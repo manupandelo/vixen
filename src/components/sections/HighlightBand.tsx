@@ -34,10 +34,7 @@ export function HighlightBand({
               </li>
             ))}
           </ul>
-          <Button
-            href={buildWhatsAppUrl(data.cta.message)}
-            className="mt-8"
-          >
+          <Button href={buildWhatsAppUrl(data.cta.message)} className="mt-8">
             {data.cta.label}
           </Button>
         </div>

@@ -15,6 +15,8 @@ describe("Button", () => {
         X
       </Button>,
     );
-    expect(screen.getByRole("link", { name: "X" }).className).toContain("border");
+    expect(screen.getByRole("link", { name: "X" }).className).toContain(
+      "border",
+    );
   });
 });

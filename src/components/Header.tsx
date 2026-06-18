@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { content } from "@/content";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -8,6 +8,26 @@ import { Button } from "./Button";
 
 export function Header() {
   const [open, setOpen] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Move focus to close button when menu opens
+  useEffect(() => {
+    if (open && closeButtonRef.current) {
+      closeButtonRef.current.focus();
+    }
+  }, [open]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/5 bg-[var(--color-base)]/80 backdrop-blur">
@@ -34,6 +54,7 @@ export function Header() {
         <button
           type="button"
           aria-label="Abrir menú"
+          aria-expanded={open}
           className="md:hidden"
           onClick={() => setOpen(true)}
         >
@@ -52,6 +73,7 @@ export function Header() {
           <div className="flex items-center justify-between">
             <span className="text-display-sm text-lg">{content.site.name}</span>
             <button
+              ref={closeButtonRef}
               type="button"
               aria-label="Cerrar menú"
               onClick={() => setOpen(false)}

@@ -26,7 +26,10 @@ export function Footer() {
           <ul className="space-y-2 text-sm">
             {nav.map((n) => (
               <li key={n.href}>
-                <Link href={n.href} className="hover:text-[var(--color-accent)]">
+                <Link
+                  href={n.href}
+                  className="hover:text-[var(--color-accent)]"
+                >
                   {n.label}
                 </Link>
               </li>
@@ -46,7 +49,11 @@ export function Footer() {
               <a href={`mailto:${site.email}`}>{site.email}</a>
             </li>
             <li className="flex gap-4 pt-2">
-              <a href={site.instagram} target="_blank" rel="noopener noreferrer">
+              <a
+                href={site.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Instagram
               </a>
               <a href={site.facebook} target="_blank" rel="noopener noreferrer">
