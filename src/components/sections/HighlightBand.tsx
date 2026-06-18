@@ -7,7 +7,7 @@ import { Button } from "@/components/Button";
 type BandData = {
   title: string;
   intro: string;
-  points: { title: string; body: string }[];
+  points: readonly { title: string; body: string }[];
   cta: { label: string; message: string };
 };
 
