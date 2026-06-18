@@ -1,4 +1,4 @@
-const tones: Record<string, string> = {
+const tones: Record<"accent" | "warm" | "neutral", string> = {
   accent: "from-[var(--color-accent)]/30 to-[var(--color-surface)]",
   warm: "from-[var(--color-warm)]/30 to-[var(--color-surface)]",
   neutral: "from-[var(--color-surface)] to-[var(--color-base)]",

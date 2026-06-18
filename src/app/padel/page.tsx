@@ -23,7 +23,11 @@ export default function PadelPage() {
       <Header />
       <main>
         <SectionShell className="pt-28">
-          <SectionHeading kicker="Pilar · Buenos Aires" title={padel.title} />
+          <SectionHeading
+            kicker="Pilar · Buenos Aires"
+            title={padel.title}
+            as="h1"
+          />
           <p className="mt-4 max-w-2xl text-lg text-[var(--color-muted)]">
             {padel.intro}
           </p>

@@ -23,7 +23,11 @@ export default function FutbolPage() {
       <Header />
       <main>
         <SectionShell className="pt-28">
-          <SectionHeading kicker="Pilar · Buenos Aires" title={futbol.title} />
+          <SectionHeading
+            kicker="Pilar · Buenos Aires"
+            title={futbol.title}
+            as="h1"
+          />
           <p className="mt-4 max-w-2xl text-lg text-[var(--color-muted)]">
             {futbol.intro}
           </p>
