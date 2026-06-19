@@ -55,6 +55,10 @@ describe("content", () => {
     ]);
   });
 
+  it("keeps the restored hero primary CTA copy contract explicit", () => {
+    expect(content.hero.primaryCta.label).toBe("Hablar por WhatsApp");
+  });
+
   it("adds trust pills and separates fútbol and pádel conversion paths", () => {
     expect(content.trustPills).toContain("Reservas en ATC");
     expect(content.useCases.futbol.cta.href).toContain(content.site.whatsappUrl);
