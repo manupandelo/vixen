@@ -57,7 +57,7 @@ export function UseCases() {
         {useCasePanels.map((panel) => (
           <article
             key={panel.id}
-            className={`flex h-full flex-col overflow-hidden rounded-[2rem] border p-5 sm:p-6 ${panel.tone}`}
+            className={`flex h-full flex-col overflow-hidden rounded-[1rem] border p-5 sm:p-6 ${panel.tone}`}
           >
             <VenueImage
               src={panel.image.src}
@@ -74,12 +74,9 @@ export function UseCases() {
               {panel.body}
             </p>
 
-            <ul className="mt-6 flex flex-wrap gap-3 text-sm text-white/82">
+            <ul className="detail-list mt-6 text-sm">
               {panel.points.map((point) => (
-                <li
-                  key={point}
-                  className="rounded-full border border-white/10 px-4 py-2"
-                >
+                <li key={point} className="list-none">
                   {point}
                 </li>
               ))}

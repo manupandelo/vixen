@@ -7,9 +7,9 @@ export function TrustBand() {
       className="border-y border-white/5 bg-[var(--color-surface)]/70"
     >
       <div className="content-shell py-5">
-        <ul className="flex flex-wrap gap-3">
+        <ul className="metadata-strip">
           {content.trustPills.map((pill) => (
-            <li key={pill} className="proof-pill">
+            <li key={pill} className="inline-flex items-center">
               {pill}
             </li>
           ))}

@@ -25,12 +25,9 @@ export function Eventos() {
             {eventos.body}
           </p>
 
-          <ul className="mt-8 grid gap-3">
+          <ul className="detail-list mt-8 text-sm">
             {eventProof.map((point) => (
-              <li
-                key={point}
-                className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-white/82"
-              >
+              <li key={point} className="list-none">
                 {point}
               </li>
             ))}
@@ -53,7 +50,7 @@ export function Eventos() {
               alt="Canchas iluminadas y predio activo en Vixen Club"
               className="aspect-[4/3] min-h-[10rem]"
             />
-            <div className="rounded-[1.75rem] border border-[var(--color-accent)]/25 bg-[linear-gradient(180deg,rgba(198,240,0,0.08),rgba(255,255,255,0.03))] p-5">
+            <div className="editorial-panel border-[var(--color-accent)]/25 bg-[linear-gradient(180deg,rgba(198,240,0,0.08),rgba(255,255,255,0.03))] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-accent)]">
                 Formato real
               </p>

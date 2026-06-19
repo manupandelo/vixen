@@ -10,7 +10,7 @@ export function Footer() {
       className="scroll-mt-20 border-t border-white/5 bg-[var(--color-surface)]"
     >
       <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
-        <div className="mb-10 rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(198,240,0,0.08))] p-6 lg:flex lg:items-center lg:justify-between lg:gap-8">
+        <div className="mb-10 rounded-[1rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(198,240,0,0.08))] p-6 lg:flex lg:items-center lg:justify-between lg:gap-8">
           <div className="max-w-2xl">
             <p className="text-display-sm text-2xl">
               Cerrá la visita con una acción clara.

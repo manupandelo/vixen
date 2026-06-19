@@ -24,13 +24,10 @@ export function Hero() {
           </div>
           <ul
             aria-label="Pruebas rápidas"
-            className="mt-8 flex flex-wrap gap-3 text-xs uppercase tracking-[0.18em] text-white/80"
+            className="metadata-strip mt-8"
           >
             {hero.proof.map((item) => (
-              <li
-                key={item}
-                className="rounded-full border border-white/10 bg-white/5 px-4 py-2"
-              >
+              <li key={item} className="inline-flex items-center">
                 {item}
               </li>
             ))}

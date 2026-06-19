@@ -31,7 +31,7 @@ export function Sede() {
             {operationalFacts.map((fact) => (
               <div
                 key={fact.label}
-                className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] px-5 py-4"
+                className="editorial-panel px-5 py-4"
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
                   {fact.label}
@@ -46,13 +46,13 @@ export function Sede() {
               href={mapHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/5 px-5 py-3 text-white transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+              className="inline-flex items-center justify-center rounded-md border border-white/12 bg-white/5 px-5 py-3 text-white transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
             >
               Abrir en Google Maps
             </a>
             <a
               href={`tel:+${site.whatsappNumber}`}
-              className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/5 px-5 py-3 text-white transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+              className="inline-flex items-center justify-center rounded-md border border-white/12 bg-white/5 px-5 py-3 text-white transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
             >
               {site.phoneDisplay}
             </a>
@@ -62,7 +62,7 @@ export function Sede() {
             {sede.amenities.map((a) => (
               <li
                 key={a}
-                className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-white/82"
+                className="list-none border-l border-white/10 px-4 py-1 text-sm text-white/82"
               >
                 {a}
               </li>
@@ -73,7 +73,7 @@ export function Sede() {
           title="Mapa de Vixen Club"
           src={mapSrc}
           loading="lazy"
-          className="h-80 w-full rounded-[2rem] border border-white/5 bg-white/5 md:h-full"
+          className="h-80 w-full rounded-[1rem] border border-white/5 bg-white/5 md:h-full"
         />
       </div>
     </SectionShell>
