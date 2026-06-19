@@ -3,11 +3,10 @@ import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Hero } from "@/components/sections/Hero";
 import { TrustBand } from "@/components/sections/TrustBand";
-import { Disciplines } from "@/components/sections/Disciplines";
-import { HighlightBand } from "@/components/sections/HighlightBand";
+import { UseCases } from "@/components/sections/UseCases";
+import { Tournaments } from "@/components/sections/Tournaments";
 import { Eventos } from "@/components/sections/Eventos";
 import { Sede } from "@/components/sections/Sede";
-import { content } from "@/content";
 
 export default function HomePage() {
   return (
@@ -16,9 +15,8 @@ export default function HomePage() {
       <main>
         <Hero />
         <TrustBand />
-        <Disciplines />
-        <HighlightBand data={content.futbol} tone="accent" />
-        <HighlightBand data={content.padel} tone="warm" reverse />
+        <UseCases />
+        <Tournaments />
         <Eventos />
         <Sede />
       </main>
