@@ -6,6 +6,8 @@ export type Discipline = {
   href: string;
 };
 
+const phoneNumber = "5491137730713";
+const phoneHref = `tel:+${phoneNumber}`;
 const whatsappNumber = "5491137730713";
 const padelReservationUrl = "https://atcsports.io/venues/vixen-club-gba";
 const whatsappUrl = `https://wa.me/${whatsappNumber}`;
@@ -18,6 +20,8 @@ export const content = {
   site: {
     name: "Vixen Club",
     phoneDisplay: "(011) 15 3773 0713",
+    phoneNumber,
+    phoneHref,
     email: "info@vixen.com.ar",
     address: "Las Azucenas 3941, Alberti, Pilar, Buenos Aires",
     whatsappNumber,
@@ -170,7 +174,7 @@ export const content = {
     body: "Cumpleaños, despedidas, after del partido. Nuestro espacio con bar es ideal para juntarte después de jugar.",
     cta: {
       label: "Consultar por un evento",
-      message: "Hola! Quiero consultar por un evento.",
+      href: buildSiteWhatsAppUrl("Hola! Quiero consultar por un evento."),
     },
   },
   sede: {

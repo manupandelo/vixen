@@ -1,25 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { content } from "@/content";
 import { Hero } from "./Hero";
-
-vi.mock("@/components/sections/UseCases", () => ({
-  UseCases: () => <section aria-label="UseCases section" data-testid="use-cases-section" />,
-}));
-
-vi.mock("@/components/sections/Tournaments", () => ({
-  Tournaments: () => (
-    <section aria-label="Tournaments section" data-testid="tournaments-section" />
-  ),
-}));
-
-vi.mock("@/components/sections/Eventos", () => ({
-  Eventos: () => <section aria-label="Eventos section" data-testid="eventos-section" />,
-}));
-
-vi.mock("@/components/sections/Sede", () => ({
-  Sede: () => <section aria-label="Sede section" data-testid="sede-section" />,
-}));
 
 import HomePage from "@/app/page";
 
@@ -70,15 +52,73 @@ describe("Hero", () => {
     render(<HomePage />);
 
     const main = screen.getByRole("main");
-    const mainChildren = Array.from(main.children);
+    const mainChildren = Array.from(main.querySelectorAll(":scope > section"));
 
     expect(mainChildren).toHaveLength(5);
-    expect(mainChildren.map((child) => child.getAttribute("aria-label"))).toEqual([
-      "Presentación del club",
-      "UseCases section",
-      "Tournaments section",
-      "Eventos section",
-      "Sede section",
-    ]);
+    expect(
+      within(mainChildren[0]).getByRole("heading", {
+        level: 1,
+        name: content.hero.title,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(mainChildren[1]).getByRole("heading", {
+        level: 2,
+        name: /fútbol por whatsapp\. pádel por atc\./i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(mainChildren[2]).getByRole("heading", {
+        level: 2,
+        name: content.tournaments.title,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(mainChildren[3]).getByRole("heading", {
+        level: 2,
+        name: content.eventos.title,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(mainChildren[4]).getByRole("heading", {
+        level: 2,
+        name: content.sede.title,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the mid-page homepage stack wired to content-owned conversion links", () => {
+    render(<HomePage />);
+
+    const useCasesRegion = screen.getByRole("region", {
+      name: /fútbol por whatsapp\. pádel por atc\./i,
+    });
+    expect(
+      within(useCasesRegion).getByRole("link", {
+        name: content.useCases.futbol.cta.label,
+      }),
+    ).toHaveAttribute("href", content.useCases.futbol.cta.href);
+    expect(
+      within(useCasesRegion).getByRole("link", {
+        name: content.useCases.padel.primaryCta.label,
+      }),
+    ).toHaveAttribute("href", content.useCases.padel.primaryCta.href);
+    expect(
+      screen.getByRole("link", { name: content.tournaments.cta.label }),
+    ).toHaveAttribute("href", content.tournaments.cta.href);
+    expect(
+      screen.getByRole("link", { name: content.eventos.cta.label }),
+    ).toHaveAttribute("href", content.eventos.cta.href);
+    expect(
+      screen.getByRole("link", { name: content.site.phoneDisplay }),
+    ).toHaveAttribute("href", content.site.phoneHref);
+
+    expect(
+      screen.getByRole("region", { name: content.tournaments.title }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: content.eventos.title }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: content.sede.title })).toBeInTheDocument();
   });
 });

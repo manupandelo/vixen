@@ -36,6 +36,11 @@ describe("content", () => {
     );
   });
 
+  it("keeps phone dialing owned by the phone contact contract", () => {
+    expect(content.site.phoneNumber).toBe("5491137730713");
+    expect(content.site.phoneHref).toBe(`tel:+${content.site.phoneNumber}`);
+  });
+
   it("defines a real hero image and trust-first CTAs", () => {
     expect(content.hero.image).toEqual({
       src: "/vixen1.jpg",
@@ -70,6 +75,7 @@ describe("content", () => {
   it("includes tournaments and richer venue amenities for later sections", () => {
     expect(content.tournaments.image.src).toBe("/copas_trofeos.jpg");
     expect(content.tournaments.cta.href).toContain(content.site.whatsappUrl);
+    expect(content.eventos.cta.href).toContain(content.site.whatsappUrl);
     expect(content.sede.amenities).toEqual(
       expect.arrayContaining([
         "Wi-Fi",
