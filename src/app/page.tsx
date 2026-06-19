@@ -2,6 +2,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Hero } from "@/components/sections/Hero";
+import { TrustBand } from "@/components/sections/TrustBand";
 import { Disciplines } from "@/components/sections/Disciplines";
 import { HighlightBand } from "@/components/sections/HighlightBand";
 import { Eventos } from "@/components/sections/Eventos";
@@ -14,6 +15,7 @@ export default function HomePage() {
       <Header />
       <main>
         <Hero />
+        <TrustBand />
         <Disciplines />
         <HighlightBand data={content.futbol} tone="accent" />
         <HighlightBand data={content.padel} tone="warm" reverse />
