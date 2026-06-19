@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { content } from "@/content";
-import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { Button } from "./Button";
 
 type HeaderCta = {
@@ -27,17 +26,16 @@ export function Header() {
   const openerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const whatsappHref = buildWhatsAppUrl("Hola! Quiero más info sobre Vixen Club.");
   const ctas: HeaderCta[] = [
     {
       label: "Reservá pádel",
       href: content.site.padelReservationUrl,
       variant: "secondary",
     },
-    { label: "WhatsApp", href: whatsappHref },
+    { label: "WhatsApp", href: content.hero.primaryCta.href },
   ];
   const mobileActionClass =
-    "inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide transition";
+    "inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
   const closeMenu = () => {
     setOpen(false);
@@ -148,7 +146,7 @@ export function Header() {
             <Link
               key={n.href}
               href={n.href}
-              className="text-sm font-medium text-[var(--color-ink)] transition hover:text-[var(--color-accent)]"
+              className="rounded-sm text-sm font-medium text-[var(--color-ink)] transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
             >
               {n.label}
             </Link>
@@ -161,12 +159,13 @@ export function Header() {
           type="button"
           aria-label="Abrir menú"
           aria-expanded={open}
-          className="md:hidden"
+          className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-[var(--color-ink)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] md:hidden"
           onClick={() => setOpen(true)}
         >
-          <span className="block h-0.5 w-7 bg-[var(--color-ink)]" />
-          <span className="mt-1.5 block h-0.5 w-7 bg-[var(--color-ink)]" />
-          <span className="mt-1.5 block h-0.5 w-7 bg-[var(--color-ink)]" />
+          <span className="sr-only">Abrir menú</span>
+          <span className="block h-0.5 w-6 bg-current" />
+          <span className="mt-1.5 block h-0.5 w-6 bg-current" />
+          <span className="mt-1.5 block h-0.5 w-6 bg-current" />
         </button>
       </div>
 
@@ -194,7 +193,7 @@ export function Header() {
               type="button"
               aria-label="Cerrar menú"
               onClick={closeMenu}
-              className="text-2xl"
+              className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-2xl text-[var(--color-ink)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
             >
               ✕
             </button>
