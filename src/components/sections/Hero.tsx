@@ -8,7 +8,7 @@ export function Hero() {
   return (
     <section
       aria-label="Presentación del club"
-      className="relative overflow-hidden bg-[radial-gradient(circle_at_top,rgba(198,240,0,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.05),transparent_42%)] px-5 pb-12 pt-8 sm:px-8 lg:pb-20 lg:pt-10"
+      className="relative overflow-hidden bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--color-accent)_18%,transparent),transparent_34%),linear-gradient(180deg,var(--color-surface-2),var(--color-base)_42%)] px-5 pb-12 pt-8 sm:px-8 lg:pb-20 lg:pt-10"
     >
       <div className="mx-auto grid max-w-6xl gap-8 lg:min-h-[calc(100vh-5.5rem)] lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)] lg:items-center lg:gap-14">
         <div className="relative z-10 lg:pr-4">

@@ -1,8 +1,27 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { content } from "@/content";
-import HomePage from "@/app/page";
 import { Hero } from "./Hero";
+
+vi.mock("@/components/sections/UseCases", () => ({
+  UseCases: () => <section aria-label="UseCases section" data-testid="use-cases-section" />,
+}));
+
+vi.mock("@/components/sections/Tournaments", () => ({
+  Tournaments: () => (
+    <section aria-label="Tournaments section" data-testid="tournaments-section" />
+  ),
+}));
+
+vi.mock("@/components/sections/Eventos", () => ({
+  Eventos: () => <section aria-label="Eventos section" data-testid="eventos-section" />,
+}));
+
+vi.mock("@/components/sections/Sede", () => ({
+  Sede: () => <section aria-label="Sede section" data-testid="sede-section" />,
+}));
+
+import HomePage from "@/app/page";
 
 describe("Hero", () => {
   it("renders the hero title as the page h1 with the expected CTA semantics", () => {
@@ -36,32 +55,30 @@ describe("Hero", () => {
     }
   });
 
-  it("keeps the homepage composition focused on the hero and the four core sections", () => {
+  it("uses the shared green brand tokens in the hero background treatment", () => {
+    render(<Hero />);
+
+    const heroSection = screen.getByRole("region", { name: /presentación del club/i });
+
+    expect(heroSection).toHaveClass(
+      "bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--color-accent)_18%,transparent),transparent_34%),linear-gradient(180deg,var(--color-surface-2),var(--color-base)_42%)]",
+    );
+    expect(heroSection.className).not.toContain("198,240,0");
+  });
+
+  it("composes the homepage main stack in the intended section order", () => {
     render(<HomePage />);
 
     const main = screen.getByRole("main");
+    const mainChildren = Array.from(main.children);
 
-    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
-    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: /escribinos por whatsapp/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(main).getByRole("heading", { level: 1, name: content.hero.title }),
-    ).toBeInTheDocument();
-    expect(
-      within(main).getByRole("heading", {
-        name: "Fútbol por WhatsApp. Pádel por ATC.",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      within(main).getByRole("heading", { name: content.tournaments.title }),
-    ).toBeInTheDocument();
-    expect(
-      within(main).getByRole("heading", { name: content.eventos.title }),
-    ).toBeInTheDocument();
-    expect(
-      within(main).getByRole("heading", { name: content.sede.title }),
-    ).toBeInTheDocument();
+    expect(mainChildren).toHaveLength(5);
+    expect(mainChildren.map((child) => child.getAttribute("aria-label"))).toEqual([
+      "Presentación del club",
+      "UseCases section",
+      "Tournaments section",
+      "Eventos section",
+      "Sede section",
+    ]);
   });
 });

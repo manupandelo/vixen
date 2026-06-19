@@ -136,7 +136,7 @@ export function Header() {
 
         <nav
           aria-label="Principal"
-          className="hidden flex-1 items-center justify-center gap-6 rounded-full border border-white/10 bg-white/[0.025] px-7 py-3 md:flex lg:gap-9"
+          className="hidden flex-1 items-center justify-center gap-6 rounded-full border border-white/10 bg-white/[0.025] px-7 py-3 lg:flex lg:gap-9"
         >
           {content.nav.map((n) => (
             <Link
@@ -152,7 +152,7 @@ export function Header() {
         <div
           role="group"
           aria-label="Contacto rápido"
-          className="hidden shrink-0 md:flex md:pl-4"
+          className="hidden shrink-0 lg:flex lg:pl-4"
         >
           {renderDesktopCtas()}
         </div>
@@ -162,7 +162,7 @@ export function Header() {
           type="button"
           aria-label="Abrir menú"
           aria-expanded={open}
-          className="inline-flex h-12 w-12 items-center justify-center rounded-md border border-white/10 bg-white/[0.03] text-[var(--color-ink)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] md:hidden"
+          className="inline-flex h-12 w-12 items-center justify-center rounded-md border border-white/10 bg-white/[0.03] text-[var(--color-ink)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] lg:hidden"
           onClick={() => setOpen(true)}
         >
           <span className="sr-only">Abrir menú</span>

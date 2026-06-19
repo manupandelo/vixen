@@ -28,6 +28,20 @@ describe("Header", () => {
     ).toHaveAttribute("href", content.hero.primaryCta.href);
   });
 
+  it("keeps the mobile menu active until large screens to avoid tablet crowding", () => {
+    render(<Header />);
+
+    const navigation = screen.getByRole("navigation", { name: /principal/i });
+    const contactGroup = screen.getByRole("group", { name: /contacto rápido/i });
+    const toggle = screen.getByRole("button", { name: /abrir menú/i });
+
+    expect(navigation).toHaveClass("hidden");
+    expect(navigation).toHaveClass("lg:flex");
+    expect(contactGroup).toHaveClass("hidden");
+    expect(contactGroup).toHaveClass("lg:flex");
+    expect(toggle).toHaveClass("lg:hidden");
+  });
+
   it("renders the logo as the home link label for Vixen Club", () => {
     render(<Header />);
 
