@@ -93,6 +93,7 @@ describe("Hero", () => {
     const useCasesRegion = screen.getByRole("region", {
       name: /fútbol por whatsapp\. pádel por atc\./i,
     });
+    const sedeRegion = screen.getByRole("region", { name: content.sede.title });
     expect(
       within(useCasesRegion).getByRole("link", {
         name: content.useCases.futbol.cta.label,
@@ -110,7 +111,7 @@ describe("Hero", () => {
       screen.getByRole("link", { name: content.eventos.cta.label }),
     ).toHaveAttribute("href", content.eventos.cta.href);
     expect(
-      screen.getByRole("link", { name: content.site.phoneDisplay }),
+      within(sedeRegion).getByRole("link", { name: content.site.phoneDisplay }),
     ).toHaveAttribute("href", content.site.phoneHref);
 
     expect(
@@ -119,6 +120,6 @@ describe("Hero", () => {
     expect(
       screen.getByRole("region", { name: content.eventos.title }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: content.sede.title })).toBeInTheDocument();
+    expect(sedeRegion).toBeInTheDocument();
   });
 });
