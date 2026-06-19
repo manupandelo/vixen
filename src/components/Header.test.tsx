@@ -16,6 +16,18 @@ describe("Header", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("keeps the navigation and WhatsApp contact action in separate groups", () => {
+    render(<Header />);
+
+    const navigation = screen.getByRole("navigation", { name: /principal/i });
+    const contactGroup = screen.getByRole("group", { name: /contacto rápido/i });
+
+    expect(within(navigation).queryByRole("link", { name: /whatsapp/i })).not.toBeInTheDocument();
+    expect(
+      within(contactGroup).getByRole("link", { name: /whatsapp/i }),
+    ).toHaveAttribute("href", content.hero.primaryCta.href);
+  });
+
   it("renders the logo as the home link label for Vixen Club", () => {
     render(<Header />);
 

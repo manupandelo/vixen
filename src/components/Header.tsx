@@ -121,8 +121,8 @@ export function Header() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/5 bg-[var(--color-base)]/86 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-5 py-4 sm:px-8">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[var(--color-base)]/72 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8 lg:gap-8 lg:py-5">
         <Link href="/" aria-label={content.site.name} className="shrink-0">
           <Image
             src="/logo_vixen.svg"
@@ -136,20 +136,26 @@ export function Header() {
 
         <nav
           aria-label="Principal"
-          className="hidden flex-1 items-center justify-center gap-4 md:flex lg:gap-8"
+          className="hidden flex-1 items-center justify-center gap-6 rounded-full border border-white/10 bg-white/[0.025] px-7 py-3 md:flex lg:gap-9"
         >
           {content.nav.map((n) => (
             <Link
               key={n.href}
               href={n.href}
-              className="rounded-sm text-sm font-medium text-[var(--color-ink)]/92 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+              className="rounded-sm text-sm font-medium tracking-[0.08em] text-[var(--color-ink)]/80 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
             >
               {n.label}
             </Link>
           ))}
         </nav>
 
-        <div className="hidden md:flex">{renderDesktopCtas()}</div>
+        <div
+          role="group"
+          aria-label="Contacto rápido"
+          className="hidden shrink-0 md:flex md:pl-4"
+        >
+          {renderDesktopCtas()}
+        </div>
 
         <button
           ref={openerRef}
