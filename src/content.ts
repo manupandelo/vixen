@@ -44,7 +44,7 @@ export const content = {
       alt: "Vista general del predio de Vixen Club con canchas y sector social",
     },
     primaryCta: {
-      label: "Hablar por WhatsApp",
+      label: "WhatsApp",
       href: buildSiteWhatsAppUrl("Hola! Quiero más info sobre Vixen Club."),
       message: "Hola! Quiero más info sobre Vixen Club.",
     },

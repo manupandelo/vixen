@@ -41,8 +41,13 @@ describe("content", () => {
       src: "/vixen1.jpg",
       alt: "Vista general del predio de Vixen Club con canchas y sector social",
     });
+    expect(content.hero.primaryCta.label).toBe("WhatsApp");
     expect(content.hero.primaryCta.href).toContain(content.site.whatsappUrl);
     expect(content.hero.secondaryCta.href).toBe(content.site.padelReservationUrl);
+  });
+
+  it("keeps premium-home sponsor and hero fact data aligned with the green-led redesign", () => {
+    expect(content.site.sponsors).toEqual(["PUMA"]);
     expect(content.hero.proof).toEqual([
       "Pilar / Del Viso",
       "Pádel en ATC",
