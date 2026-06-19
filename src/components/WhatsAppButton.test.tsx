@@ -11,6 +11,6 @@ describe("WhatsAppButton", () => {
 
     expect(link).toHaveAttribute("href", content.hero.primaryCta.href);
     expect(within(link).getByText("Vixen Club")).toBeInTheDocument();
-    expect(within(link).getByTitle("WhatsApp")).toBeInTheDocument();
+    expect(within(link).getByRole("img", { name: /whatsapp/i })).toBeInTheDocument();
   });
 });

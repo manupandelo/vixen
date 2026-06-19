@@ -7,6 +7,7 @@ describe("content", () => {
     expect(content.site.phoneDisplay).toBe("(011) 15 3773 0713");
     expect(content.site.address).toContain("Pilar");
     expect(content.site.whatsappNumber).toBe("5491137730713");
+    expect(content.site.sponsors).toContain("PUMA");
   });
 
   it("has the five primary nav links", () => {
@@ -43,10 +44,10 @@ describe("content", () => {
     expect(content.hero.primaryCta.href).toContain(content.site.whatsappUrl);
     expect(content.hero.secondaryCta.href).toBe(content.site.padelReservationUrl);
     expect(content.hero.proof).toEqual([
+      "Pilar / Del Viso",
       "Pádel en ATC",
       "Fútbol 7",
-      "Torneos",
-      "Bar y eventos",
+      "Torneos y eventos",
     ]);
   });
 

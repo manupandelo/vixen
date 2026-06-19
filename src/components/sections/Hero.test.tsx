@@ -21,10 +21,10 @@ describe("Hero", () => {
     ).toHaveAttribute("href", content.hero.secondaryCta.href);
   });
 
-  it("renders the proof items as a labeled list", () => {
+  it("renders the club facts line as a labeled list", () => {
     render(<Hero />);
 
-    const proofList = screen.getByRole("list", { name: /pruebas rápidas/i });
+    const proofList = screen.getByRole("list", { name: /datos del club/i });
 
     expect(proofList).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(content.hero.proof.length);

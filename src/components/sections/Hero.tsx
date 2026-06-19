@@ -22,10 +22,7 @@ export function Hero() {
               {hero.secondaryCta.label}
             </Button>
           </div>
-          <ul
-            aria-label="Pruebas rápidas"
-            className="metadata-strip mt-8"
-          >
+          <ul aria-label="Datos del club" className="metadata-strip mt-8">
             {hero.proof.map((item) => (
               <li key={item} className="inline-flex items-center">
                 {item}

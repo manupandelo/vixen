@@ -25,7 +25,7 @@ export const content = {
     padelReservationUrl,
     instagram: "https://instagram.com/vixen.club",
     facebook: "https://facebook.com/vixen.club",
-    sponsor: "PUMA",
+    sponsors: ["PUMA"],
   },
   nav: [
     { label: "Fútbol", href: "/futbol" },
@@ -53,7 +53,12 @@ export const content = {
       href: padelReservationUrl,
       message: "Hola! Quiero reservar una cancha.",
     },
-    proof: ["Pádel en ATC", "Fútbol 7", "Torneos", "Bar y eventos"],
+    proof: [
+      "Pilar / Del Viso",
+      "Pádel en ATC",
+      "Fútbol 7",
+      "Torneos y eventos",
+    ],
   },
   trustPills: [
     "Pilar / Del Viso",

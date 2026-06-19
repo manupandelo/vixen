@@ -1,15 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { content } from "@/content";
 import { Header } from "./Header";
 
 describe("Header", () => {
-  it("shows a visible padel reservation link", () => {
+  it("shows WhatsApp as the only header CTA", () => {
     render(<Header />);
 
     expect(
-      screen.getByRole("link", { name: /reservá pádel/i }),
-    ).toHaveAttribute("href", "https://atcsports.io/venues/vixen-club-gba");
+      screen.getByRole("link", { name: /whatsapp/i }),
+    ).toHaveAttribute("href", content.hero.primaryCta.href);
+    expect(
+      screen.queryByRole("link", { name: /reservá pádel/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders the logo as the home link label for Vixen Club", () => {

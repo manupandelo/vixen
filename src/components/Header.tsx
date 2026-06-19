@@ -26,14 +26,7 @@ export function Header() {
   const openerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const ctas: HeaderCta[] = [
-    {
-      label: "Reservá pádel",
-      href: content.site.padelReservationUrl,
-      variant: "secondary",
-    },
-    { label: "WhatsApp", href: content.hero.primaryCta.href },
-  ];
+  const ctas: HeaderCta[] = [{ label: "WhatsApp", href: content.hero.primaryCta.href }];
   const mobileActionClass =
     "inline-flex items-center justify-center rounded-md px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
@@ -128,8 +121,8 @@ export function Header() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/5 bg-[var(--color-base)]/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
+    <header className="sticky top-0 z-50 border-b border-white/5 bg-[var(--color-base)]/86 backdrop-blur">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-5 py-4 sm:px-8">
         <Link href="/" aria-label={content.site.name} className="shrink-0">
           <Image
             src="/logo_vixen.svg"
@@ -137,22 +130,26 @@ export function Header() {
             width={168}
             height={50}
             priority
-            className="h-auto w-32 sm:w-36"
+            className="h-auto w-36 sm:w-40"
           />
         </Link>
 
-        <nav aria-label="Principal" className="hidden items-center gap-4 md:flex lg:gap-6">
+        <nav
+          aria-label="Principal"
+          className="hidden flex-1 items-center justify-center gap-4 md:flex lg:gap-8"
+        >
           {content.nav.map((n) => (
             <Link
               key={n.href}
               href={n.href}
-              className="rounded-sm text-sm font-medium text-[var(--color-ink)] transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+              className="rounded-sm text-sm font-medium text-[var(--color-ink)]/92 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
             >
               {n.label}
             </Link>
           ))}
-          {renderDesktopCtas()}
         </nav>
+
+        <div className="hidden md:flex">{renderDesktopCtas()}</div>
 
         <button
           ref={openerRef}
