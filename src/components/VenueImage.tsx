@@ -1,0 +1,29 @@
+import Image from "next/image";
+
+export function VenueImage({
+  src,
+  alt,
+  priority = false,
+  overlay = false,
+  className = "",
+}: {
+  src: string;
+  alt: string;
+  priority?: boolean;
+  overlay?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`venue-frame ${className}`}>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        priority={priority}
+        sizes="(max-width: 768px) 100vw, 50vw"
+        className="object-cover"
+      />
+      {overlay ? <div aria-hidden="true" className="venue-frame__overlay" /> : null}
+    </div>
+  );
+}
