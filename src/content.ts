@@ -6,13 +6,23 @@ export type Discipline = {
   href: string;
 };
 
+const whatsappNumber = "5491137730713";
+const padelReservationUrl = "https://atcsports.io/venues/vixen-club-gba";
+const whatsappUrl = `https://wa.me/${whatsappNumber}`;
+
+function buildSiteWhatsAppUrl(message: string): string {
+  return `${whatsappUrl}?text=${encodeURIComponent(message)}`;
+}
+
 export const content = {
   site: {
     name: "Vixen Club",
     phoneDisplay: "(011) 15 3773 0713",
     email: "info@vixen.com.ar",
     address: "Las Azucenas 3941, Alberti, Pilar, Buenos Aires",
-    whatsappNumber: "5491137730713",
+    whatsappNumber,
+    whatsappUrl,
+    padelReservationUrl,
     instagram: "https://instagram.com/vixen.club",
     facebook: "https://facebook.com/vixen.club",
     sponsor: "PUMA",
@@ -26,18 +36,33 @@ export const content = {
   ] as NavLink[],
   hero: {
     kicker: "Pilar · Buenos Aires",
-    title: "Viví el deporte\nen Vixen",
+    title: "Club, canchas y torneos en un solo lugar",
     subtitle:
-      "Torneos de fútbol 7 y pádel, clases, alquiler de canchas y eventos. Inscripción temporada 2026 abierta.",
+      "Fútbol 7, pádel, eventos y un predio activo para jugar, competir y encontrarte.",
+    image: {
+      src: "/vixen1.jpg",
+      alt: "Vista general del predio de Vixen Club con canchas y sector social",
+    },
     primaryCta: {
-      label: "Inscripción 2026",
-      message: "Hola! Quiero inscribirme en la temporada 2026.",
+      label: "Hablar por WhatsApp",
+      href: buildSiteWhatsAppUrl("Hola! Quiero más info sobre Vixen Club."),
+      message: "Hola! Quiero más info sobre Vixen Club.",
     },
     secondaryCta: {
-      label: "Reservar cancha",
+      label: "Reservá pádel en ATC",
+      href: padelReservationUrl,
       message: "Hola! Quiero reservar una cancha.",
     },
+    proof: ["Pádel en ATC", "Fútbol 7", "Torneos", "Bar y eventos"],
   },
+  trustPills: [
+    "Pilar / Del Viso",
+    "Pádel",
+    "Fútbol 7",
+    "Torneos",
+    "Estacionamiento",
+    "Reservas en ATC",
+  ],
   disciplines: [
     {
       id: "futbol",
@@ -95,6 +120,46 @@ export const content = {
       message: "Hola! Quiero reservar una cancha de pádel.",
     },
   },
+  useCases: {
+    futbol: {
+      title: "Fútbol 7",
+      body: "Torneos, inscripciones y consultas generales por WhatsApp para resolver rápido con el club.",
+      cta: {
+        label: "Hablar por WhatsApp",
+        href: buildSiteWhatsAppUrl(
+          "Hola! Quiero más info sobre fútbol 7 en Vixen Club.",
+        ),
+      },
+    },
+    padel: {
+      title: "Pádel",
+      body: "Reservá tus turnos en ATC y usá WhatsApp para consultas sobre clases, torneos o el predio.",
+      primaryCta: {
+        label: "Reservá pádel en ATC",
+        href: padelReservationUrl,
+      },
+      secondaryCta: {
+        label: "Consultar por WhatsApp",
+        href: buildSiteWhatsAppUrl(
+          "Hola! Quiero más info sobre pádel en Vixen Club.",
+        ),
+      },
+    },
+  },
+  tournaments: {
+    title: "Copas, torneos y movimiento real",
+    body: "Vixen no es solo alquiler de canchas: hay competencia, fechas y una comunidad activa alrededor del club.",
+    image: {
+      src: "/copas_trofeos.jpg",
+      alt: "Copas y trofeos exhibidos en Vixen Club",
+    },
+    cta: {
+      label: "Quiero jugar un torneo",
+      href: buildSiteWhatsAppUrl(
+        "Hola! Quiero sumarme a un torneo en Vixen Club.",
+      ),
+    },
+  },
   eventos: {
     title: "Eventos y Bar",
     body: "Cumpleaños, despedidas, after del partido. Nuestro espacio con bar es ideal para juntarte después de jugar.",
@@ -110,8 +175,14 @@ export const content = {
     amenities: [
       "Canchas de fútbol 7",
       "Canchas de pádel",
-      "Bar y eventos",
+      "Wi-Fi",
+      "Vestuario",
       "Estacionamiento",
+      "Ayuda médica",
+      "Torneos",
+      "Cumpleaños",
+      "Bar / Restaurante",
+      "Quincho",
     ],
   },
 } as const;

@@ -1,5 +1,4 @@
 import { content } from "@/content";
-import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { Button } from "@/components/Button";
 
 export function Hero() {
@@ -18,13 +17,8 @@ export function Hero() {
           {hero.subtitle}
         </p>
         <div className="mt-10 flex flex-wrap gap-4">
-          <Button href={buildWhatsAppUrl(hero.primaryCta.message)}>
-            {hero.primaryCta.label}
-          </Button>
-          <Button
-            href={buildWhatsAppUrl(hero.secondaryCta.message)}
-            variant="secondary"
-          >
+          <Button href={hero.primaryCta.href}>{hero.primaryCta.label}</Button>
+          <Button href={hero.secondaryCta.href} variant="secondary">
             {hero.secondaryCta.label}
           </Button>
         </div>
