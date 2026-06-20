@@ -23,14 +23,17 @@ describe("Hero", () => {
     ).toHaveAttribute("href", content.hero.secondaryCta.href);
   });
 
-  it("renders the club facts line inside the hero with a visible Datos del club label", () => {
+  it("renders the hero facts as a compact club list", () => {
     render(<Hero />);
 
-    const heroSection = screen.getByRole("region", { name: /presentación del club/i });
+    const heroSection = screen.getByRole("region", {
+      name: /presentación del club/i,
+    });
     const proofList = screen.getByRole("list", { name: /datos del club/i });
 
-    expect(within(heroSection).getByText("Datos del club")).toBeInTheDocument();
-    expect(within(heroSection).getByRole("list", { name: /datos del club/i })).toBe(proofList);
+    expect(
+      within(heroSection).getByRole("list", { name: /datos del club/i }),
+    ).toBe(proofList);
     expect(screen.getAllByRole("listitem")).toHaveLength(content.hero.proof.length);
     for (const item of content.hero.proof) {
       expect(screen.getByText(item)).toBeInTheDocument();
@@ -64,7 +67,7 @@ describe("Hero", () => {
     expect(
       within(mainChildren[1]).getByRole("heading", {
         level: 2,
-        name: /fútbol por whatsapp\. pádel por atc\./i,
+        name: /fútbol 7 y pádel dentro del mismo club\./i,
       }),
     ).toBeInTheDocument();
     expect(
@@ -91,19 +94,24 @@ describe("Hero", () => {
     render(<HomePage />);
 
     const useCasesRegion = screen.getByRole("region", {
-      name: /fútbol por whatsapp\. pádel por atc\./i,
+      name: /fútbol 7 y pádel dentro del mismo club\./i,
     });
     const sedeRegion = screen.getByRole("region", { name: content.sede.title });
     expect(
-      within(useCasesRegion).getByRole("link", {
+      within(useCasesRegion).queryByRole("link", {
         name: content.useCases.futbol.cta.label,
       }),
-    ).toHaveAttribute("href", content.useCases.futbol.cta.href);
+    ).not.toBeInTheDocument();
     expect(
       within(useCasesRegion).getByRole("link", {
         name: content.useCases.padel.primaryCta.label,
       }),
     ).toHaveAttribute("href", content.useCases.padel.primaryCta.href);
+    expect(
+      within(useCasesRegion).queryByRole("link", {
+        name: content.useCases.padel.secondaryCta.label,
+      }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: content.tournaments.cta.label }),
     ).toHaveAttribute("href", content.tournaments.cta.href);

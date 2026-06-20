@@ -132,7 +132,7 @@ export const content = {
   useCases: {
     futbol: {
       title: "Fútbol 7",
-      body: "Torneos, inscripciones y consultas generales por WhatsApp para resolver rápido con el club.",
+      body: "Fechas, cupos e inscripciones coordinadas directo con el club para resolver equipos, categorías y torneos sin fricción.",
       cta: {
         label: "Hablar por WhatsApp",
         href: buildSiteWhatsAppUrl(
@@ -142,7 +142,7 @@ export const content = {
     },
     padel: {
       title: "Pádel",
-      body: "Reservá tus turnos en ATC y usá WhatsApp para consultas sobre clases, torneos o el predio.",
+      body: "Turnos en ATC para entrar a cancha rápido; clases y torneos se coordinan desde el club sin mezclar canales.",
       primaryCta: {
         label: "Reservá pádel en ATC",
         href: padelReservationUrl,
@@ -178,16 +178,10 @@ export const content = {
     addressLabel: "Las Azucenas 3941, Alberti, Pilar",
     mapQuery: "Las Azucenas 3941, Alberti, Pilar, Buenos Aires",
     amenities: [
-      "Fútbol 7",
-      "Pádel",
       "Wi-Fi",
       "Vestuarios",
       "Estacionamiento",
       "Ayuda médica",
-      "Torneos",
-      "Eventos privados",
-      "Bar",
-      "Quincho",
     ],
   },
 } as const;

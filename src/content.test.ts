@@ -82,12 +82,9 @@ describe("content", () => {
         "Vestuarios",
         "Estacionamiento",
         "Ayuda médica",
-        "Torneos",
-        "Eventos privados",
-        "Bar",
-        "Quincho",
       ]),
     );
+    expect(content.sede.amenities).toHaveLength(4);
   });
 
   it("reuses site-level CTA URLs across home conversion entry points", () => {

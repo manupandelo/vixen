@@ -27,27 +27,6 @@ function AmenityIcon({
 
 function amenityGlyph(label: (typeof content.sede.amenities)[number]) {
   switch (label) {
-    case "Fútbol 7":
-      return (
-        <>
-          <circle cx="12" cy="12" r="7" />
-          <path d="m12 5.5 2 2.3-.8 2.7h-2.4L10 7.8Z" />
-          <path d="m7.8 10.7 2.3-.2 1.6 1.7-.7 2.5-2.6.7-1.6-2Z" />
-          <path d="m13.9 12.2 2-1.7 2.5.6.4 2.6-2 1.8-2.3-.9Z" />
-        </>
-      );
-    case "Pádel":
-      return (
-        <>
-          <path d="M9 6.5c0-1.4 1.1-2.5 2.5-2.5h1.8c1.4 0 2.5 1.1 2.5 2.5v6.8c0 1.4-1.1 2.5-2.5 2.5H9.9A2.9 2.9 0 0 1 7 12.9V9.4C7 7.8 8.3 6.5 9.9 6.5Z" />
-          <path d="M10 18v2.5" />
-          <path d="M13 18v2.5" />
-          <circle cx="11.2" cy="8.7" r=".5" fill="currentColor" stroke="none" />
-          <circle cx="13.9" cy="8.7" r=".5" fill="currentColor" stroke="none" />
-          <circle cx="11.2" cy="11.3" r=".5" fill="currentColor" stroke="none" />
-          <circle cx="13.9" cy="11.3" r=".5" fill="currentColor" stroke="none" />
-        </>
-      );
     case "Wi-Fi":
       return (
         <>
@@ -79,41 +58,6 @@ function amenityGlyph(label: (typeof content.sede.amenities)[number]) {
           <path d="M12 20s-6-3.8-6-9a3.4 3.4 0 0 1 6-2.2A3.4 3.4 0 0 1 18 11c0 5.2-6 9-6 9Z" />
           <path d="M12 9v4" />
           <path d="M10 11h4" />
-        </>
-      );
-    case "Torneos":
-      return (
-        <>
-          <path d="M8 5h8v3a4 4 0 0 1-8 0Z" />
-          <path d="M10 15h4" />
-          <path d="M11 8v4" />
-          <path d="M13 8v4" />
-          <path d="M9 19h6" />
-        </>
-      );
-    case "Eventos privados":
-      return (
-        <>
-          <path d="M7 9h10v9H7Z" />
-          <path d="M9 4v3" />
-          <path d="M15 4v3" />
-          <path d="M7 12h10" />
-        </>
-      );
-    case "Bar":
-      return (
-        <>
-          <path d="M7 5h10l-1 5a4 4 0 0 1-4 3 4 4 0 0 1-4-3Z" />
-          <path d="M12 13v6" />
-          <path d="M9 19h6" />
-        </>
-      );
-    case "Quincho":
-      return (
-        <>
-          <path d="M4 11.5 12 5l8 6.5" />
-          <path d="M7 10.5V19h10v-8.5" />
-          <path d="M10 19v-4h4v4" />
         </>
       );
     default:
@@ -149,20 +93,19 @@ export function Sede() {
             {sede.title}
           </h2>
           <p className="mt-4 max-w-xl text-lg text-white/88">
-            Predio operativo para jugar, competir y organizar encuentros en
-            Pilar, con acceso claro, servicios en cancha y espacio social para
-            quedarse.
+            Predio operativo en Pilar, con acceso claro y los servicios
+            puntuales para jugar cómodo y resolver la jornada sin salir del club.
           </p>
 
           <div className="mt-10">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-              Servicios del predio
+              Servicios útiles
             </p>
-            <ul className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="mt-5 grid gap-3 sm:grid-cols-2">
               {sede.amenities.map((amenity) => (
                 <li
                   key={amenity}
-                  className="list-none border-t border-white/8 pt-4"
+                  className="list-none border border-white/8 bg-white/[0.02] px-4 py-4"
                 >
                   <div className="flex items-start gap-3">
                     <AmenityIcon>{amenityGlyph(amenity)}</AmenityIcon>
