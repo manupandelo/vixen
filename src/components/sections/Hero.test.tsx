@@ -108,8 +108,8 @@ describe("Hero", () => {
       screen.getByRole("link", { name: content.tournaments.cta.label }),
     ).toHaveAttribute("href", content.tournaments.cta.href);
     expect(
-      screen.getByRole("link", { name: content.eventos.cta.label }),
-    ).toHaveAttribute("href", content.eventos.cta.href);
+      screen.queryByRole("link", { name: /consultar por un evento/i }),
+    ).not.toBeInTheDocument();
     expect(
       within(sedeRegion).getByRole("link", { name: content.site.phoneDisplay }),
     ).toHaveAttribute("href", content.site.phoneHref);

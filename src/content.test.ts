@@ -75,16 +75,16 @@ describe("content", () => {
   it("includes tournaments and richer venue amenities for later sections", () => {
     expect(content.tournaments.image.src).toBe("/copas_trofeos.jpg");
     expect(content.tournaments.cta.href).toContain(content.site.whatsappUrl);
-    expect(content.eventos.cta.href).toContain(content.site.whatsappUrl);
+    expect(content.eventos).not.toHaveProperty("cta");
     expect(content.sede.amenities).toEqual(
       expect.arrayContaining([
         "Wi-Fi",
-        "Vestuario",
+        "Vestuarios",
         "Estacionamiento",
         "Ayuda médica",
         "Torneos",
-        "Cumpleaños",
-        "Bar / Restaurante",
+        "Eventos privados",
+        "Bar",
         "Quincho",
       ]),
     );
