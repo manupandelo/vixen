@@ -16,7 +16,7 @@ export function VenueImage({
   className?: string;
 }) {
   return (
-    <div className={`venue-frame ${className}`}>
+    <div className={`venue-frame w-full max-w-full ${className}`}>
       <Image
         src={src}
         alt={alt}

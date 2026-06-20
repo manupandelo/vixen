@@ -5,34 +5,38 @@ import { content } from "@/content";
 import { Header } from "./Header";
 
 describe("Header", () => {
-  it("shows WhatsApp as the only header CTA", () => {
+  it("shows Instagram and Facebook as the header quick actions", () => {
     render(<Header />);
 
     expect(
-      screen.getByRole("link", { name: /whatsapp/i }),
-    ).toHaveAttribute("href", content.hero.primaryCta.href);
+      screen.getByRole("link", { name: /instagram/i }),
+    ).toHaveAttribute("href", content.site.instagram);
     expect(
-      screen.queryByRole("link", { name: /reservá pádel/i }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("link", { name: /facebook/i }),
+    ).toHaveAttribute("href", content.site.facebook);
+    expect(screen.queryByRole("link", { name: /whatsapp/i })).not.toBeInTheDocument();
   });
 
-  it("keeps the navigation and WhatsApp contact action in separate groups", () => {
+  it("keeps the navigation and social actions in separate groups", () => {
     render(<Header />);
 
     const navigation = screen.getByRole("navigation", { name: /principal/i });
-    const contactGroup = screen.getByRole("group", { name: /contacto rápido/i });
+    const contactGroup = screen.getByRole("group", { name: /redes sociales/i });
 
-    expect(within(navigation).queryByRole("link", { name: /whatsapp/i })).not.toBeInTheDocument();
+    expect(within(navigation).queryByRole("link", { name: /instagram/i })).not.toBeInTheDocument();
     expect(
-      within(contactGroup).getByRole("link", { name: /whatsapp/i }),
-    ).toHaveAttribute("href", content.hero.primaryCta.href);
+      within(contactGroup).getByRole("link", { name: /instagram/i }),
+    ).toHaveAttribute("href", content.site.instagram);
+    expect(
+      within(contactGroup).getByRole("link", { name: /facebook/i }),
+    ).toHaveAttribute("href", content.site.facebook);
   });
 
   it("keeps the mobile menu active until large screens to avoid tablet crowding", () => {
     render(<Header />);
 
     const navigation = screen.getByRole("navigation", { name: /principal/i });
-    const contactGroup = screen.getByRole("group", { name: /contacto rápido/i });
+    const contactGroup = screen.getByRole("group", { name: /redes sociales/i });
     const toggle = screen.getByRole("button", { name: /abrir menú/i });
 
     expect(navigation).toHaveClass("hidden");
@@ -72,7 +76,7 @@ describe("Header", () => {
     const dialogScope = within(dialog);
     const closeButton = dialogScope.getByRole("button", { name: /cerrar menú/i });
     const logoLink = dialogScope.getByRole("link", { name: /vixen club/i });
-    const lastAction = dialogScope.getByRole("link", { name: /whatsapp/i });
+    const lastAction = dialogScope.getByRole("link", { name: /facebook/i });
 
     expect(closeButton).toHaveFocus();
 

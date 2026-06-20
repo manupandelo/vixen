@@ -44,7 +44,7 @@ export default function FutbolPage() {
         </SectionShell>
 
         <SectionShell className="border-t border-white/5 bg-[var(--color-surface)]">
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-4">
             {futbol.points.map((p) => (
               <div key={p.title}>
                 <h3 className="text-display-sm text-xl">{p.title}</h3>

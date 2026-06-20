@@ -17,11 +17,16 @@
   color-scheme: dark;
 }
 
+html {
+  overflow-x: clip;
+}
+
 body {
   background: var(--color-base);
   color: var(--color-ink);
   font-family: var(--font-body-family);
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
 }
 
 .content-shell {

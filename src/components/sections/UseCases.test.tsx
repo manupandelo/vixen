@@ -18,10 +18,13 @@ describe("UseCases", () => {
 
     const futbolPanel = getPanel(content.useCases.futbol.title);
     expect(
-      within(futbolPanel).getByRole("link", {
+      within(futbolPanel).queryByRole("link", {
         name: content.useCases.futbol.cta.label,
       }),
-    ).toHaveAttribute("href", content.useCases.futbol.cta.href);
+    ).not.toBeInTheDocument();
+    expect(
+      within(futbolPanel).getByText(/directo con vixen/i),
+    ).toBeInTheDocument();
 
     const padelPanel = getPanel(content.useCases.padel.title);
     expect(
@@ -30,9 +33,9 @@ describe("UseCases", () => {
       }),
     ).toHaveAttribute("href", content.useCases.padel.primaryCta.href);
     expect(
-      within(padelPanel).getByRole("link", {
+      within(padelPanel).queryByRole("link", {
         name: content.useCases.padel.secondaryCta.label,
       }),
-    ).toHaveAttribute("href", content.useCases.padel.secondaryCta.href);
+    ).not.toBeInTheDocument();
   });
 });

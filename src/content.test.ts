@@ -46,7 +46,7 @@ describe("content", () => {
       src: "/vixen1.jpg",
       alt: "Vista general del predio de Vixen Club con canchas y sector social",
     });
-    expect(content.hero.primaryCta.href).toContain(content.site.whatsappUrl);
+    expect(content.hero.primaryCta.href).toBe("/#disciplinas");
     expect(content.hero.secondaryCta.href).toBe(content.site.padelReservationUrl);
   });
 
@@ -60,8 +60,8 @@ describe("content", () => {
     ]);
   });
 
-  it("keeps the restored hero primary CTA copy contract explicit", () => {
-    expect(content.hero.primaryCta.label).toBe("Hablar por WhatsApp");
+  it("keeps the hero primary CTA focused on on-page exploration", () => {
+    expect(content.hero.primaryCta.label).toBe("Ver actividades");
   });
 
   it("adds trust pills and separates fútbol and pádel conversion paths", () => {
@@ -88,7 +88,7 @@ describe("content", () => {
   });
 
   it("reuses site-level CTA URLs across home conversion entry points", () => {
-    expect(content.hero.primaryCta.href).toContain(content.site.whatsappUrl);
+    expect(content.hero.primaryCta.href).toBe("/#disciplinas");
     expect(content.useCases.futbol.cta.href).toContain(content.site.whatsappUrl);
     expect(content.tournaments.cta.href).toContain(content.site.whatsappUrl);
     expect(content.hero.secondaryCta.href).toBe(content.site.padelReservationUrl);

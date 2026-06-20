@@ -40,17 +40,16 @@ export const content = {
   ] as NavLink[],
   hero: {
     kicker: "Pilar · Buenos Aires",
-    title: "Club, canchas y torneos en un solo lugar",
-    subtitle:
-      "Fútbol 7, pádel y torneos en un predio activo para jugar, competir y encontrarte.",
+    title: "Vixen Club, todo el día.",
+    subtitle: "Fútbol 7, pádel y vida de club en Pilar.",
     image: {
       src: "/vixen1.jpg",
       alt: "Vista general del predio de Vixen Club con canchas y sector social",
     },
     primaryCta: {
-      label: "Hablar por WhatsApp",
-      href: buildSiteWhatsAppUrl("Hola! Quiero más info sobre Vixen Club."),
-      message: "Hola! Quiero más info sobre Vixen Club.",
+      label: "Ver actividades",
+      href: "/#disciplinas",
+      message: "",
     },
     secondaryCta: {
       label: "Reservá pádel",
@@ -89,7 +88,7 @@ export const content = {
   futbol: {
     title: "Fútbol 7",
     intro:
-      "Jugá en las mejores canchas de Pilar. Torneos masculino y femenino, formato 7 vs 7, todos los niveles.",
+      "Jugá, reservá cancha o sumate a los torneos de fútbol 7 del club. Formato 7 vs 7, categorías activas y ritmo real de predio.",
     points: [
       {
         title: "Masculino y Femenino",
@@ -102,6 +101,10 @@ export const content = {
       {
         title: "Copas y torneos",
         body: "Fixture organizado, premios y la mejor competencia.",
+      },
+      {
+        title: "Alquiler de canchas",
+        body: "Turnos para jugar suelto, entrenar o resolver un partido entre amigos.",
       },
     ],
     cta: {
@@ -132,7 +135,7 @@ export const content = {
   useCases: {
     futbol: {
       title: "Fútbol 7",
-      body: "Fechas, cupos e inscripciones coordinadas directo con el club para resolver equipos, categorías y torneos sin fricción.",
+      body: "La parte más competitiva y social del club: resolvés una cancha, armás equipo o entrás al calendario desde un mismo canal.",
       cta: {
         label: "Hablar por WhatsApp",
         href: buildSiteWhatsAppUrl(
@@ -142,7 +145,7 @@ export const content = {
     },
     padel: {
       title: "Pádel",
-      body: "Turnos en ATC para entrar a cancha rápido; clases y torneos se coordinan desde el club sin mezclar canales.",
+      body: "Más directo y más rápido: resolvés el turno online y el club acompaña clases, americanos y consultas.",
       primaryCta: {
         label: "Reservá pádel",
         href: padelReservationUrl,
@@ -171,7 +174,7 @@ export const content = {
   },
   eventos: {
     title: "Eventos y Bar",
-    body: "Espacio social para extender la jornada con bar, quincho y formatos privados dentro del club.",
+    body: "Una parte real del club para quedarse después de jugar, organizar grupos o sumar una fecha con ritmo propio.",
   },
   sede: {
     title: "La Sede",

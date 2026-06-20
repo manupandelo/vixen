@@ -52,44 +52,44 @@ export function Eventos() {
               </article>
             ))}
           </div>
+
+          <div className="mt-7 border-t border-white/10 pt-5">
+            <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-start">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-accent)]">
+                  Club social
+                </p>
+                <p className="mt-3 max-w-lg text-sm text-white/72">
+                  Bar, vista a cancha y formatos privados dentro del mismo
+                  recorrido del club, sin sentirse como un bloque aparte.
+                </p>
+              </div>
+              <VenueImage
+                src="/canchas4.jpg"
+                alt="Canchas iluminadas y predio activo en Vixen Club"
+                className="aspect-[16/11] min-h-[11rem] max-w-[13rem] rounded-[1.1rem] sm:justify-self-end"
+              />
+            </div>
+            <div className="mt-5 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-3 sm:gap-4">
+              <div className="border-t border-white/10 pt-3 text-sm text-white/72 sm:border-t-0 sm:pt-0">
+                Bar y quincho
+              </div>
+              <div className="border-t border-white/10 pt-3 text-sm text-white/72 sm:border-t-0 sm:pt-0">
+                Eventos privados
+              </div>
+              <div className="border-t border-white/10 pt-3 text-sm text-white/72 sm:border-t-0 sm:pt-0">
+                Vista a cancha
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-[1.15fr_0.85fr] sm:items-start">
+        <div>
           <VenueImage
             src="/vixen2.jpg"
             alt="Sector social de Vixen Club con mesas y vista a las canchas"
-            className="aspect-[4/5] min-h-[21rem] sm:min-h-[24rem]"
+            className="aspect-[4/5] min-h-[21rem] sm:min-h-[28rem]"
           />
-          <div className="flex flex-col gap-4 sm:pl-4">
-            <VenueImage
-              src="/canchas4.jpg"
-              alt="Canchas iluminadas y predio activo en Vixen Club"
-              className="aspect-[4/3] min-h-[12rem]"
-            />
-            <div className="border-t border-white/10 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-accent)]">
-                Club social
-              </p>
-              <div className="mt-4 space-y-3 border-b border-white/10 pb-4">
-                <div className="flex items-center justify-between gap-4 text-sm text-white/72">
-                  <span>Bar y quincho</span>
-                  <span className="text-white/42">01</span>
-                </div>
-                <div className="flex items-center justify-between gap-4 text-sm text-white/72">
-                  <span>Eventos privados</span>
-                  <span className="text-white/42">02</span>
-                </div>
-                <div className="flex items-center justify-between gap-4 text-sm text-white/72">
-                  <span>Vista a cancha</span>
-                  <span className="text-white/42">03</span>
-                </div>
-              </div>
-              <p className="mt-4 max-w-xs text-sm text-white/58">
-                Una parte más del club, no un bloque aislado para repetir la
-                misma acción.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </SectionShell>

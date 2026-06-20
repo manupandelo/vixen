@@ -27,10 +27,12 @@
 ### Task 1: Scaffold Next.js project
 
 **Files:**
+
 - Create: `package.json`, `tsconfig.json`, `next.config.ts`, `postcss.config.mjs`, `eslint.config.mjs`, `.prettierrc`, `.gitignore`
 - Create: `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/globals.css`
 
 **Interfaces:**
+
 - Produces: a running Next.js app; root `layout.tsx` exporting `metadata` and wrapping `{children}`.
 
 - [ ] **Step 1: Scaffold with create-next-app**
@@ -72,12 +74,14 @@ git add -A && git commit -m "chore: verify build" --allow-empty
 ### Task 2: Install test tooling and design tokens
 
 **Files:**
+
 - Modify: `package.json` (scripts + devDeps)
 - Create: `vitest.config.ts`, `vitest.setup.ts`
 - Modify: `src/app/globals.css` (theme tokens + fluid type)
 - Modify: `src/app/layout.tsx` (fonts + metadata)
 
 **Interfaces:**
+
 - Produces: CSS custom properties / Tailwind theme tokens `--color-base`, `--color-surface`, `--color-ink`, `--color-accent`, `--color-warm`; font CSS vars `--font-display`, `--font-body`; npm script `test`.
 
 - [ ] **Step 1: Install dev dependencies**
@@ -229,11 +233,13 @@ git add -A && git commit -m "feat: add design tokens, fonts, and test tooling"
 ### Task 3: Content model + WhatsApp link helper (TDD)
 
 **Files:**
+
 - Create: `src/lib/whatsapp.ts`, `src/lib/whatsapp.test.ts`
 - Create: `src/content.ts`
 - Create: `src/content.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `buildWhatsAppUrl(message?: string): string` — returns `https://wa.me/5491137730713` optionally with `?text=` URL-encoded message.
   - `content` object (typed) with shape: `site` (`{ name, phoneDisplay, email, address, whatsappNumber, instagram, facebook }`), `nav: { label: string; href: string }[]`, `hero`, `disciplines: { id, title, blurb, href }[]`, `futbol`, `padel`, `eventos`, `sede`, used by all sections/pages.
@@ -352,8 +358,14 @@ export const content = {
     title: "Viví el deporte\nen Vixen",
     subtitle:
       "Torneos de fútbol 7 y pádel, clases, alquiler de canchas y eventos. Inscripción temporada 2026 abierta.",
-    primaryCta: { label: "Inscripción 2026", message: "Hola! Quiero inscribirme en la temporada 2026." },
-    secondaryCta: { label: "Reservar cancha", message: "Hola! Quiero reservar una cancha." },
+    primaryCta: {
+      label: "Inscripción 2026",
+      message: "Hola! Quiero inscribirme en la temporada 2026.",
+    },
+    secondaryCta: {
+      label: "Reservar cancha",
+      message: "Hola! Quiero reservar una cancha.",
+    },
   },
   disciplines: [
     {
@@ -374,33 +386,62 @@ export const content = {
     intro:
       "Jugá en las mejores canchas de Pilar. Torneos masculino y femenino, formato 7 vs 7, todos los niveles.",
     points: [
-      { title: "Masculino y Femenino", body: "Categorías para todos. Armá tu equipo o sumate a uno." },
-      { title: "Formato 7 vs 7", body: "Partidos dinámicos en canchas de césped sintético." },
-      { title: "Copas y torneos", body: "Fixture organizado, premios y la mejor competencia." },
+      {
+        title: "Masculino y Femenino",
+        body: "Categorías para todos. Armá tu equipo o sumate a uno.",
+      },
+      {
+        title: "Formato 7 vs 7",
+        body: "Partidos dinámicos en canchas de césped sintético.",
+      },
+      {
+        title: "Copas y torneos",
+        body: "Fixture organizado, premios y la mejor competencia.",
+      },
     ],
-    cta: { label: "Inscripción 2026", message: "Hola! Quiero anotar mi equipo de fútbol 7 para 2026." },
+    cta: {
+      label: "Inscripción 2026",
+      message: "Hola! Quiero anotar mi equipo de fútbol 7 para 2026.",
+    },
   },
   padel: {
     title: "Pádel",
     intro:
       "Torneos americanos, clases con profes y alquiler de canchas. Para jugar suelto o competir.",
     points: [
-      { title: "Torneos americanos", body: "Diversión y juego asegurado para todos los niveles." },
+      {
+        title: "Torneos americanos",
+        body: "Diversión y juego asegurado para todos los niveles.",
+      },
       { title: "Clases", body: "Mejorá tu juego con nuestros profesores." },
-      { title: "Alquiler de canchas", body: "Reservá tu turno por WhatsApp en segundos." },
+      {
+        title: "Alquiler de canchas",
+        body: "Reservá tu turno por WhatsApp en segundos.",
+      },
     ],
-    cta: { label: "Reservar cancha", message: "Hola! Quiero reservar una cancha de pádel." },
+    cta: {
+      label: "Reservar cancha",
+      message: "Hola! Quiero reservar una cancha de pádel.",
+    },
   },
   eventos: {
     title: "Eventos y Bar",
     body: "Cumpleaños, despedidas, after del partido. Nuestro espacio con bar es ideal para juntarte después de jugar.",
-    cta: { label: "Consultar por un evento", message: "Hola! Quiero consultar por un evento." },
+    cta: {
+      label: "Consultar por un evento",
+      message: "Hola! Quiero consultar por un evento.",
+    },
   },
   sede: {
     title: "La Sede",
     addressLabel: "Las Azucenas 3941, Alberti, Pilar",
     mapQuery: "Las Azucenas 3941, Alberti, Pilar, Buenos Aires",
-    amenities: ["Canchas de fútbol 7", "Canchas de pádel", "Bar y eventos", "Estacionamiento"],
+    amenities: [
+      "Canchas de fútbol 7",
+      "Canchas de pádel",
+      "Bar y eventos",
+      "Estacionamiento",
+    ],
   },
 } as const;
 ```
@@ -421,10 +462,12 @@ git add -A && git commit -m "feat: add typed content model and WhatsApp helper"
 ### Task 4: Primitive components (Button, SectionShell, SectionHeading, ImagePlaceholder, Stat)
 
 **Files:**
+
 - Create: `src/components/Button.tsx`, `src/components/SectionShell.tsx`, `src/components/SectionHeading.tsx`, `src/components/ImagePlaceholder.tsx`, `src/components/Stat.tsx`
 - Create: `src/components/Button.test.tsx`
 
 **Interfaces:**
+
 - Produces:
   - `Button({ href, variant?, children, className? })` — `variant: "primary" | "secondary" | "ghost"` (default `primary`); renders an `<a>`.
   - `SectionShell({ id?, className?, children })` — `<section>` with id anchor + responsive padding + max-width container.
@@ -454,7 +497,9 @@ describe("Button", () => {
         X
       </Button>,
     );
-    expect(screen.getByRole("link", { name: "X" }).className).toContain("border");
+    expect(screen.getByRole("link", { name: "X" }).className).toContain(
+      "border",
+    );
   });
 });
 ```
@@ -625,9 +670,11 @@ git add -A && git commit -m "feat: add primitive UI components"
 ### Task 5: Header with responsive mobile menu (TDD on menu toggle)
 
 **Files:**
+
 - Create: `src/components/Header.tsx`, `src/components/Header.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `content.nav`, `content.site`, `buildWhatsAppUrl`, `Button`.
 - Produces: `Header()` — sticky top bar; desktop inline nav; mobile hamburger that toggles a full-screen overlay menu. Client component (`"use client"`).
 
@@ -767,9 +814,11 @@ git add -A && git commit -m "feat: add responsive header with mobile menu"
 ### Task 6: Footer + floating WhatsApp button
 
 **Files:**
+
 - Create: `src/components/Footer.tsx`, `src/components/WhatsAppButton.tsx`
 
 **Interfaces:**
+
 - Consumes: `content.site`, `content.nav`, `buildWhatsAppUrl`.
 - Produces: `Footer()` (server component) and `WhatsAppButton()` (fixed bottom-right floating link).
 
@@ -824,7 +873,10 @@ export function Footer() {
           <ul className="space-y-2 text-sm">
             {nav.map((n) => (
               <li key={n.href}>
-                <Link href={n.href} className="hover:text-[var(--color-accent)]">
+                <Link
+                  href={n.href}
+                  className="hover:text-[var(--color-accent)]"
+                >
                   {n.label}
                 </Link>
               </li>
@@ -844,7 +896,11 @@ export function Footer() {
               <a href={`mailto:${site.email}`}>{site.email}</a>
             </li>
             <li className="flex gap-4 pt-2">
-              <a href={site.instagram} target="_blank" rel="noopener noreferrer">
+              <a
+                href={site.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Instagram
               </a>
               <a href={site.facebook} target="_blank" rel="noopener noreferrer">
@@ -878,9 +934,11 @@ git add -A && git commit -m "feat: add footer and floating WhatsApp button"
 ### Task 7: Home section components
 
 **Files:**
+
 - Create: `src/components/sections/Hero.tsx`, `src/components/sections/Disciplines.tsx`, `src/components/sections/HighlightBand.tsx`, `src/components/sections/Eventos.tsx`, `src/components/sections/Sede.tsx`
 
 **Interfaces:**
+
 - Consumes: `content`, `buildWhatsAppUrl`, primitives (`Button`, `SectionShell`, `SectionHeading`, `ImagePlaceholder`, `Stat`).
 - Produces: `Hero()`, `Disciplines()`, `HighlightBand({ data, reverse?, tone })` where `data` is `content.futbol` or `content.padel` (shape `{ title, intro, points: {title,body}[], cta: {label,message} }`), `Eventos()`, `Sede()`.
 
@@ -1000,10 +1058,7 @@ export function HighlightBand({
               </li>
             ))}
           </ul>
-          <Button
-            href={buildWhatsAppUrl(data.cta.message)}
-            className="mt-8"
-          >
+          <Button href={buildWhatsAppUrl(data.cta.message)} className="mt-8">
             {data.cta.label}
           </Button>
         </div>
@@ -1101,9 +1156,11 @@ git add -A && git commit -m "feat: add home page section components"
 ### Task 8: Assemble home page
 
 **Files:**
+
 - Modify: `src/app/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `Header`, `Footer`, `WhatsAppButton`, all section components, `content`.
 
 - [ ] **Step 1: Replace page.tsx**
@@ -1154,9 +1211,11 @@ git add -A && git commit -m "feat: assemble home page"
 ### Task 9: Fútbol detail page
 
 **Files:**
+
 - Create: `src/app/futbol/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `Header`, `Footer`, `WhatsAppButton`, `HighlightBand`, `SectionShell`, `SectionHeading`, `Stat`, `content.futbol`, `buildWhatsAppUrl`.
 
 - [ ] **Step 1: Create futbol/page.tsx**
@@ -1239,9 +1298,11 @@ git add -A && git commit -m "feat: add fútbol detail page"
 ### Task 10: Pádel detail page
 
 **Files:**
+
 - Create: `src/app/padel/page.tsx`
 
 **Interfaces:**
+
 - Consumes: same components as Task 9, `content.padel`.
 
 - [ ] **Step 1: Create padel/page.tsx**
@@ -1324,6 +1385,7 @@ git add -A && git commit -m "feat: add pádel detail page"
 ### Task 11: Responsive + accessibility + final verification
 
 **Files:**
+
 - Modify: any component needing fixes found during verification.
 
 **Interfaces:** none new.
@@ -1342,6 +1404,7 @@ Expected: prettier formats, lint clean (fix any warnings), tests pass, build suc
 - [ ] **Step 2: Responsive verification at three widths**
 
 Run `npm run dev`. In a browser, use device toolbar to check each route (`/`, `/futbol`, `/padel`) at **375px**, **768px**, **1280px**:
+
 - Header collapses to hamburger below `md`; full-screen menu opens/closes and links navigate.
 - Hero headline scales fluidly, never overflows horizontally.
 - Discipline cards: 1 column at 375px, 2 at ≥768px.
@@ -1369,6 +1432,7 @@ git add -A && git commit -m "chore: responsive, a11y, and quality pass"
 ## Self-Review
 
 **Spec coverage:**
+
 - Home sections (header, hero, disciplines, fútbol band, pádel band, eventos, sede, contacto/footer, footer) → Tasks 5–8. ✓
 - `/futbol`, `/padel` detail pages → Tasks 9, 10. ✓
 - Design system (tokens, fonts, primitives, motion via reduced-motion guard) → Tasks 2, 4. ✓
