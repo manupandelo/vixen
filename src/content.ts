@@ -42,7 +42,7 @@ export const content = {
     kicker: "Pilar · Buenos Aires",
     title: "Club, canchas y torneos en un solo lugar",
     subtitle:
-      "Fútbol 7, pádel, eventos y un predio activo para jugar, competir y encontrarte.",
+      "Fútbol 7, pádel y torneos en un predio activo para jugar, competir y encontrarte.",
     image: {
       src: "/vixen1.jpg",
       alt: "Vista general del predio de Vixen Club con canchas y sector social",
@@ -53,15 +53,15 @@ export const content = {
       message: "Hola! Quiero más info sobre Vixen Club.",
     },
     secondaryCta: {
-      label: "Reservá pádel en ATC",
+      label: "Reservá pádel",
       href: padelReservationUrl,
       message: "Hola! Quiero reservar una cancha.",
     },
     proof: [
       "Pilar / Del Viso",
-      "Pádel en ATC",
+      "Pádel",
       "Fútbol 7",
-      "Torneos y eventos",
+      "Torneos",
     ],
   },
   trustPills: [
@@ -144,7 +144,7 @@ export const content = {
       title: "Pádel",
       body: "Turnos en ATC para entrar a cancha rápido; clases y torneos se coordinan desde el club sin mezclar canales.",
       primaryCta: {
-        label: "Reservá pádel en ATC",
+        label: "Reservá pádel",
         href: padelReservationUrl,
       },
       secondaryCta: {

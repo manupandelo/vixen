@@ -67,7 +67,7 @@ describe("Hero", () => {
     expect(
       within(mainChildren[1]).getByRole("heading", {
         level: 2,
-        name: /fútbol 7 y pádel dentro del mismo club\./i,
+        name: /fútbol 7 y pádel\./i,
       }),
     ).toBeInTheDocument();
     expect(
@@ -94,7 +94,7 @@ describe("Hero", () => {
     render(<HomePage />);
 
     const useCasesRegion = screen.getByRole("region", {
-      name: /fútbol 7 y pádel dentro del mismo club\./i,
+      name: /fútbol 7 y pádel\./i,
     });
     const sedeRegion = screen.getByRole("region", { name: content.sede.title });
     expect(

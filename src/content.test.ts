@@ -54,9 +54,9 @@ describe("content", () => {
     expect(content.site.sponsors).toEqual(["PUMA"]);
     expect(content.hero.proof).toEqual([
       "Pilar / Del Viso",
-      "Pádel en ATC",
+      "Pádel",
       "Fútbol 7",
-      "Torneos y eventos",
+      "Torneos",
     ]);
   });
 
@@ -95,5 +95,7 @@ describe("content", () => {
     expect(content.useCases.padel.primaryCta.href).toBe(
       content.site.padelReservationUrl,
     );
+    expect(content.hero.secondaryCta.label).toBe("Reservá pádel");
+    expect(content.useCases.padel.primaryCta.label).toBe("Reservá pádel");
   });
 });

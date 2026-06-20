@@ -5,12 +5,14 @@ export function VenueImage({
   alt,
   priority = false,
   overlay = false,
+  objectPosition = "center",
   className = "",
 }: {
   src: string;
   alt: string;
   priority?: boolean;
   overlay?: boolean;
+  objectPosition?: string;
   className?: string;
 }) {
   return (
@@ -22,6 +24,7 @@ export function VenueImage({
         priority={priority}
         sizes="(max-width: 768px) 100vw, 50vw"
         className="object-cover"
+        style={{ objectPosition }}
       />
       {overlay ? <div aria-hidden="true" className="venue-frame__overlay" /> : null}
     </div>
