@@ -6,7 +6,11 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { requireAdmin } from "./data";
-import { teamFormSchema, tournamentFormSchema } from "./validation";
+import {
+  matchFormSchema,
+  teamFormSchema,
+  tournamentFormSchema,
+} from "./validation";
 
 export type ActionState = {
   ok: boolean;
@@ -108,6 +112,22 @@ function getTeamPayload(formData: FormData) {
       contact_phone: parsed.data.contactPhone,
       notes: parsed.data.notes,
     },
+  };
+}
+
+function getMatchPayload(formData: FormData) {
+  const parsed = matchFormSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) return null;
+
+  return {
+    round_label: parsed.data.roundLabel,
+    scheduled_at: parsed.data.scheduledAt,
+    home_team_id: parsed.data.homeTeamId,
+    away_team_id: parsed.data.awayTeamId,
+    home_score: parsed.data.homeScore,
+    away_score: parsed.data.awayScore,
+    status: parsed.data.status,
   };
 }
 
@@ -239,5 +259,43 @@ export async function createTeam(
   return {
     ok: true,
     message: "Equipo creado.",
+  };
+}
+
+export async function createMatch(
+  tournamentId: string,
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const payload = getMatchPayload(formData);
+
+  if (!payload) {
+    return {
+      ok: false,
+      message: "Revisá los datos del partido.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("football_matches").insert({
+    tournament_id: tournamentId,
+    ...payload,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      message: error.message,
+    };
+  }
+
+  revalidatePath(`/admin/torneos/${tournamentId}/partidos`);
+  revalidatePath("/futbol");
+
+  return {
+    ok: true,
+    message: "Partido guardado.",
   };
 }

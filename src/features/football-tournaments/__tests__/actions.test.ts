@@ -33,6 +33,7 @@ vi.mock("@/features/football-tournaments/data", () => ({
 }));
 
 import {
+  createMatch,
   createTeam,
   createTournament,
   loginAdmin,
@@ -439,5 +440,114 @@ describe("football tournament admin actions", () => {
       "/admin/torneos/tournament-1/equipos",
     );
     expect(revalidatePathMock).not.toHaveBeenCalledWith("/futbol");
+  });
+
+  it("requires admin access before rejecting invalid match data", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+
+    const state = await createMatch(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({
+        roundLabel: "",
+        scheduledAt: "",
+        homeTeamId: "team-1",
+        awayTeamId: "team-1",
+        status: "scheduled",
+        homeScore: "",
+        awayScore: "",
+      }),
+    );
+
+    expect(requireAdminMock).toHaveBeenCalledTimes(1);
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message: "Revisá los datos del partido.",
+    });
+  });
+
+  it("creates a completed match with normalized datetime and scores", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock.mockResolvedValue({ data: null, error: null });
+
+    const state = await createMatch(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({
+        roundLabel: " Fecha 1 ",
+        scheduledAt: "2026-03-01T20:30",
+        homeTeamId: "team-1",
+        awayTeamId: "team-2",
+        status: "completed",
+        homeScore: "3",
+        awayScore: "1",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Partido guardado.",
+    });
+    expect(requireAdminMock).toHaveBeenCalledTimes(1);
+    expect(fromMock).toHaveBeenCalledWith("football_matches");
+    expect(insertMock).toHaveBeenCalledWith({
+      tournament_id: "tournament-1",
+      round_label: "Fecha 1",
+      scheduled_at: "2026-03-01T20:30:00-03:00",
+      home_team_id: "team-1",
+      away_team_id: "team-2",
+      home_score: 3,
+      away_score: 1,
+      status: "completed",
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1/partidos",
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
+  });
+
+  it("clears submitted scores when creating a scheduled match", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock.mockResolvedValue({ data: null, error: null });
+
+    const state = await createMatch(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({
+        roundLabel: "Fecha 2",
+        scheduledAt: "",
+        homeTeamId: "team-1",
+        awayTeamId: "team-2",
+        status: "scheduled",
+        homeScore: "5",
+        awayScore: "4",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Partido guardado.",
+    });
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduled_at: null,
+        home_score: null,
+        away_score: null,
+        status: "scheduled",
+      }),
+    );
   });
 });

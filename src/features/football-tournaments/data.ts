@@ -72,6 +72,17 @@ type AdminTeamRow = {
   football_team_admin_details: AdminTeamDetailsRow | AdminTeamDetailsRow[] | null;
 };
 
+type AdminMatchRow = {
+  id: string;
+  round_label: string;
+  scheduled_at: string | null;
+  home_team_id: string;
+  away_team_id: string;
+  home_score: number | null;
+  away_score: number | null;
+  status: FootballMatchStatus;
+};
+
 export type AdminTournament = {
   id: string;
   name: string;
@@ -91,6 +102,17 @@ export type AdminTeam = {
   captainName: string | null;
   contactPhone: string | null;
   notes: string | null;
+};
+
+export type AdminMatch = {
+  id: string;
+  roundLabel: string;
+  scheduledAt: string | null;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  status: FootballMatchStatus;
 };
 
 function compareNullableIsoDate(
@@ -278,6 +300,19 @@ function formatAdminTeam(row: AdminTeamRow): AdminTeam {
   };
 }
 
+function formatAdminMatch(row: AdminMatchRow): AdminMatch {
+  return {
+    id: row.id,
+    roundLabel: row.round_label,
+    scheduledAt: row.scheduled_at,
+    homeTeamId: row.home_team_id,
+    awayTeamId: row.away_team_id,
+    homeScore: row.home_score,
+    awayScore: row.away_score,
+    status: row.status,
+  };
+}
+
 export async function getAdminTournaments(): Promise<AdminTournament[]> {
   await requireAdmin();
 
@@ -336,4 +371,25 @@ export async function getAdminTeams(
   }
 
   return ((data ?? []) as AdminTeamRow[]).map(formatAdminTeam);
+}
+
+export async function getAdminMatches(
+  tournamentId: string,
+): Promise<AdminMatch[]> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("football_matches")
+    .select(
+      "id, round_label, scheduled_at, home_team_id, away_team_id, home_score, away_score, status",
+    )
+    .eq("tournament_id", tournamentId)
+    .order("scheduled_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as AdminMatchRow[]).map(formatAdminMatch);
 }

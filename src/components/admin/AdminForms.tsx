@@ -3,8 +3,16 @@
 import { useActionState } from "react";
 
 import type { ActionState } from "@/features/football-tournaments/actions";
-import type { AdminTournament } from "@/features/football-tournaments/data";
-import { footballTournamentStatuses } from "@/features/football-tournaments/types";
+import type {
+  AdminTeam,
+  AdminTournament,
+} from "@/features/football-tournaments/data";
+import {
+  footballMatchStatuses,
+  footballTournamentStatuses,
+  type FootballMatchStatus,
+  type FootballTournamentStatus,
+} from "@/features/football-tournaments/types";
 
 type TournamentFormAction = (
   prevState: ActionState,
@@ -12,6 +20,11 @@ type TournamentFormAction = (
 ) => Promise<ActionState>;
 
 type TeamFormAction = (
+  prevState: ActionState,
+  formData: FormData,
+) => Promise<ActionState>;
+
+type MatchFormAction = (
   prevState: ActionState,
   formData: FormData,
 ) => Promise<ActionState>;
@@ -26,17 +39,29 @@ type TeamFormProps = {
   action: TeamFormAction;
 };
 
+type MatchFormProps = {
+  action: MatchFormAction;
+  teams: Pick<AdminTeam, "id" | "name">[];
+};
+
 const initialState: ActionState = {
   ok: false,
   message: "",
 };
 
-const statusLabels: Record<string, string> = {
+const statusLabels: Record<FootballTournamentStatus, string> = {
   draft: "Borrador",
   published: "Publicado",
   active: "Activo",
   completed: "Finalizado",
   archived: "Archivado",
+};
+
+const matchStatusLabels: Record<FootballMatchStatus, string> = {
+  scheduled: "Programado",
+  completed: "Finalizado",
+  postponed: "Postergado",
+  cancelled: "Cancelado",
 };
 
 const inputClass =
@@ -246,6 +271,140 @@ export function TeamForm({ action }: TeamFormProps) {
         className="inline-flex min-h-12 w-full items-center justify-center rounded-[0.95rem] border border-[color-mix(in_srgb,var(--color-accent)_72%,black)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-accent)_92%,white_8%),var(--color-accent))] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#07110a] shadow-[0_10px_24px_rgb(60_191_113_/_0.12)] transition duration-200 hover:-translate-y-px hover:border-[var(--color-accent-strong)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] sm:w-fit"
       >
         {isPending ? "Guardando..." : "Crear equipo"}
+      </button>
+    </form>
+  );
+}
+
+export function MatchForm({ action, teams }: MatchFormProps) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const hasEnoughTeams = teams.length >= 2;
+
+  return (
+    <form action={formAction} className="grid gap-5">
+      <div className="grid gap-4 lg:grid-cols-[1fr_0.8fr_0.8fr]">
+        <label className="grid gap-2">
+          <span className={labelClass}>Ronda</span>
+          <input
+            name="roundLabel"
+            required
+            className={inputClass}
+            placeholder="Fecha 1"
+          />
+        </label>
+
+        <label className="grid gap-2">
+          <span className={labelClass}>Día y hora</span>
+          <input name="scheduledAt" type="datetime-local" className={inputClass} />
+        </label>
+
+        <label className="grid gap-2">
+          <span className={labelClass}>Estado</span>
+          <select name="status" defaultValue="scheduled" className={inputClass}>
+            {footballMatchStatuses.map((status) => (
+              <option key={status} value={status}>
+                {matchStatusLabels[status]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <label className="grid gap-2">
+          <span className={labelClass}>Local</span>
+          <select
+            name="homeTeamId"
+            required
+            className={inputClass}
+            defaultValue=""
+            disabled={!hasEnoughTeams}
+          >
+            <option value="" disabled>
+              Elegí local
+            </option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="grid gap-2">
+          <span className={labelClass}>Visitante</span>
+          <select
+            name="awayTeamId"
+            required
+            className={inputClass}
+            defaultValue=""
+            disabled={!hasEnoughTeams}
+          >
+            <option value="" disabled>
+              Elegí visitante
+            </option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="grid gap-2">
+          <span className={labelClass}>Goles local</span>
+          <input
+            name="homeScore"
+            type="number"
+            min="0"
+            step="1"
+            inputMode="numeric"
+            className={inputClass}
+            placeholder="0"
+          />
+        </label>
+
+        <label className="grid gap-2">
+          <span className={labelClass}>Goles visitante</span>
+          <input
+            name="awayScore"
+            type="number"
+            min="0"
+            step="1"
+            inputMode="numeric"
+            className={inputClass}
+            placeholder="0"
+          />
+        </label>
+      </div>
+
+      {!hasEnoughTeams ? (
+        <p className="rounded-[0.8rem] border border-white/12 bg-white/[0.035] px-4 py-3 text-sm text-white/70">
+          Cargá al menos dos equipos antes de crear partidos.
+        </p>
+      ) : null}
+
+      {state.message ? (
+        <p
+          className={
+            state.ok
+              ? "rounded-[0.8rem] border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 px-4 py-3 text-sm text-white/86"
+              : "rounded-[0.8rem] border border-[var(--color-warm)]/35 bg-[var(--color-warm)]/10 px-4 py-3 text-sm text-white/86"
+          }
+          aria-live="polite"
+        >
+          {state.message}
+        </p>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={isPending || !hasEnoughTeams}
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-[0.95rem] border border-[color-mix(in_srgb,var(--color-accent)_72%,black)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-accent)_92%,white_8%),var(--color-accent))] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#07110a] shadow-[0_10px_24px_rgb(60_191_113_/_0.12)] transition duration-200 hover:-translate-y-px hover:border-[var(--color-accent-strong)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] sm:w-fit"
+      >
+        {isPending ? "Guardando..." : "Crear partido"}
       </button>
     </form>
   );
