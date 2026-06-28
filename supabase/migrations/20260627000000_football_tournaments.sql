@@ -112,6 +112,23 @@ create trigger football_matches_set_updated_at
 before update on public.football_matches
 for each row execute function public.set_updated_at();
 
+create or replace function public.prevent_team_tournament_change()
+returns trigger
+language plpgsql
+as $$
+begin
+  if old.tournament_id is distinct from new.tournament_id then
+    raise exception 'football team tournament_id is immutable';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger football_teams_prevent_tournament_change
+before update of tournament_id on public.football_teams
+for each row execute function public.prevent_team_tournament_change();
+
 create or replace function public.is_admin()
 returns boolean
 language sql
