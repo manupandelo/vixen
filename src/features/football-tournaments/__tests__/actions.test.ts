@@ -1,0 +1,169 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const redirectMock = vi.hoisted(() => vi.fn((path: string) => {
+  throw new Error(`NEXT_REDIRECT:${path}`);
+}));
+const revalidatePathMock = vi.hoisted(() => vi.fn());
+const requireAdminMock = vi.hoisted(() => vi.fn());
+const signInWithPasswordMock = vi.hoisted(() => vi.fn());
+const signOutMock = vi.hoisted(() => vi.fn());
+const maybeSingleMock = vi.hoisted(() => vi.fn());
+const eqMock = vi.hoisted(() => vi.fn());
+const selectMock = vi.hoisted(() => vi.fn());
+const fromMock = vi.hoisted(() => vi.fn());
+const createSupabaseServerClientMock = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
+}));
+
+vi.mock("next/cache", () => ({
+  revalidatePath: revalidatePathMock,
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseServerClient: createSupabaseServerClientMock,
+}));
+
+vi.mock("@/features/football-tournaments/data", () => ({
+  requireAdmin: requireAdminMock,
+}));
+
+import {
+  loginAdmin,
+  logoutAdmin,
+  pingAdminAccess,
+  type ActionState,
+} from "@/features/football-tournaments/actions";
+
+function formData(fields: Record<string, string>) {
+  const data = new FormData();
+
+  Object.entries(fields).forEach(([key, value]) => {
+    data.set(key, value);
+  });
+
+  return data;
+}
+
+function createSupabaseMock() {
+  eqMock.mockReturnValue({ eq: eqMock, maybeSingle: maybeSingleMock });
+  selectMock.mockReturnValue({ eq: eqMock });
+  fromMock.mockReturnValue({ select: selectMock });
+
+  const supabase = {
+    auth: {
+      signInWithPassword: signInWithPasswordMock,
+      signOut: signOutMock,
+    },
+    from: fromMock,
+  };
+
+  createSupabaseServerClientMock.mockResolvedValue(supabase);
+
+  return supabase;
+}
+
+describe("football tournament admin actions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createSupabaseMock();
+  });
+
+  it("returns a Spanish validation message when credentials are missing", async () => {
+    const state = await loginAdmin({ status: "idle" }, formData({}));
+
+    expect(state).toEqual<ActionState>({
+      status: "error",
+      message: "Ingresá email y contraseña.",
+    });
+    expect(signInWithPasswordMock).not.toHaveBeenCalled();
+  });
+
+  it("returns a Spanish error message when Supabase rejects credentials", async () => {
+    signInWithPasswordMock.mockResolvedValue({
+      data: { user: null },
+      error: new Error("Invalid login credentials"),
+    });
+
+    const state = await loginAdmin(
+      { status: "idle" },
+      formData({ email: "admin@vixen.test", password: "bad-password" }),
+    );
+
+    expect(signInWithPasswordMock).toHaveBeenCalledWith({
+      email: "admin@vixen.test",
+      password: "bad-password",
+    });
+    expect(state).toEqual<ActionState>({
+      status: "error",
+      message: "No pudimos iniciar sesión. Revisá email y contraseña.",
+    });
+  });
+
+  it("signs out and rejects a signed-in user without an admin profile", async () => {
+    signInWithPasswordMock.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+
+    const state = await loginAdmin(
+      { status: "idle" },
+      formData({ email: "user@vixen.test", password: "password" }),
+    );
+
+    expect(fromMock).toHaveBeenCalledWith("admin_profiles");
+    expect(selectMock).toHaveBeenCalledWith("id, email, role");
+    expect(eqMock).toHaveBeenCalledWith("id", "user-1");
+    expect(eqMock).toHaveBeenCalledWith("role", "admin");
+    expect(signOutMock).toHaveBeenCalledTimes(1);
+    expect(state).toEqual<ActionState>({
+      status: "error",
+      message: "Tu usuario no tiene permisos de administrador.",
+    });
+  });
+
+  it("redirects to the admin dashboard when the signed-in user is an admin", async () => {
+    signInWithPasswordMock.mockResolvedValue({
+      data: { user: { id: "admin-1" } },
+      error: null,
+    });
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "admin-1", email: "admin@vixen.test", role: "admin" },
+      error: null,
+    });
+
+    await expect(
+      loginAdmin(
+        { status: "idle" },
+        formData({ email: "admin@vixen.test", password: "password" }),
+      ),
+    ).rejects.toThrow("NEXT_REDIRECT:/admin");
+
+    expect(redirectMock).toHaveBeenCalledWith("/admin");
+  });
+
+  it("allows any current session to sign out and redirects to login", async () => {
+    await expect(logoutAdmin()).rejects.toThrow("NEXT_REDIRECT:/admin/login");
+
+    expect(signOutMock).toHaveBeenCalledTimes(1);
+    expect(redirectMock).toHaveBeenCalledWith("/admin/login");
+  });
+
+  it("verifies admin access before revalidating the admin dashboard", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+
+    await expect(pingAdminAccess()).resolves.toEqual<ActionState>({
+      status: "success",
+      message: "Acceso de administrador verificado.",
+    });
+
+    expect(requireAdminMock).toHaveBeenCalledTimes(1);
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin");
+  });
+});
