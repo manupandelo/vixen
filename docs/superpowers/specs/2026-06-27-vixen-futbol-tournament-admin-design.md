@@ -88,14 +88,24 @@ Fields:
 - `tournament_id`
 - `name`
 - `short_name`
+- `created_at`
+- `updated_at`
+
+### `football_team_admin_details`
+
+Stores private team coordination data for admin users only.
+
+Fields:
+
+- `team_id`
 - `captain_name`
 - `contact_phone`
 - `notes`
 - `created_at`
 - `updated_at`
 
-`captain_name`, `contact_phone`, and `notes` are private admin data and should
-not be exposed on the public page.
+`captain_name`, `contact_phone`, and `notes` are private admin data. They must
+stay out of the public team table and must not be exposed on the public page.
 
 ### `football_matches`
 
@@ -221,12 +231,13 @@ Public anonymous reads:
 - can read published/active/completed tournaments
 - can read teams for visible tournaments
 - can read matches for visible tournaments
+- cannot read `football_team_admin_details`
 
 Admin writes:
 
 - require authenticated Supabase user
 - require matching row in `admin_profiles`
-- can create/update/delete tournaments, teams, and matches
+- can create/update/delete tournaments, teams, team admin details, and matches
 
 Private fields such as contact phone and notes should only be readable by admin
 users.
