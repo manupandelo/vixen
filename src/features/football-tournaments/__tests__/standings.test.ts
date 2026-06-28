@@ -107,4 +107,19 @@ describe("calculateStandings", () => {
       expect.objectContaining({ teamId: "c", played: 0, points: 0 }),
     ]);
   });
+
+  it("throws when a completed match references a missing team", () => {
+    expect(() =>
+      calculateStandings(teams, [
+        {
+          id: "m5",
+          homeTeamId: "a",
+          awayTeamId: "missing-team",
+          homeScore: 1,
+          awayScore: 0,
+          status: "completed",
+        },
+      ]),
+    ).toThrow("missing-team");
+  });
 });

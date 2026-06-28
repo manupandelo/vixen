@@ -26,6 +26,36 @@ describe("football tournament validation", () => {
     });
   });
 
+  it("rejects invalid tournament calendar dates", () => {
+    expect(() =>
+      tournamentFormSchema.parse({
+        name: "Apertura 2026",
+        slug: "apertura-2026",
+        season: "2026",
+        category: "Masculino",
+        status: "published",
+        startsAt: "2026-02-30",
+        endsAt: "",
+        description: "",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a tournament ending before it starts", () => {
+    expect(() =>
+      tournamentFormSchema.parse({
+        name: "Apertura 2026",
+        slug: "apertura-2026",
+        season: "2026",
+        category: "Masculino",
+        status: "published",
+        startsAt: "2026-03-10",
+        endsAt: "2026-03-01",
+        description: "",
+      }),
+    ).toThrow();
+  });
+
   it("normalizes optional team text fields to null", () => {
     expect(
       teamFormSchema.parse({
@@ -52,6 +82,52 @@ describe("football tournament validation", () => {
         homeTeamId: "team-a",
         awayTeamId: "team-b",
         status: "completed",
+        homeScore: "",
+        awayScore: "",
+      }),
+    ).toThrow();
+  });
+
+  it("normalizes datetime-local scheduled values to Argentina offset", () => {
+    expect(
+      matchFormSchema.parse({
+        roundLabel: "Fecha 1",
+        scheduledAt: "2026-03-01T20:00",
+        homeTeamId: "team-a",
+        awayTeamId: "team-b",
+        status: "scheduled",
+        homeScore: "",
+        awayScore: "",
+      }),
+    ).toMatchObject({
+      scheduledAt: "2026-03-01T20:00:00-03:00",
+    });
+  });
+
+  it("accepts scheduled values that already include a timezone", () => {
+    expect(
+      matchFormSchema.parse({
+        roundLabel: "Fecha 1",
+        scheduledAt: "2026-03-01T23:00:00Z",
+        homeTeamId: "team-a",
+        awayTeamId: "team-b",
+        status: "scheduled",
+        homeScore: "",
+        awayScore: "",
+      }),
+    ).toMatchObject({
+      scheduledAt: "2026-03-01T23:00:00Z",
+    });
+  });
+
+  it("rejects invalid scheduled calendar dates", () => {
+    expect(() =>
+      matchFormSchema.parse({
+        roundLabel: "Fecha 1",
+        scheduledAt: "2026-02-30T20:00:00Z",
+        homeTeamId: "team-a",
+        awayTeamId: "team-b",
+        status: "scheduled",
         homeScore: "",
         awayScore: "",
       }),

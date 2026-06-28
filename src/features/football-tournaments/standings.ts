@@ -59,7 +59,16 @@ export function calculateStandings(
     const away = rows.get(match.awayTeamId);
 
     if (!home || !away) {
-      continue;
+      const missingTeamIds = [
+        home ? null : match.homeTeamId,
+        away ? null : match.awayTeamId,
+      ].filter((teamId): teamId is string => teamId !== null);
+
+      throw new Error(
+        `Completed match ${match.id} references missing team(s): ${missingTeamIds.join(
+          ", ",
+        )}.`,
+      );
     }
 
     applyResult(home, match.homeScore, match.awayScore);
