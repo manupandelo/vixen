@@ -10,6 +10,7 @@ const signOutMock = vi.hoisted(() => vi.fn());
 const maybeSingleMock = vi.hoisted(() => vi.fn());
 const eqMock = vi.hoisted(() => vi.fn());
 const selectMock = vi.hoisted(() => vi.fn());
+const singleMock = vi.hoisted(() => vi.fn());
 const insertMock = vi.hoisted(() => vi.fn());
 const updateMock = vi.hoisted(() => vi.fn());
 const fromMock = vi.hoisted(() => vi.fn());
@@ -32,6 +33,7 @@ vi.mock("@/features/football-tournaments/data", () => ({
 }));
 
 import {
+  createTeam,
   createTournament,
   loginAdmin,
   logoutAdmin,
@@ -320,5 +322,122 @@ describe("football tournament admin actions", () => {
       "/admin/torneos/tournament-1",
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
+  });
+
+  it("requires admin access before rejecting invalid team data", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+
+    const state = await createTeam(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({ name: "" }),
+    );
+
+    expect(requireAdminMock).toHaveBeenCalledTimes(1);
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message: "Revisá los datos del equipo.",
+    });
+  });
+
+  it("creates a team and private admin details in separate tables", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock
+      .mockReturnValueOnce({ select: selectMock })
+      .mockResolvedValueOnce({ data: null, error: null });
+    selectMock.mockReturnValueOnce({ single: singleMock });
+    singleMock.mockResolvedValueOnce({
+      data: { id: "team-1" },
+      error: null,
+    });
+
+    const state = await createTeam(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({
+        name: "  Deportivo Vixen  ",
+        shortName: "  DVX  ",
+        captainName: "  Ana Perez  ",
+        contactPhone: "  11 5555-1212  ",
+        notes: "  Paga por transferencia  ",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Equipo creado.",
+    });
+    expect(fromMock).toHaveBeenNthCalledWith(1, "football_teams");
+    expect(insertMock).toHaveBeenNthCalledWith(1, {
+      tournament_id: "tournament-1",
+      name: "Deportivo Vixen",
+      short_name: "DVX",
+    });
+    expect(selectMock).toHaveBeenCalledWith("id");
+    expect(singleMock).toHaveBeenCalledTimes(1);
+    expect(fromMock).toHaveBeenNthCalledWith(
+      2,
+      "football_team_admin_details",
+    );
+    expect(insertMock).toHaveBeenNthCalledWith(2, {
+      team_id: "team-1",
+      captain_name: "Ana Perez",
+      contact_phone: "11 5555-1212",
+      notes: "Paga por transferencia",
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1/equipos",
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
+  });
+
+  it("returns the Supabase error message when private team details fail", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock
+      .mockReturnValueOnce({ select: selectMock })
+      .mockResolvedValueOnce({
+        data: null,
+        error: new Error("violates row-level security policy"),
+      });
+    selectMock.mockReturnValueOnce({ single: singleMock });
+    singleMock.mockResolvedValueOnce({
+      data: { id: "team-1" },
+      error: null,
+    });
+
+    const state = await createTeam(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({
+        name: "Deportivo Vixen",
+        shortName: "",
+        captainName: "",
+        contactPhone: "",
+        notes: "",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message: "violates row-level security policy",
+    });
+    expect(insertMock).toHaveBeenCalledTimes(2);
+    expect(revalidatePathMock).not.toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1/equipos",
+    );
+    expect(revalidatePathMock).not.toHaveBeenCalledWith("/futbol");
   });
 });

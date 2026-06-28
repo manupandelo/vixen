@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { requireAdmin } from "./data";
-import { tournamentFormSchema } from "./validation";
+import { teamFormSchema, tournamentFormSchema } from "./validation";
 
 export type ActionState = {
   ok: boolean;
@@ -93,6 +93,24 @@ function getTournamentPayload(formData: FormData) {
   };
 }
 
+function getTeamPayload(formData: FormData) {
+  const parsed = teamFormSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) return null;
+
+  return {
+    publicTeam: {
+      name: parsed.data.name,
+      short_name: parsed.data.shortName,
+    },
+    adminDetails: {
+      captain_name: parsed.data.captainName,
+      contact_phone: parsed.data.contactPhone,
+      notes: parsed.data.notes,
+    },
+  };
+}
+
 export async function createTournament(
   _prevState: ActionState,
   formData: FormData,
@@ -158,5 +176,68 @@ export async function updateTournament(
   return {
     ok: true,
     message: "Torneo guardado.",
+  };
+}
+
+export async function createTeam(
+  tournamentId: string,
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const payload = getTeamPayload(formData);
+
+  if (!payload) {
+    return {
+      ok: false,
+      message: "Revisá los datos del equipo.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: team, error: teamError } = await supabase
+    .from("football_teams")
+    .insert({
+      tournament_id: tournamentId,
+      ...payload.publicTeam,
+    })
+    .select("id")
+    .single();
+
+  if (teamError) {
+    return {
+      ok: false,
+      message: teamError.message,
+    };
+  }
+
+  if (!team?.id) {
+    return {
+      ok: false,
+      message: "No pudimos crear el equipo.",
+    };
+  }
+
+  const { error: detailsError } = await supabase
+    .from("football_team_admin_details")
+    .insert({
+      team_id: team.id,
+      ...payload.adminDetails,
+    });
+
+  if (detailsError) {
+    return {
+      ok: false,
+      message: detailsError.message,
+    };
+  }
+
+  revalidatePath(`/admin/torneos/${tournamentId}/equipos`);
+  revalidatePath("/futbol");
+
+  return {
+    ok: true,
+    message: "Equipo creado.",
   };
 }

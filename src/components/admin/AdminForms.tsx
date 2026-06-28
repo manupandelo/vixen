@@ -11,10 +11,19 @@ type TournamentFormAction = (
   formData: FormData,
 ) => Promise<ActionState>;
 
+type TeamFormAction = (
+  prevState: ActionState,
+  formData: FormData,
+) => Promise<ActionState>;
+
 type TournamentFormProps = {
   action: TournamentFormAction;
   tournament?: AdminTournament;
   submitLabel: string;
+};
+
+type TeamFormProps = {
+  action: TeamFormAction;
 };
 
 const initialState: ActionState = {
@@ -161,6 +170,82 @@ export function TournamentForm({
         className="inline-flex min-h-12 w-full items-center justify-center rounded-[0.95rem] border border-[color-mix(in_srgb,var(--color-accent)_72%,black)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-accent)_92%,white_8%),var(--color-accent))] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#07110a] shadow-[0_10px_24px_rgb(60_191_113_/_0.12)] transition duration-200 hover:-translate-y-px hover:border-[var(--color-accent-strong)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] sm:w-fit"
       >
         {isPending ? "Guardando..." : submitLabel}
+      </button>
+    </form>
+  );
+}
+
+export function TeamForm({ action }: TeamFormProps) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
+
+  return (
+    <form action={formAction} className="grid gap-5">
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.6fr]">
+        <label className="grid gap-2">
+          <span className={labelClass}>Nombre</span>
+          <input
+            name="name"
+            required
+            className={inputClass}
+            placeholder="Deportivo Vixen"
+          />
+        </label>
+
+        <label className="grid gap-2">
+          <span className={labelClass}>Nombre corto</span>
+          <input name="shortName" className={inputClass} placeholder="DVX" />
+        </label>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <label className="grid gap-2">
+          <span className={labelClass}>Capitán</span>
+          <input
+            name="captainName"
+            className={inputClass}
+            placeholder="Nombre del responsable"
+          />
+        </label>
+
+        <label className="grid gap-2">
+          <span className={labelClass}>Teléfono</span>
+          <input
+            name="contactPhone"
+            className={inputClass}
+            placeholder="+54 9 11 5555-1212"
+          />
+        </label>
+      </div>
+
+      <label className="grid gap-2">
+        <span className={labelClass}>Notas privadas</span>
+        <textarea
+          name="notes"
+          rows={4}
+          className={`${inputClass} resize-y py-3 leading-6`}
+          placeholder="Información interna del equipo"
+        />
+      </label>
+
+      {state.message ? (
+        <p
+          className={
+            state.ok
+              ? "rounded-[0.8rem] border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 px-4 py-3 text-sm text-white/86"
+              : "rounded-[0.8rem] border border-[var(--color-warm)]/35 bg-[var(--color-warm)]/10 px-4 py-3 text-sm text-white/86"
+          }
+          aria-live="polite"
+        >
+          {state.message}
+        </p>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={isPending}
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-[0.95rem] border border-[color-mix(in_srgb,var(--color-accent)_72%,black)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-accent)_92%,white_8%),var(--color-accent))] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#07110a] shadow-[0_10px_24px_rgb(60_191_113_/_0.12)] transition duration-200 hover:-translate-y-px hover:border-[var(--color-accent-strong)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] sm:w-fit"
+      >
+        {isPending ? "Guardando..." : "Crear equipo"}
       </button>
     </form>
   );

@@ -59,6 +59,19 @@ type AdminTournamentRow = {
   description?: string | null;
 };
 
+type AdminTeamDetailsRow = {
+  captain_name: string | null;
+  contact_phone: string | null;
+  notes: string | null;
+};
+
+type AdminTeamRow = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  football_team_admin_details: AdminTeamDetailsRow | AdminTeamDetailsRow[] | null;
+};
+
 export type AdminTournament = {
   id: string;
   name: string;
@@ -69,6 +82,15 @@ export type AdminTournament = {
   startsAt: string | null;
   endsAt: string | null;
   description: string | null;
+};
+
+export type AdminTeam = {
+  id: string;
+  name: string;
+  shortName: string | null;
+  captainName: string | null;
+  contactPhone: string | null;
+  notes: string | null;
 };
 
 function compareNullableIsoDate(
@@ -241,6 +263,21 @@ function formatAdminTournament(row: AdminTournamentRow): AdminTournament {
   };
 }
 
+function formatAdminTeam(row: AdminTeamRow): AdminTeam {
+  const details = Array.isArray(row.football_team_admin_details)
+    ? (row.football_team_admin_details[0] ?? null)
+    : row.football_team_admin_details;
+
+  return {
+    id: row.id,
+    name: row.name,
+    shortName: row.short_name,
+    captainName: details?.captain_name ?? null,
+    contactPhone: details?.contact_phone ?? null,
+    notes: details?.notes ?? null,
+  };
+}
+
 export async function getAdminTournaments(): Promise<AdminTournament[]> {
   await requireAdmin();
 
@@ -278,4 +315,25 @@ export async function getAdminTournament(
   if (!data) return null;
 
   return formatAdminTournament(data as AdminTournamentRow);
+}
+
+export async function getAdminTeams(
+  tournamentId: string,
+): Promise<AdminTeam[]> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("football_teams")
+    .select(
+      "id, name, short_name, football_team_admin_details(captain_name, contact_phone, notes)",
+    )
+    .eq("tournament_id", tournamentId)
+    .order("name", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as AdminTeamRow[]).map(formatAdminTeam);
 }
