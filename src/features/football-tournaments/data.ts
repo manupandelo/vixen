@@ -47,17 +47,30 @@ type TournamentRow = {
   [key: string]: unknown;
 };
 
+function compareNullableIsoDate(
+  left: string | null,
+  right: string | null,
+): number {
+  if (left === null && right === null) return 0;
+  if (left === null) return 1;
+  if (right === null) return -1;
+
+  return left.localeCompare(right);
+}
+
 export function formatPublicTournament(
   row: TournamentRow,
 ): PublicFootballTournament {
-  const teams = (row.football_teams ?? []).map((team) => ({
-    id: team.id,
-    name: team.name,
-    shortName: team.short_name,
-  }));
+  const teams = (row.football_teams ?? [])
+    .map((team) => ({
+      id: team.id,
+      name: team.name,
+      shortName: team.short_name,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name, "es"));
   const teamNames = new Map(teams.map((team) => [team.id, team.name]));
-  const matches: PublicFootballMatch[] = (row.football_matches ?? []).map(
-    (match) => ({
+  const matches: PublicFootballMatch[] = (row.football_matches ?? [])
+    .map((match) => ({
       id: match.id,
       roundLabel: match.round_label,
       scheduledAt: match.scheduled_at,
@@ -68,8 +81,22 @@ export function formatPublicTournament(
       status: match.status,
       homeTeamName: teamNames.get(match.home_team_id) ?? "Equipo local",
       awayTeamName: teamNames.get(match.away_team_id) ?? "Equipo visitante",
-    }),
-  );
+    }))
+    .sort((left, right) => {
+      const dateOrder = compareNullableIsoDate(
+        left.scheduledAt,
+        right.scheduledAt,
+      );
+      if (dateOrder !== 0) return dateOrder;
+
+      const roundOrder = left.roundLabel.localeCompare(
+        right.roundLabel,
+        "es",
+      );
+      if (roundOrder !== 0) return roundOrder;
+
+      return left.id.localeCompare(right.id);
+    });
 
   return {
     id: row.id,
@@ -85,6 +112,27 @@ export function formatPublicTournament(
     matches,
     standings: calculateStandings(teams, matches),
   };
+}
+
+export function formatPublicTournamentRows(
+  rows: TournamentRow[],
+): PublicFootballTournament[] {
+  const tournaments: PublicFootballTournament[] = [];
+
+  for (const row of rows) {
+    try {
+      tournaments.push(formatPublicTournament(row));
+    } catch (error) {
+      console.error("Skipping malformed public football tournament row.", {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        error,
+      });
+    }
+  }
+
+  return tournaments;
 }
 
 export async function getPublicFootballTournaments() {
@@ -119,13 +167,12 @@ export async function getPublicFootballTournaments() {
     .order("starts_at", { ascending: false });
 
   if (error) {
-    console.error(error);
-    return [];
+    throw new Error("Failed to load public football tournaments.", {
+      cause: error,
+    });
   }
 
-  return (data ?? []).map((row) =>
-    formatPublicTournament(row as unknown as TournamentRow),
-  );
+  return formatPublicTournamentRows((data ?? []) as unknown as TournamentRow[]);
 }
 
 export const getCurrentAdmin = cache(async () => {
