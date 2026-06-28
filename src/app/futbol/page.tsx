@@ -35,7 +35,7 @@ export default async function FutbolPage() {
           <p className="mt-4 max-w-2xl text-lg text-[var(--color-muted)]">
             {futbol.intro}
           </p>
-          <div className="mt-10 flex gap-10">
+          <div className="mt-10 flex flex-wrap gap-10">
             <Stat value="7v7" label="Formato" />
             <Stat value="M/F" label="Categorías" />
             <Stat value="2026" label="Inscripción" />
