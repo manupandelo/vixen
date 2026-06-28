@@ -47,6 +47,30 @@ type TournamentRow = {
   [key: string]: unknown;
 };
 
+type AdminTournamentRow = {
+  id: string;
+  name: string;
+  slug: string;
+  season: string;
+  category: string;
+  status: FootballTournamentStatus;
+  starts_at: string | null;
+  ends_at: string | null;
+  description?: string | null;
+};
+
+export type AdminTournament = {
+  id: string;
+  name: string;
+  slug: string;
+  season: string;
+  category: string;
+  status: FootballTournamentStatus;
+  startsAt: string | null;
+  endsAt: string | null;
+  description: string | null;
+};
+
 function compareNullableIsoDate(
   left: string | null,
   right: string | null,
@@ -201,4 +225,57 @@ export async function requireAdmin() {
   }
 
   return admin;
+}
+
+function formatAdminTournament(row: AdminTournamentRow): AdminTournament {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    season: row.season,
+    category: row.category,
+    status: row.status,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    description: row.description ?? null,
+  };
+}
+
+export async function getAdminTournaments(): Promise<AdminTournament[]> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("football_tournaments")
+    .select("id, name, slug, season, category, status, starts_at, ends_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as AdminTournamentRow[]).map(formatAdminTournament);
+}
+
+export async function getAdminTournament(
+  id: string,
+): Promise<AdminTournament | null> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("football_tournaments")
+    .select(
+      "id, name, slug, season, category, status, starts_at, ends_at, description",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) return null;
+
+  return formatAdminTournament(data as AdminTournamentRow);
 }

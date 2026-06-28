@@ -10,6 +10,8 @@ const signOutMock = vi.hoisted(() => vi.fn());
 const maybeSingleMock = vi.hoisted(() => vi.fn());
 const eqMock = vi.hoisted(() => vi.fn());
 const selectMock = vi.hoisted(() => vi.fn());
+const insertMock = vi.hoisted(() => vi.fn());
+const updateMock = vi.hoisted(() => vi.fn());
 const fromMock = vi.hoisted(() => vi.fn());
 const createSupabaseServerClientMock = vi.hoisted(() => vi.fn());
 
@@ -30,9 +32,11 @@ vi.mock("@/features/football-tournaments/data", () => ({
 }));
 
 import {
+  createTournament,
   loginAdmin,
   logoutAdmin,
   pingAdminAccess,
+  updateTournament,
   type ActionState,
 } from "@/features/football-tournaments/actions";
 
@@ -49,7 +53,12 @@ function formData(fields: Record<string, string>) {
 function createSupabaseMock() {
   eqMock.mockReturnValue({ eq: eqMock, maybeSingle: maybeSingleMock });
   selectMock.mockReturnValue({ eq: eqMock });
-  fromMock.mockReturnValue({ select: selectMock });
+  updateMock.mockReturnValue({ eq: eqMock });
+  fromMock.mockReturnValue({
+    insert: insertMock,
+    select: selectMock,
+    update: updateMock,
+  });
 
   const supabase = {
     auth: {
@@ -171,5 +180,145 @@ describe("football tournament admin actions", () => {
 
     expect(requireAdminMock).toHaveBeenCalledTimes(1);
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin");
+  });
+
+  it("requires admin access before rejecting invalid tournament data", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+
+    const state = await createTournament(
+      { ok: false, message: "" },
+      formData({ name: "" }),
+    );
+
+    expect(requireAdminMock).toHaveBeenCalledTimes(1);
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message: "Revisá los datos del torneo.",
+    });
+  });
+
+  it("creates a tournament with validated snake_case fields and redirects to the list", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock.mockResolvedValue({ data: null, error: null });
+
+    await expect(
+      createTournament(
+        { ok: false, message: "" },
+        formData({
+          name: "Apertura Vixen",
+          slug: "apertura-vixen",
+          season: "2026",
+          category: "Libre",
+          status: "draft",
+          startsAt: "2026-03-01",
+          endsAt: "2026-06-30",
+          description: " Torneo interno ",
+        }),
+      ),
+    ).rejects.toThrow("NEXT_REDIRECT:/admin/torneos");
+
+    expect(requireAdminMock).toHaveBeenCalledTimes(1);
+    expect(fromMock).toHaveBeenCalledWith("football_tournaments");
+    expect(insertMock).toHaveBeenCalledWith({
+      name: "Apertura Vixen",
+      slug: "apertura-vixen",
+      season: "2026",
+      category: "Libre",
+      status: "draft",
+      starts_at: "2026-03-01",
+      ends_at: "2026-06-30",
+      description: "Torneo interno",
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/torneos");
+    expect(redirectMock).toHaveBeenCalledWith("/admin/torneos");
+  });
+
+  it("returns the Supabase error message when tournament creation fails", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock.mockResolvedValue({
+      data: null,
+      error: new Error("duplicate key value violates unique constraint"),
+    });
+
+    const state = await createTournament(
+      { ok: false, message: "" },
+      formData({
+        name: "Apertura Vixen",
+        slug: "apertura-vixen",
+        season: "2026",
+        category: "Libre",
+        status: "draft",
+        startsAt: "",
+        endsAt: "",
+        description: "",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message: "duplicate key value violates unique constraint",
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it("updates a tournament and revalidates admin and public paths", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    eqMock.mockResolvedValue({ data: null, error: null });
+
+    await expect(
+      updateTournament(
+        "tournament-1",
+        { ok: false, message: "" },
+        formData({
+          name: "Clausura Vixen",
+          slug: "clausura-vixen",
+          season: "2026",
+          category: "Senior",
+          status: "published",
+          startsAt: "2026-08-01",
+          endsAt: "",
+          description: "",
+        }),
+      ),
+    ).resolves.toEqual<ActionState>({
+      ok: true,
+      message: "Torneo guardado.",
+    });
+
+    expect(requireAdminMock).toHaveBeenCalledTimes(1);
+    expect(fromMock).toHaveBeenCalledWith("football_tournaments");
+    expect(updateMock).toHaveBeenCalledWith({
+      name: "Clausura Vixen",
+      slug: "clausura-vixen",
+      season: "2026",
+      category: "Senior",
+      status: "published",
+      starts_at: "2026-08-01",
+      ends_at: null,
+      description: null,
+    });
+    expect(eqMock).toHaveBeenCalledWith("id", "tournament-1");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/torneos");
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1",
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
   });
 });

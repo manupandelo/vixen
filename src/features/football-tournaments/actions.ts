@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { requireAdmin } from "./data";
+import { tournamentFormSchema } from "./validation";
 
 export type ActionState = {
   ok: boolean;
@@ -72,5 +73,90 @@ export async function pingAdminAccess(): Promise<ActionState> {
   return {
     ok: true,
     message: "Acceso de administrador verificado.",
+  };
+}
+
+function getTournamentPayload(formData: FormData) {
+  const parsed = tournamentFormSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) return null;
+
+  return {
+    name: parsed.data.name,
+    slug: parsed.data.slug,
+    season: parsed.data.season,
+    category: parsed.data.category,
+    status: parsed.data.status,
+    starts_at: parsed.data.startsAt,
+    ends_at: parsed.data.endsAt,
+    description: parsed.data.description,
+  };
+}
+
+export async function createTournament(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const payload = getTournamentPayload(formData);
+
+  if (!payload) {
+    return {
+      ok: false,
+      message: "Revisá los datos del torneo.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("football_tournaments").insert(payload);
+
+  if (error) {
+    return {
+      ok: false,
+      message: error.message,
+    };
+  }
+
+  revalidatePath("/admin/torneos");
+  redirect("/admin/torneos");
+}
+
+export async function updateTournament(
+  id: string,
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const payload = getTournamentPayload(formData);
+
+  if (!payload) {
+    return {
+      ok: false,
+      message: "Revisá los datos del torneo.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("football_tournaments")
+    .update(payload)
+    .eq("id", id);
+
+  if (error) {
+    return {
+      ok: false,
+      message: error.message,
+    };
+  }
+
+  revalidatePath("/admin/torneos");
+  revalidatePath(`/admin/torneos/${id}`);
+  revalidatePath("/futbol");
+
+  return {
+    ok: true,
+    message: "Torneo guardado.",
   };
 }
