@@ -8,26 +8,20 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "./data";
 
 export type ActionState = {
-  status: "idle" | "success" | "error";
-  message?: string;
+  ok: boolean;
+  message: string;
 };
-
-function getRequiredString(formData: FormData, key: string) {
-  const value = formData.get(key);
-
-  return typeof value === "string" ? value.trim() : "";
-}
 
 export async function loginAdmin(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const email = getRequiredString(formData, "email");
-  const password = getRequiredString(formData, "password");
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
 
   if (!email || !password) {
     return {
-      status: "error",
+      ok: false,
       message: "Ingresá email y contraseña.",
     };
   }
@@ -40,7 +34,7 @@ export async function loginAdmin(
 
   if (error || !data.user) {
     return {
-      status: "error",
+      ok: false,
       message: "No pudimos iniciar sesión. Revisá email y contraseña.",
     };
   }
@@ -56,7 +50,7 @@ export async function loginAdmin(
     await supabase.auth.signOut();
 
     return {
-      status: "error",
+      ok: false,
       message: "Tu usuario no tiene permisos de administrador.",
     };
   }
@@ -76,7 +70,7 @@ export async function pingAdminAccess(): Promise<ActionState> {
   revalidatePath("/admin");
 
   return {
-    status: "success",
+    ok: true,
     message: "Acceso de administrador verificado.",
   };
 }

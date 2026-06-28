@@ -8,7 +8,8 @@ import {
 } from "@/features/football-tournaments/actions";
 
 const initialState: ActionState = {
-  status: "idle",
+  ok: false,
+  message: "",
 };
 
 export function LoginForm() {
@@ -57,9 +58,9 @@ export function LoginForm() {
       {state.message ? (
         <p
           className={
-            state.status === "error"
-              ? "rounded-[0.8rem] border border-[var(--color-warm)]/35 bg-[var(--color-warm)]/10 px-4 py-3 text-sm text-white/86"
-              : "rounded-[0.8rem] border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 px-4 py-3 text-sm text-white/86"
+            state.ok
+              ? "rounded-[0.8rem] border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 px-4 py-3 text-sm text-white/86"
+              : "rounded-[0.8rem] border border-[var(--color-warm)]/35 bg-[var(--color-warm)]/10 px-4 py-3 text-sm text-white/86"
           }
           aria-live="polite"
         >

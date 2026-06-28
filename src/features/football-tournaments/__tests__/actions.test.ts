@@ -71,32 +71,38 @@ describe("football tournament admin actions", () => {
   });
 
   it("returns a Spanish validation message when credentials are missing", async () => {
-    const state = await loginAdmin({ status: "idle" }, formData({}));
+    const state = await loginAdmin(
+      { ok: false, message: "" },
+      formData({}),
+    );
 
     expect(state).toEqual<ActionState>({
-      status: "error",
+      ok: false,
       message: "Ingresá email y contraseña.",
     });
     expect(signInWithPasswordMock).not.toHaveBeenCalled();
   });
 
-  it("returns a Spanish error message when Supabase rejects credentials", async () => {
+  it("trims email, preserves password exactly, and reports rejected credentials", async () => {
     signInWithPasswordMock.mockResolvedValue({
       data: { user: null },
       error: new Error("Invalid login credentials"),
     });
 
     const state = await loginAdmin(
-      { status: "idle" },
-      formData({ email: "admin@vixen.test", password: "bad-password" }),
+      { ok: false, message: "" },
+      formData({
+        email: "  admin@vixen.test  ",
+        password: "  spaced-password  ",
+      }),
     );
 
     expect(signInWithPasswordMock).toHaveBeenCalledWith({
       email: "admin@vixen.test",
-      password: "bad-password",
+      password: "  spaced-password  ",
     });
     expect(state).toEqual<ActionState>({
-      status: "error",
+      ok: false,
       message: "No pudimos iniciar sesión. Revisá email y contraseña.",
     });
   });
@@ -109,7 +115,7 @@ describe("football tournament admin actions", () => {
     maybeSingleMock.mockResolvedValue({ data: null, error: null });
 
     const state = await loginAdmin(
-      { status: "idle" },
+      { ok: false, message: "" },
       formData({ email: "user@vixen.test", password: "password" }),
     );
 
@@ -119,7 +125,7 @@ describe("football tournament admin actions", () => {
     expect(eqMock).toHaveBeenCalledWith("role", "admin");
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(state).toEqual<ActionState>({
-      status: "error",
+      ok: false,
       message: "Tu usuario no tiene permisos de administrador.",
     });
   });
@@ -136,7 +142,7 @@ describe("football tournament admin actions", () => {
 
     await expect(
       loginAdmin(
-        { status: "idle" },
+        { ok: false, message: "" },
         formData({ email: "admin@vixen.test", password: "password" }),
       ),
     ).rejects.toThrow("NEXT_REDIRECT:/admin");
@@ -159,7 +165,7 @@ describe("football tournament admin actions", () => {
     });
 
     await expect(pingAdminAccess()).resolves.toEqual<ActionState>({
-      status: "success",
+      ok: true,
       message: "Acceso de administrador verificado.",
     });
 
