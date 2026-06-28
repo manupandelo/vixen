@@ -3,13 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { KeyboardEvent } from "react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { content } from "@/content";
 
 type HeaderCta = {
@@ -101,16 +95,16 @@ export function Header() {
       );
     });
 
-  const closeMobileMenu = useCallback(() => {
+  const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
     toggleButtonRef.current?.focus();
-  }, []);
+  };
 
   useLayoutEffect(() => {
     if (isMobileMenuOpen) {
       closeButtonRef.current?.focus();
     }
-  }, [closeMobileMenu, isMobileMenuOpen]);
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     document.documentElement.style.overflow = isMobileMenuOpen ? "hidden" : "";
@@ -118,7 +112,8 @@ export function Header() {
     const handleDocumentKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape" && isMobileMenuOpen) {
         event.preventDefault();
-        closeMobileMenu();
+        setIsMobileMenuOpen(false);
+        toggleButtonRef.current?.focus();
       }
     };
 
@@ -128,7 +123,7 @@ export function Header() {
       document.removeEventListener("keydown", handleDocumentKeyDown);
       document.documentElement.style.overflow = "";
     };
-  }, [closeMobileMenu, isMobileMenuOpen]);
+  }, [isMobileMenuOpen]);
 
   const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
