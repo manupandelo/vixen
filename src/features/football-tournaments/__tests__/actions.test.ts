@@ -47,13 +47,17 @@ import {
   createMatch,
   createTeam,
   createTournament,
+  deleteMatch,
   deleteTournament,
   generateLeagueFixture,
   loginAdmin,
   logoutAdmin,
   pingAdminAccess,
   submitViewerMatchResult,
+  updateMatch,
   updateMatchResult,
+  removeTeamFromTournament,
+  updateTeam,
   updateTournament,
   type ActionState,
 } from "@/features/football-tournaments/actions";
@@ -76,12 +80,17 @@ function createSupabaseMock() {
   const queryChain = {
     eq: eqMock,
     in: inMock,
+    select: selectMock,
     maybeSingle: maybeSingleMock,
   };
 
   eqMock.mockReturnValue(queryChain);
   inMock.mockReturnValue({ maybeSingle: maybeSingleMock });
-  selectMock.mockReturnValue({ eq: eqMock, in: inMock });
+  selectMock.mockReturnValue({
+    eq: eqMock,
+    in: inMock,
+    maybeSingle: maybeSingleMock,
+  });
   updateMock.mockReturnValue({ eq: eqMock });
   deleteMock.mockReturnValue({ eq: eqMock });
   fromMock.mockReturnValue({
@@ -437,7 +446,10 @@ describe("football tournament admin actions", () => {
       email: "admin@vixen.test",
       role: "admin",
     });
-    eqMock.mockResolvedValue({ data: null, error: null });
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "tournament-1" },
+      error: null,
+    });
 
     await expect(
       updateTournament(
@@ -474,11 +486,66 @@ describe("football tournament admin actions", () => {
       description: null,
     });
     expect(eqMock).toHaveBeenCalledWith("id", "tournament-1");
+    expect(selectMock).toHaveBeenCalledWith("id");
+    expect(maybeSingleMock).toHaveBeenCalledTimes(1);
+    expect(fromMock).toHaveBeenCalledWith("football_audit_events");
+    expect(insertMock).toHaveBeenCalledWith({
+      tournament_id: "tournament-1",
+      actor_profile_id: "admin-1",
+      actor_email: "admin@vixen.test",
+      entity_type: "tournament",
+      entity_id: "tournament-1",
+      action: "updated",
+      summary: "Actualizó datos del torneo",
+      metadata: {
+        changedFields: [
+          "name",
+          "slug",
+          "season",
+          "category",
+          "format",
+          "status",
+          "starts_at",
+          "ends_at",
+          "description",
+        ],
+      },
+    });
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/torneos");
     expect(revalidatePathMock).toHaveBeenCalledWith(
       "/admin/torneos/tournament-1",
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
+  });
+
+  it("reports when a tournament update did not touch any row", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+
+    await expect(
+      updateTournament(
+        "tournament-1",
+        { ok: false, message: "" },
+        formData({
+          name: "Clausura Vixen",
+          category: "Senior",
+          format: "league_playoff",
+          status: "published",
+          startsAt: "2026-08-01",
+          endsAt: "",
+          description: "",
+        }),
+      ),
+    ).resolves.toEqual<ActionState>({
+      ok: false,
+      message: "No pudimos guardar el torneo.",
+    });
+
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
   it("requires the tournament name before deleting a tournament", async () => {
@@ -688,6 +755,156 @@ describe("football tournament admin actions", () => {
       "/admin/torneos/tournament-1",
     );
     expect(revalidatePathMock).not.toHaveBeenCalledWith("/futbol");
+  });
+
+  it("updates a team and its private admin details", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock
+      .mockResolvedValueOnce({ data: { id: "team-1" }, error: null })
+      .mockResolvedValueOnce({ data: { team_id: "team-1" }, error: null });
+
+    const state = await updateTeam(
+      "tournament-1",
+      "team-1",
+      { ok: false, message: "" },
+      formData({
+        existingTeamId: "",
+        name: "  Deportivo Vixen  ",
+        shortName: "  DVX  ",
+        captainName: "  Ana Perez  ",
+        contactPhone: "  11 5555-1212  ",
+        notes: "  Nueva nota  ",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Equipo guardado.",
+    });
+    expect(fromMock).toHaveBeenNthCalledWith(1, "football_teams");
+    expect(updateMock).toHaveBeenNthCalledWith(1, {
+      name: "Deportivo Vixen",
+      short_name: "DVX",
+    });
+    expect(eqMock).toHaveBeenCalledWith("id", "team-1");
+    expect(fromMock).toHaveBeenNthCalledWith(
+      2,
+      "football_team_admin_details",
+    );
+    expect(updateMock).toHaveBeenNthCalledWith(2, {
+      captain_name: "Ana Perez",
+      contact_phone: "11 5555-1212",
+      notes: "Nueva nota",
+    });
+    expect(eqMock).toHaveBeenCalledWith("team_id", "team-1");
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1",
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
+  });
+
+  it("reports when a team update did not touch any team", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValueOnce({ data: null, error: null });
+
+    const state = await updateTeam(
+      "tournament-1",
+      "missing-team",
+      { ok: false, message: "" },
+      formData({
+        existingTeamId: "",
+        name: "Deportivo Vixen",
+        shortName: "DVX",
+        captainName: "",
+        contactPhone: "",
+        notes: "",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message: "No pudimos guardar el equipo.",
+    });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("removes a team from a tournament when it has no matches there", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    vi.mocked(getAdminMatches).mockResolvedValue([]);
+    maybeSingleMock.mockResolvedValueOnce({
+      data: { team_id: "team-1" },
+      error: null,
+    });
+
+    const state = await removeTeamFromTournament(
+      "tournament-1",
+      "team-1",
+      { ok: false, message: "" },
+      formData({}),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Equipo quitado del torneo.",
+    });
+    expect(fromMock).toHaveBeenCalledWith("football_tournament_teams");
+    expect(deleteMock).toHaveBeenCalledTimes(1);
+    expect(eqMock).toHaveBeenCalledWith("tournament_id", "tournament-1");
+    expect(eqMock).toHaveBeenCalledWith("team_id", "team-1");
+    expect(selectMock).toHaveBeenCalledWith("team_id");
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1",
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
+  });
+
+  it("does not remove a team that already has tournament matches", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    vi.mocked(getAdminMatches).mockResolvedValue([
+      {
+        id: "match-1",
+        roundLabel: "Fecha 1",
+        scheduledAt: null,
+        homeTeamId: "team-1",
+        awayTeamId: "team-2",
+        homeScore: null,
+        awayScore: null,
+        status: "scheduled",
+        assignedViewerId: null,
+        resultLockedAt: null,
+        resultSubmittedBy: null,
+      },
+    ]);
+
+    const state = await removeTeamFromTournament(
+      "tournament-1",
+      "team-1",
+      { ok: false, message: "" },
+      formData({}),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message:
+        "No podés quitar un equipo que ya tiene partidos en este torneo.",
+    });
+    expect(deleteMock).not.toHaveBeenCalled();
   });
 
   it("requires admin access before rejecting invalid match data", async () => {
@@ -942,6 +1159,10 @@ describe("football tournament admin actions", () => {
       email: "admin@vixen.test",
       role: "admin",
     });
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "match-1" },
+      error: null,
+    });
 
     const state = await assignMatchViewer(
       "tournament-1",
@@ -967,11 +1188,121 @@ describe("football tournament admin actions", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/veedor");
   });
 
+  it("reports when assigning a viewer did not touch any match", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+
+    const state = await assignMatchViewer(
+      "tournament-1",
+      "missing-match",
+      { ok: false, message: "" },
+      formData({ assignedViewerId: "viewer-1" }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message: "No pudimos guardar el partido.",
+    });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("lets admins update a match schedule and status", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "match-1" },
+      error: null,
+    });
+
+    const state = await updateMatch(
+      "tournament-1",
+      "match-1",
+      { ok: false, message: "" },
+      formData({
+        roundLabel: " Fecha 3 ",
+        scheduledAt: "2026-03-15T21:00",
+        homeTeamId: "team-1",
+        awayTeamId: "team-2",
+        status: "postponed",
+        homeScore: "4",
+        awayScore: "2",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Partido guardado.",
+    });
+    expect(updateMock).toHaveBeenCalledWith({
+      round_label: "Fecha 3",
+      scheduled_at: "2026-03-15T21:00:00-03:00",
+      home_team_id: "team-1",
+      away_team_id: "team-2",
+      home_score: null,
+      away_score: null,
+      status: "postponed",
+    });
+    expect(eqMock).toHaveBeenCalledWith("id", "match-1");
+    expect(eqMock).toHaveBeenCalledWith("tournament_id", "tournament-1");
+    expect(selectMock).toHaveBeenCalledWith("id");
+    expect(maybeSingleMock).toHaveBeenCalledTimes(1);
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1",
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/veedor");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
+  });
+
+  it("lets admins delete a match from a tournament", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "match-1" },
+      error: null,
+    });
+
+    const state = await deleteMatch(
+      "tournament-1",
+      "match-1",
+      { ok: false, message: "" },
+      formData({}),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Partido eliminado.",
+    });
+    expect(fromMock).toHaveBeenCalledWith("football_matches");
+    expect(deleteMock).toHaveBeenCalledTimes(1);
+    expect(eqMock).toHaveBeenCalledWith("id", "match-1");
+    expect(eqMock).toHaveBeenCalledWith("tournament_id", "tournament-1");
+    expect(selectMock).toHaveBeenCalledWith("id");
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1",
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/veedor");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
+  });
+
   it("lets admins update a locked match result", async () => {
     requireAdminMock.mockResolvedValue({
       id: "admin-1",
       email: "admin@vixen.test",
       role: "admin",
+    });
+    maybeSingleMock.mockResolvedValue({
+      data: { id: "match-1" },
+      error: null,
     });
 
     const state = await updateMatchResult(
@@ -992,6 +1323,28 @@ describe("football tournament admin actions", () => {
     });
     expect(eqMock).toHaveBeenCalledWith("id", "match-1");
     expect(eqMock).toHaveBeenCalledWith("tournament_id", "tournament-1");
+  });
+
+  it("reports when updating a match result did not touch any match", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+
+    const state = await updateMatchResult(
+      "tournament-1",
+      "missing-match",
+      { ok: false, message: "" },
+      formData({ homeScore: "4", awayScore: "2" }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message: "No pudimos guardar el partido.",
+    });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
   it("lets an assigned viewer submit a final result once and lock it", async () => {

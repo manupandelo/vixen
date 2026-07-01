@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import {
   BarChart3,
   CalendarClock,
+  History,
   Settings2,
   Users,
   type LucideIcon,
@@ -14,9 +15,13 @@ import {
   DeleteTournamentForm,
   FixtureGeneratorDialog,
   MatchCreateDialog,
+  MatchDeleteDialog,
+  MatchEditDialog,
   MatchResultForm,
   MatchViewerAssignmentForm,
   TeamCreatePanel,
+  TeamEditDialog,
+  TeamRemoveDialog,
   TournamentForm,
 } from "@/components/admin/AdminForms";
 import {
@@ -35,9 +40,13 @@ import {
   assignMatchViewer,
   createMatch,
   createTeam,
+  deleteMatch,
   deleteTournament,
   generateLeagueFixture,
+  removeTeamFromTournament,
+  updateMatch,
   updateMatchResult,
+  updateTeam,
   updateTournament,
 } from "@/features/football-tournaments/actions";
 import {
@@ -46,6 +55,8 @@ import {
   getAdminTeams,
   getAdminTournament,
   getAdminViewers,
+  getTournamentAuditEvents,
+  type AuditEvent,
   type AdminMatch,
   type AdminTeam,
   type AdminTournament,
@@ -62,7 +73,12 @@ type TournamentWorkspacePageProps = {
   }>;
 };
 
-type TournamentWorkspaceTab = "resumen" | "datos" | "equipos" | "partidos";
+type TournamentWorkspaceTab =
+  | "resumen"
+  | "datos"
+  | "equipos"
+  | "partidos"
+  | "actividad";
 
 export const metadata: Metadata = {
   title: "Torneo — Vixen Admin",
@@ -94,6 +110,11 @@ const tabs: Array<{
     label: "Partidos",
     icon: CalendarClock,
   },
+  {
+    id: "actividad",
+    label: "Actividad",
+    icon: History,
+  },
 ];
 
 const matchStatusLabels: Record<FootballMatchStatus, string> = {
@@ -112,7 +133,12 @@ const scheduledAtFormatter = new Intl.DateTimeFormat("es-AR", {
 function normalizeTab(value: string | string[] | undefined): TournamentWorkspaceTab {
   const tab = Array.isArray(value) ? value[0] : value;
 
-  if (tab === "datos" || tab === "equipos" || tab === "partidos") {
+  if (
+    tab === "datos" ||
+    tab === "equipos" ||
+    tab === "partidos" ||
+    tab === "actividad"
+  ) {
     return tab;
   }
 
@@ -160,7 +186,7 @@ function TournamentTabs({
   return (
     <nav
       aria-label="Secciones del torneo"
-      className="grid gap-1 rounded-[0.95rem] border border-white/10 bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.035)] sm:grid-cols-4"
+      className="grid gap-1 rounded-[0.95rem] border border-white/10 bg-white/[0.035] p-1 shadow-[inset_0_1px_0_rgb(255_255_255_/_0.035)] sm:grid-cols-5"
     >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
@@ -368,57 +394,77 @@ function TeamsTab({
           </AdminTableHeader>
 
           <div className="divide-y divide-white/10">
-            {teams.map((team) => (
-              <article
-                key={team.id}
-                className="grid gap-4 px-5 py-5 lg:grid-cols-[1.1fr_0.8fr_0.8fr_1fr] lg:items-start"
-              >
-                <AdminMobileField label="Equipo">
-                  <div className="flex min-w-0 items-center gap-4">
-                    {team.photoUrl ? (
-                      <Image
-                        src={team.photoUrl}
-                        alt=""
-                        width={56}
-                        height={56}
-                        unoptimized
-                        className="size-14 shrink-0 rounded-[0.8rem] object-cover"
-                      />
-                    ) : (
-                      <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-[0.8rem] border border-white/10 bg-white/[0.035] text-lg font-semibold text-white">
-                        {team.name.slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                    <div className="min-w-0">
-                      <h3 className="truncate text-lg font-semibold text-white">
-                        {team.name}
-                      </h3>
-                      <p className="mt-1 text-sm text-[var(--color-muted)]">
-                        {team.shortName ?? "Sin nombre corto"}
-                      </p>
+            {teams.map((team) => {
+              const updateTeamAction = updateTeam.bind(
+                null,
+                tournament.id,
+                team.id,
+              );
+              const removeTeamAction = removeTeamFromTournament.bind(
+                null,
+                tournament.id,
+                team.id,
+              );
+
+              return (
+                <article
+                  key={team.id}
+                  className="grid gap-4 px-5 py-5 lg:grid-cols-[1.1fr_0.8fr_0.8fr_1fr] lg:items-start"
+                >
+                  <AdminMobileField label="Equipo">
+                    <div className="flex min-w-0 items-center gap-4">
+                      {team.photoUrl ? (
+                        <Image
+                          src={team.photoUrl}
+                          alt=""
+                          width={56}
+                          height={56}
+                          unoptimized
+                          className="size-14 shrink-0 rounded-[0.8rem] object-cover"
+                        />
+                      ) : (
+                        <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-[0.8rem] border border-white/10 bg-white/[0.035] text-lg font-semibold text-white">
+                          {team.name.slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <h3 className="truncate text-lg font-semibold text-white">
+                          {team.name}
+                        </h3>
+                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          {team.shortName ?? "Sin nombre corto"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </AdminMobileField>
+                  </AdminMobileField>
 
-                <AdminMobileField label="Capitán">
-                  <p className="text-sm text-white/76">
-                    {team.captainName ?? "Sin capitán"}
-                  </p>
-                </AdminMobileField>
+                  <AdminMobileField label="Capitán">
+                    <p className="text-sm text-white/76">
+                      {team.captainName ?? "Sin capitán"}
+                    </p>
+                  </AdminMobileField>
 
-                <AdminMobileField label="Teléfono">
-                  <p className="text-sm text-white/76">
-                    {team.contactPhone ?? "Sin teléfono"}
-                  </p>
-                </AdminMobileField>
+                  <AdminMobileField label="Teléfono">
+                    <p className="text-sm text-white/76">
+                      {team.contactPhone ?? "Sin teléfono"}
+                    </p>
+                  </AdminMobileField>
 
-                <AdminMobileField label="Notas privadas">
-                  <p className="text-sm leading-6 text-white/70">
-                    {team.notes ?? "Sin notas privadas"}
-                  </p>
-                </AdminMobileField>
-              </article>
-            ))}
+                  <AdminMobileField label="Notas privadas">
+                    <p className="text-sm leading-6 text-white/70">
+                      {team.notes ?? "Sin notas privadas"}
+                    </p>
+                    <div className="mt-3 grid gap-2">
+                      <TeamEditDialog action={updateTeamAction} team={team} />
+                      <TeamRemoveDialog
+                        action={removeTeamAction}
+                        teamName={team.name}
+                      />
+                    </div>
+                  </AdminMobileField>
+                </article>
+              );
+            })}
           </div>
         </AdminPanel>
       ) : (
@@ -496,6 +542,16 @@ function MatchesTab({
                 tournament.id,
                 match.id,
               );
+              const updateMatchAction = updateMatch.bind(
+                null,
+                tournament.id,
+                match.id,
+              );
+              const deleteMatchAction = deleteMatch.bind(
+                null,
+                tournament.id,
+                match.id,
+              );
 
               return (
                 <article
@@ -564,6 +620,17 @@ function MatchesTab({
                           "Veedor asignado"
                         : "Sin veedor"}
                     </p>
+                    <div className="mt-3 grid gap-2">
+                      <MatchEditDialog
+                        action={updateMatchAction}
+                        match={match}
+                        teams={teams}
+                      />
+                      <MatchDeleteDialog
+                        action={deleteMatchAction}
+                        matchLabel={match.roundLabel}
+                      />
+                    </div>
                   </AdminMobileField>
                 </article>
               );
@@ -590,6 +657,56 @@ function MatchesTab({
               <MatchCreateDialog action={createMatchAction} teams={teams} />
             </div>
           }
+        />
+      )}
+    </section>
+  );
+}
+
+function ActivityTab({ events }: { events: AuditEvent[] }) {
+  return (
+    <section className="grid gap-5">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)] sm:text-sm">
+          Auditoría
+        </p>
+        <h2 className="mt-2 text-2xl font-semibold text-white">
+          Historial de cambios
+        </h2>
+      </div>
+
+      {events.length > 0 ? (
+        <AdminPanel>
+          <div className="divide-y divide-white/10">
+            {events.map((event) => (
+              <article
+                key={event.id}
+                className="grid gap-3 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-white">
+                      {event.summary}
+                    </p>
+                    <AdminStatusPill tone="muted">
+                      {event.entityType}
+                    </AdminStatusPill>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-[var(--color-muted)]">
+                    <span>{event.actorEmail}</span>
+                    <span>{formatScheduledAt(event.createdAt)}</span>
+                    <span>ID {event.entityId.slice(0, 8)}</span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </AdminPanel>
+      ) : (
+        <AdminEmptyState
+          eyebrow="Sin actividad"
+          title="Todavía no hay cambios auditados."
+          description="Cuando un usuario edite datos, equipos, partidos o resultados, el movimiento va a aparecer acá."
         />
       )}
     </section>
@@ -637,6 +754,12 @@ async function renderTournamentTabContent({
         viewers={viewers}
       />
     );
+  }
+
+  if (activeTab === "actividad") {
+    const events = await getTournamentAuditEvents(tournament.id);
+
+    return <ActivityTab events={events} />;
   }
 
   return renderSummaryTab(tournament);

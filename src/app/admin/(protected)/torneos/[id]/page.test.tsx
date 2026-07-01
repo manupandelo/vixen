@@ -29,6 +29,20 @@ vi.mock("@/features/football-tournaments/data", () => ({
   ]),
   getAdminAvailableTeams: vi.fn(async () => []),
   getAdminMatches: vi.fn(async () => []),
+  getTournamentAuditEvents: vi.fn(async () => [
+    {
+      id: "audit-1",
+      tournamentId: "tournament-1",
+      actorProfileId: "admin-1",
+      actorEmail: "admin@vixen.test",
+      entityType: "tournament",
+      entityId: "tournament-1",
+      action: "updated",
+      summary: "Actualizó datos del torneo",
+      metadata: { changedFields: ["status"] },
+      createdAt: "2026-07-01T12:30:00-03:00",
+    },
+  ]),
   getAdminViewers: vi.fn(async () => []),
 }));
 
@@ -36,9 +50,11 @@ vi.mock("@/features/football-tournaments/actions", () => ({
   assignMatchViewer: vi.fn(),
   createMatch: vi.fn(),
   createTeam: vi.fn(),
+  removeTeamFromTournament: vi.fn(),
   deleteTournament: vi.fn(),
   generateLeagueFixture: vi.fn(),
   updateMatchResult: vi.fn(),
+  updateTeam: vi.fn(),
   updateTournament: vi.fn(),
 }));
 
@@ -75,6 +91,10 @@ describe("AdminTournamentWorkspacePage", () => {
       "href",
       "/admin/torneos/tournament-1?tab=partidos",
     );
+    expect(screen.getByRole("link", { name: "Actividad" })).toHaveAttribute(
+      "href",
+      "/admin/torneos/tournament-1?tab=actividad",
+    );
     expect(screen.getByText("Vixen Norte")).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Ver partidos" }),
@@ -96,5 +116,18 @@ describe("AdminTournamentWorkspacePage", () => {
       "href",
       "/admin/torneos/tournament-1?tab=equipos",
     );
+  });
+
+  it("shows tournament audit events in the activity tab", async () => {
+    render(
+      await AdminTournamentWorkspacePage({
+        params: Promise.resolve({ id: "tournament-1" }),
+        searchParams: Promise.resolve({ tab: "actividad" }),
+      }),
+    );
+
+    expect(screen.getByText("Historial de cambios")).toBeInTheDocument();
+    expect(screen.getByText("Actualizó datos del torneo")).toBeInTheDocument();
+    expect(screen.getByText("admin@vixen.test")).toBeInTheDocument();
   });
 });

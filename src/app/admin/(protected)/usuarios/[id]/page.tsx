@@ -34,6 +34,7 @@ import {
 import {
   getAdminStaffProfileDetail,
   getCurrentAdmin,
+  type AuditEvent,
   type StaffActivityMatch,
 } from "@/features/football-tournaments/data";
 import type {
@@ -203,6 +204,65 @@ function MatchActivityList({
   );
 }
 
+function AuditEventList({ events }: { events: AuditEvent[] }) {
+  return (
+    <AdminPanel>
+      <div className="flex items-start gap-3 border-b border-white/10 px-5 py-4">
+        <span className="mt-0.5 grid size-10 shrink-0 place-items-center rounded-[0.85rem] border border-white/10 bg-white/[0.035] text-white/74">
+          <Activity size={18} aria-hidden="true" />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold text-white">
+            Actividad reciente
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+            Cambios registrados por esta cuenta en torneos, equipos y partidos.
+          </p>
+        </div>
+      </div>
+
+      {events.length > 0 ? (
+        <div className="divide-y divide-white/10">
+          {events.map((event) => (
+            <article
+              key={event.id}
+              className="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold text-white">
+                    {event.summary}
+                  </p>
+                  <AdminStatusPill tone="muted">
+                    {event.entityType}
+                  </AdminStatusPill>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-[var(--color-muted)]">
+                  <span>{event.actorEmail}</span>
+                  <span>{formatScheduledAt(event.createdAt)}</span>
+                  <span>ID {event.entityId.slice(0, 8)}</span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="px-5 py-6">
+          <div className="rounded-[0.95rem] border border-dashed border-white/12 bg-white/[0.02] px-4 py-5">
+            <p className="text-sm font-semibold text-white">
+              Sin cambios auditados
+            </p>
+            <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+              Cuando esta cuenta modifique datos del panel, los eventos van a
+              aparecer acá.
+            </p>
+          </div>
+        </div>
+      )}
+    </AdminPanel>
+  );
+}
+
 export default async function AdminUserDetailPage({
   params,
 }: AdminUserDetailPageProps) {
@@ -216,7 +276,8 @@ export default async function AdminUserDetailPage({
     notFound();
   }
 
-  const { profile, metrics, assignedMatches, submittedMatches } = detail;
+  const { profile, metrics, assignedMatches, submittedMatches, auditEvents } =
+    detail;
   const isSelf = profile.id === currentAdmin?.id;
   const isSuspended = profile.status === "suspended";
   const roleAction = updateStaffRole.bind(null, profile.id);
@@ -382,6 +443,8 @@ export default async function AdminUserDetailPage({
         icon={<Activity size={18} aria-hidden="true" />}
         description="Historial de resultados finales informados desde esta cuenta."
       />
+
+      <AuditEventList events={auditEvents} />
 
       <MatchActivityList
         title="Partidos asignados"

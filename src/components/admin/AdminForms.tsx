@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   CalendarPlus,
   ListChecks,
+  Pencil,
   Plus,
   Trash2,
   Trophy,
@@ -26,6 +27,7 @@ import { useActionToast } from "@/components/admin/AdminToast";
 import type { ActionState } from "@/features/football-tournaments/actions";
 import { buildLeagueFixture } from "@/features/football-tournaments/fixture";
 import type {
+  AdminMatch,
   AdminTeam,
   AdminTournament,
   StaffProfile,
@@ -101,16 +103,42 @@ type TeamFormProps = {
   action: TeamFormAction;
   availableTeams?: Pick<AdminTeam, "id" | "name" | "shortName">[];
   onSuccess?: () => void;
+  team?: AdminTeam;
+  submitLabel?: string;
 };
 
 type TeamCreatePanelProps = TeamFormProps;
 
+type TeamEditDialogProps = {
+  action: TeamFormAction;
+  team: AdminTeam;
+};
+
+type TeamRemoveDialogProps = {
+  action: TeamFormAction;
+  teamName: string;
+};
+
 type MatchFormProps = {
   action: MatchFormAction;
   teams: Pick<AdminTeam, "id" | "name">[];
+  match?: AdminMatch;
+  submitLabel?: string;
+  onSuccess?: () => void;
 };
 
 type MatchCreateDialogProps = MatchFormProps;
+
+type MatchEditDialogProps = {
+  action: MatchFormAction;
+  match: AdminMatch;
+  teams: Pick<AdminTeam, "id" | "name">[];
+};
+
+type MatchDeleteDialogProps = {
+  action: MatchAdminAction;
+  matchLabel: string;
+};
 
 type FixtureGeneratorDialogProps = {
   action: FixtureGeneratorAction;
@@ -215,6 +243,9 @@ const labelClass =
 
 const compactButtonClass =
   "inline-flex min-h-10 w-full items-center justify-center rounded-[0.8rem] border border-white/12 bg-white/[0.025] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/78 transition hover:border-[var(--color-accent)] hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
+
+const dangerCompactButtonClass =
+  "inline-flex min-h-10 w-full items-center justify-center rounded-[0.8rem] border border-[var(--color-warm)]/35 bg-[var(--color-warm)]/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[var(--color-warm)]/18 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
 const primaryButtonClass =
   "inline-flex min-h-12 w-full items-center justify-center rounded-[0.95rem] border border-[color-mix(in_srgb,var(--color-accent)_72%,black)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-accent)_92%,white_8%),var(--color-accent))] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#07110a] shadow-[0_10px_24px_rgb(60_191_113_/_0.12)] transition duration-200 hover:-translate-y-px hover:border-[var(--color-accent-strong)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] sm:w-fit";
@@ -960,15 +991,18 @@ export function TeamForm({
   action,
   availableTeams = EMPTY_AVAILABLE_TEAMS,
   onSuccess,
+  team,
+  submitLabel,
 }: TeamFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const isEditing = Boolean(team);
   const [existingTeamId, setExistingTeamId] = useState("");
   const [teamValues, setTeamValues] = useState({
-    name: "",
-    shortName: "",
-    captainName: "",
-    contactPhone: "",
-    notes: "",
+    name: team?.name ?? "",
+    shortName: team?.shortName ?? "",
+    captainName: team?.captainName ?? "",
+    contactPhone: team?.contactPhone ?? "",
+    notes: team?.notes ?? "",
   });
   const [teamPhotoError, setTeamPhotoError] = useState("");
   const isUsingExistingTeam = existingTeamId.length > 0;
@@ -986,15 +1020,17 @@ export function TeamForm({
 
   useActionToast(state, {
     onSuccess: () => {
-      setExistingTeamId("");
-      setTeamValues({
-        name: "",
-        shortName: "",
-        captainName: "",
-        contactPhone: "",
-        notes: "",
-      });
-      setTeamPhotoError("");
+      if (!isEditing) {
+        setExistingTeamId("");
+        setTeamValues({
+          name: "",
+          shortName: "",
+          captainName: "",
+          contactPhone: "",
+          notes: "",
+        });
+        setTeamPhotoError("");
+      }
       onSuccess?.();
     },
   });
@@ -1008,7 +1044,7 @@ export function TeamForm({
 
   return (
     <form action={formAction} className="grid gap-5">
-      {availableTeams.length > 0 ? (
+      {!isEditing && availableTeams.length > 0 ? (
         <label className="grid gap-2">
           <span className={labelClass}>Usar equipo existente</span>
           <select
@@ -1121,7 +1157,9 @@ export function TeamForm({
           </div>
 
           <label className="grid gap-2">
-            <span className={labelClass}>Foto del equipo</span>
+            <span className={labelClass}>
+              {isEditing ? "Nueva foto del equipo" : "Foto del equipo"}
+            </span>
             <input
               name="teamPhoto"
               type="file"
@@ -1176,9 +1214,12 @@ export function TeamForm({
       >
         {isPending
           ? "Guardando..."
-          : isUsingExistingTeam
-            ? "Agregar al torneo"
-            : "Crear equipo"}
+          : submitLabel ??
+            (isUsingExistingTeam
+              ? "Agregar al torneo"
+              : isEditing
+                ? "Guardar equipo"
+                : "Crear equipo")}
       </button>
     </form>
   );
@@ -1285,6 +1326,113 @@ export function TeamCreatePanel({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+export function TeamEditDialog({ action, team }: TeamEditDialogProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger asChild>
+        <button type="button" className={compactButtonClass}>
+          <Pencil size={14} aria-hidden="true" />
+          Editar equipo
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[88vh] w-[min(94vw,46rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[1rem] border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <Dialog.Title className="text-2xl font-semibold text-white">
+            Editar equipo
+          </Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Actualizá los datos públicos y la información privada de
+            coordinación.
+          </Dialog.Description>
+          <div className="mt-6">
+            <TeamForm
+              action={action}
+              team={team}
+              submitLabel="Guardar equipo"
+              onSuccess={() => setOpen(false)}
+            />
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+export function TeamRemoveDialog({
+  action,
+  teamName,
+}: TeamRemoveDialogProps) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [confirmation, setConfirmation] = useState("");
+  const [open, setOpen] = useState(false);
+  const canRemove = confirmation.trim() === teamName.trim();
+
+  useActionToast(state, {
+    onSuccess: () => {
+      setOpen(false);
+      setConfirmation("");
+    },
+  });
+
+  return (
+    <AlertDialog.Root open={open} onOpenChange={setOpen}>
+      <AlertDialog.Trigger asChild>
+        <button type="button" className={dangerCompactButtonClass}>
+          <Trash2 size={14} aria-hidden="true" />
+          Quitar del torneo
+        </button>
+      </AlertDialog.Trigger>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 grid w-[min(94vw,34rem)] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-[1rem] border border-[var(--color-warm)]/35 bg-[#17100d] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <div>
+            <AlertDialog.Title className="text-2xl font-semibold text-white">
+              Quitar equipo
+            </AlertDialog.Title>
+            <AlertDialog.Description className="mt-3 text-sm leading-6 text-white/68">
+              Se quita de este torneo, pero el equipo queda guardado para usarlo
+              en otros torneos. No se puede quitar si ya tiene partidos
+              cargados.
+            </AlertDialog.Description>
+          </div>
+
+          <form action={formAction} className="grid gap-4">
+            <label className="grid gap-2">
+              <span className={labelClass}>Escribí el equipo para confirmar</span>
+              <input
+                name="confirmation"
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                className={inputClass}
+                placeholder={teamName}
+                autoComplete="off"
+              />
+            </label>
+
+            <div className="flex flex-wrap justify-end gap-3">
+              <AlertDialog.Cancel asChild>
+                <button type="button" className={secondaryButtonClass}>
+                  Cancelar
+                </button>
+              </AlertDialog.Cancel>
+              <button
+                type="submit"
+                disabled={isPending || !canRemove}
+                className="inline-flex min-h-11 items-center justify-center rounded-[0.8rem] border border-[var(--color-warm)]/50 bg-[var(--color-warm)]/18 px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-warm)]/26 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+              >
+                {isPending ? "Quitando..." : "Quitar definitivamente"}
+              </button>
+            </div>
+          </form>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
   );
 }
 
@@ -1519,14 +1667,137 @@ export function MatchCreateDialog({ action, teams }: MatchCreateDialogProps) {
   );
 }
 
-function MatchForm({ action, teams }: MatchFormProps) {
+export function MatchEditDialog({
+  action,
+  match,
+  teams,
+}: MatchEditDialogProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger asChild>
+        <button type="button" className={compactButtonClass}>
+          <Pencil size={14} aria-hidden="true" />
+          Editar partido
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[88vh] w-[min(94vw,52rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[1rem] border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <Dialog.Title className="text-2xl font-semibold text-white">
+            Editar partido
+          </Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Corregí fecha, equipos, estado o resultado si hubo un error de
+            carga.
+          </Dialog.Description>
+          <div className="mt-6">
+            <MatchForm
+              action={action}
+              teams={teams}
+              match={match}
+              submitLabel="Guardar partido"
+              onSuccess={() => setOpen(false)}
+            />
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+export function MatchDeleteDialog({
+  action,
+  matchLabel,
+}: MatchDeleteDialogProps) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [confirmation, setConfirmation] = useState("");
+  const [open, setOpen] = useState(false);
+  const canDelete = confirmation.trim() === matchLabel.trim();
+
+  useActionToast(state, {
+    onSuccess: () => {
+      setOpen(false);
+      setConfirmation("");
+    },
+  });
+
+  return (
+    <AlertDialog.Root open={open} onOpenChange={setOpen}>
+      <AlertDialog.Trigger asChild>
+        <button type="button" className={dangerCompactButtonClass}>
+          <Trash2 size={14} aria-hidden="true" />
+          Eliminar partido
+        </button>
+      </AlertDialog.Trigger>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 grid w-[min(94vw,34rem)] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-[1rem] border border-[var(--color-warm)]/35 bg-[#17100d] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <div>
+            <AlertDialog.Title className="text-2xl font-semibold text-white">
+              Eliminar partido
+            </AlertDialog.Title>
+            <AlertDialog.Description className="mt-3 text-sm leading-6 text-white/68">
+              Esta acción borra el partido y su resultado. Usá editar si solo
+              necesitás postergar, cancelar o corregir datos.
+            </AlertDialog.Description>
+          </div>
+
+          <form action={formAction} className="grid gap-4">
+            <label className="grid gap-2">
+              <span className={labelClass}>Escribí la ronda para confirmar</span>
+              <input
+                name="confirmation"
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                className={inputClass}
+                placeholder={matchLabel}
+                autoComplete="off"
+              />
+            </label>
+
+            <div className="flex flex-wrap justify-end gap-3">
+              <AlertDialog.Cancel asChild>
+                <button type="button" className={secondaryButtonClass}>
+                  Cancelar
+                </button>
+              </AlertDialog.Cancel>
+              <button
+                type="submit"
+                disabled={isPending || !canDelete}
+                className="inline-flex min-h-11 items-center justify-center rounded-[0.8rem] border border-[var(--color-warm)]/50 bg-[var(--color-warm)]/18 px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-warm)]/26 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+              >
+                {isPending ? "Eliminando..." : "Eliminar definitivamente"}
+              </button>
+            </div>
+          </form>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
+  );
+}
+
+function formatDatetimeLocal(value: string | null) {
+  if (!value) return "";
+
+  return value.slice(0, 16);
+}
+
+function MatchForm({
+  action,
+  teams,
+  match,
+  submitLabel = "Crear partido",
+  onSuccess,
+}: MatchFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   const hasEnoughTeams = teams.length >= 2;
-  const [roundLabel, setRoundLabel] = useState("");
+  const [roundLabel, setRoundLabel] = useState(match?.roundLabel ?? "");
   const hasValidRoundLabel =
     roundLabel.trim().length >= 1 &&
     !isOverLimit(roundLabel, footballFormLimits.matchRoundLabel);
-  useActionToast(state);
+  useActionToast(state, { onSuccess });
 
   return (
     <form action={formAction} className="grid gap-5">
@@ -1554,13 +1825,18 @@ function MatchForm({ action, teams }: MatchFormProps) {
           <input
             name="scheduledAt"
             type="datetime-local"
+            defaultValue={formatDatetimeLocal(match?.scheduledAt ?? null)}
             className={inputClass}
           />
         </label>
 
         <label className="grid gap-2">
           <span className={labelClass}>Estado</span>
-          <select name="status" defaultValue="scheduled" className={inputClass}>
+          <select
+            name="status"
+            defaultValue={match?.status ?? "scheduled"}
+            className={inputClass}
+          >
             {footballMatchStatuses.map((status) => (
               <option key={status} value={status}>
                 {matchStatusLabels[status]}
@@ -1577,7 +1853,7 @@ function MatchForm({ action, teams }: MatchFormProps) {
             name="homeTeamId"
             required
             className={inputClass}
-            defaultValue=""
+            defaultValue={match?.homeTeamId ?? ""}
             disabled={!hasEnoughTeams}
           >
             <option value="" disabled>
@@ -1597,7 +1873,7 @@ function MatchForm({ action, teams }: MatchFormProps) {
             name="awayTeamId"
             required
             className={inputClass}
-            defaultValue=""
+            defaultValue={match?.awayTeamId ?? ""}
             disabled={!hasEnoughTeams}
           >
             <option value="" disabled>
@@ -1622,6 +1898,7 @@ function MatchForm({ action, teams }: MatchFormProps) {
             step="1"
             inputMode="numeric"
             className={inputClass}
+            defaultValue={match?.homeScore ?? ""}
             placeholder="0"
           />
         </label>
@@ -1635,6 +1912,7 @@ function MatchForm({ action, teams }: MatchFormProps) {
             step="1"
             inputMode="numeric"
             className={inputClass}
+            defaultValue={match?.awayScore ?? ""}
             placeholder="0"
           />
         </label>
@@ -1651,7 +1929,7 @@ function MatchForm({ action, teams }: MatchFormProps) {
         disabled={isPending || !hasEnoughTeams || !hasValidRoundLabel}
         className="inline-flex min-h-12 w-full items-center justify-center rounded-[0.95rem] border border-[color-mix(in_srgb,var(--color-accent)_72%,black)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-accent)_92%,white_8%),var(--color-accent))] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#07110a] shadow-[0_10px_24px_rgb(60_191_113_/_0.12)] transition duration-200 hover:-translate-y-px hover:border-[var(--color-accent-strong)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] sm:w-fit"
       >
-        {isPending ? "Guardando..." : "Crear partido"}
+        {isPending ? "Guardando..." : submitLabel}
       </button>
     </form>
   );

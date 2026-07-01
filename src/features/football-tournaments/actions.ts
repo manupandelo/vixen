@@ -10,6 +10,9 @@ import {
   getAdminTeams,
   requireAdmin,
   requireViewer,
+  type AuditAction,
+  type AuditEntityType,
+  type StaffProfile,
 } from "./data";
 import { buildLeagueFixture } from "./fixture";
 import { teamPhotoMaxBytes, teamPhotoMaxLabel } from "./limits";
@@ -26,6 +29,55 @@ export type ActionState = {
   ok: boolean;
   message: string;
 };
+
+type SupabaseServerClient = Awaited<
+  ReturnType<typeof createSupabaseServerClient>
+>;
+
+type AuditActor = Pick<StaffProfile, "id" | "email">;
+
+async function recordAuditEvent(
+  supabase: SupabaseServerClient,
+  {
+    tournamentId,
+    actor,
+    entityType,
+    entityId,
+    action,
+    summary,
+    metadata = {},
+  }: {
+    tournamentId: string;
+    actor: AuditActor;
+    entityType: AuditEntityType;
+    entityId: string;
+    action: AuditAction;
+    summary: string;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  const result = await supabase.from("football_audit_events").insert({
+    tournament_id: tournamentId,
+    actor_profile_id: actor.id,
+    actor_email: actor.email,
+    entity_type: entityType,
+    entity_id: entityId,
+    action,
+    summary,
+    metadata,
+  });
+
+  if (result?.error) {
+    console.error("Failed to record football audit event.", {
+      tournamentId,
+      actorId: actor.id,
+      entityType,
+      entityId,
+      action,
+      error: result.error,
+    });
+  }
+}
 
 function slugify(value: string) {
   const slug = value
@@ -209,6 +261,27 @@ function getTeamPayload(formData: FormData, photoUrl: string | null) {
   };
 }
 
+function getTeamEditPayload(formData: FormData, photoUrl: string | null) {
+  const parsed = teamFormSchema.safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success || !parsed.data.name || parsed.data.name.length < 2) {
+    return null;
+  }
+
+  return {
+    publicTeam: {
+      name: parsed.data.name,
+      short_name: parsed.data.shortName,
+      ...(photoUrl ? { photo_url: photoUrl } : {}),
+    },
+    adminDetails: {
+      captain_name: parsed.data.captainName,
+      contact_phone: parsed.data.contactPhone,
+      notes: parsed.data.notes,
+    },
+  };
+}
+
 function getMatchPayload(formData: FormData) {
   const parsed = matchFormSchema.safeParse(Object.fromEntries(formData));
 
@@ -302,7 +375,7 @@ export async function updateTournament(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const payload = getTournamentPayload(formData);
 
@@ -314,10 +387,12 @@ export async function updateTournament(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  const { data: updatedTournament, error } = await supabase
     .from("football_tournaments")
     .update(payload)
-    .eq("id", id);
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return {
@@ -326,8 +401,28 @@ export async function updateTournament(
     };
   }
 
+  if (!updatedTournament?.id) {
+    return {
+      ok: false,
+      message: "No pudimos guardar el torneo.",
+    };
+  }
+
+  await recordAuditEvent(supabase, {
+    tournamentId: id,
+    actor: admin,
+    entityType: "tournament",
+    entityId: id,
+    action: "updated",
+    summary: "Actualizó datos del torneo",
+    metadata: {
+      changedFields: Object.keys(payload),
+    },
+  });
+
   revalidatePath("/admin/torneos");
   revalidatePath(`/admin/torneos/${id}`);
+  revalidatePath(`/admin/usuarios/${admin.id}`);
   revalidatePath("/futbol");
 
   return {
@@ -491,6 +586,170 @@ export async function createTeam(
   };
 }
 
+export async function updateTeam(
+  tournamentId: string,
+  teamId: string,
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const { photoUrl, error: photoError } = await uploadTeamPhoto(
+    formData,
+    supabase,
+  );
+
+  if (photoError) {
+    return {
+      ok: false,
+      message: photoError.message,
+    };
+  }
+
+  const payload = getTeamEditPayload(formData, photoUrl);
+
+  if (!payload) {
+    return {
+      ok: false,
+      message: "Revisá los datos del equipo.",
+    };
+  }
+
+  const { data: updatedTeam, error: teamError } = await supabase
+    .from("football_teams")
+    .update(payload.publicTeam)
+    .eq("id", teamId)
+    .select("id")
+    .maybeSingle();
+
+  if (teamError) {
+    return {
+      ok: false,
+      message: teamError.message,
+    };
+  }
+
+  if (!updatedTeam?.id) {
+    return {
+      ok: false,
+      message: "No pudimos guardar el equipo.",
+    };
+  }
+
+  const { data: updatedDetails, error: detailsError } = await supabase
+    .from("football_team_admin_details")
+    .update(payload.adminDetails)
+    .eq("team_id", teamId)
+    .select("team_id")
+    .maybeSingle();
+
+  if (detailsError) {
+    return {
+      ok: false,
+      message: detailsError.message,
+    };
+  }
+
+  if (!updatedDetails?.team_id) {
+    return {
+      ok: false,
+      message: "No pudimos guardar los datos privados del equipo.",
+    };
+  }
+
+  await recordAuditEvent(supabase, {
+    tournamentId,
+    actor: admin,
+    entityType: "team",
+    entityId: teamId,
+    action: "updated",
+    summary: "Actualizó datos de un equipo",
+    metadata: {
+      changedFields: [
+        ...Object.keys(payload.publicTeam),
+        ...Object.keys(payload.adminDetails),
+      ],
+    },
+  });
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath(`/admin/usuarios/${admin.id}`);
+  revalidatePath("/futbol");
+
+  return {
+    ok: true,
+    message: "Equipo guardado.",
+  };
+}
+
+export async function removeTeamFromTournament(
+  tournamentId: string,
+  teamId: string,
+  _prevState?: ActionState,
+  _formData?: FormData,
+): Promise<ActionState> {
+  void _prevState;
+  void _formData;
+
+  const admin = await requireAdmin();
+
+  const matches = await getAdminMatches(tournamentId);
+  const hasTournamentMatch = matches.some(
+    (match) => match.homeTeamId === teamId || match.awayTeamId === teamId,
+  );
+
+  if (hasTournamentMatch) {
+    return {
+      ok: false,
+      message:
+        "No podés quitar un equipo que ya tiene partidos en este torneo.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: removedTeam, error } = await supabase
+    .from("football_tournament_teams")
+    .delete()
+    .eq("tournament_id", tournamentId)
+    .eq("team_id", teamId)
+    .select("team_id")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ok: false,
+      message: error.message,
+    };
+  }
+
+  if (!removedTeam?.team_id) {
+    return {
+      ok: false,
+      message: "No pudimos quitar el equipo del torneo.",
+    };
+  }
+
+  await recordAuditEvent(supabase, {
+    tournamentId,
+    actor: admin,
+    entityType: "team",
+    entityId: teamId,
+    action: "removed_from_tournament",
+    summary: "Quitó un equipo del torneo",
+    metadata: {},
+  });
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath(`/admin/usuarios/${admin.id}`);
+  revalidatePath("/futbol");
+
+  return {
+    ok: true,
+    message: "Equipo quitado del torneo.",
+  };
+}
+
 export async function createMatch(
   tournamentId: string,
   _prevState: ActionState,
@@ -526,6 +785,124 @@ export async function createMatch(
   return {
     ok: true,
     message: "Partido guardado.",
+  };
+}
+
+export async function updateMatch(
+  tournamentId: string,
+  matchId: string,
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await requireAdmin();
+
+  const payload = getMatchPayload(formData);
+
+  if (!payload) {
+    return {
+      ok: false,
+      message: "Revisá los datos del partido.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: updatedMatch, error } = await supabase
+    .from("football_matches")
+    .update(payload)
+    .eq("id", matchId)
+    .eq("tournament_id", tournamentId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ok: false,
+      message: error.message,
+    };
+  }
+
+  if (!updatedMatch?.id) {
+    return {
+      ok: false,
+      message: "No pudimos guardar el partido.",
+    };
+  }
+
+  await recordAuditEvent(supabase, {
+    tournamentId,
+    actor: admin,
+    entityType: "match",
+    entityId: matchId,
+    action: "updated",
+    summary: `Actualizó partido ${payload.round_label}`,
+    metadata: {
+      changedFields: Object.keys(payload),
+    },
+  });
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath(`/admin/usuarios/${admin.id}`);
+  revalidatePath("/veedor");
+  revalidatePath("/futbol");
+
+  return {
+    ok: true,
+    message: "Partido guardado.",
+  };
+}
+
+export async function deleteMatch(
+  tournamentId: string,
+  matchId: string,
+  _prevState?: ActionState,
+  _formData?: FormData,
+): Promise<ActionState> {
+  void _prevState;
+  void _formData;
+
+  const admin = await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const { data: deletedMatch, error } = await supabase
+    .from("football_matches")
+    .delete()
+    .eq("id", matchId)
+    .eq("tournament_id", tournamentId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ok: false,
+      message: error.message,
+    };
+  }
+
+  if (!deletedMatch?.id) {
+    return {
+      ok: false,
+      message: "No pudimos eliminar el partido.",
+    };
+  }
+
+  await recordAuditEvent(supabase, {
+    tournamentId,
+    actor: admin,
+    entityType: "match",
+    entityId: matchId,
+    action: "deleted",
+    summary: "Eliminó un partido",
+    metadata: {},
+  });
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath(`/admin/usuarios/${admin.id}`);
+  revalidatePath("/veedor");
+  revalidatePath("/futbol");
+
+  return {
+    ok: true,
+    message: "Partido eliminado.",
   };
 }
 
@@ -613,7 +990,7 @@ export async function assignMatchViewer(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const payload = getViewerAssignmentPayload(formData);
 
@@ -625,11 +1002,13 @@ export async function assignMatchViewer(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  const { data: updatedMatch, error } = await supabase
     .from("football_matches")
     .update(payload)
     .eq("id", matchId)
-    .eq("tournament_id", tournamentId);
+    .eq("tournament_id", tournamentId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return {
@@ -638,7 +1017,29 @@ export async function assignMatchViewer(
     };
   }
 
+  if (!updatedMatch?.id) {
+    return {
+      ok: false,
+      message: "No pudimos guardar el partido.",
+    };
+  }
+
+  await recordAuditEvent(supabase, {
+    tournamentId,
+    actor: admin,
+    entityType: "viewer_assignment",
+    entityId: matchId,
+    action: "assigned",
+    summary: payload.assigned_viewer_id
+      ? "Asignó veedor a un partido"
+      : "Quitó veedor de un partido",
+    metadata: {
+      assignedViewerId: payload.assigned_viewer_id,
+    },
+  });
+
   revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath(`/admin/usuarios/${admin.id}`);
   revalidatePath("/veedor");
 
   return {
@@ -653,7 +1054,7 @@ export async function updateMatchResult(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const payload = getMatchResultPayload(formData);
 
@@ -665,11 +1066,13 @@ export async function updateMatchResult(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  const { data: updatedMatch, error } = await supabase
     .from("football_matches")
     .update(payload)
     .eq("id", matchId)
-    .eq("tournament_id", tournamentId);
+    .eq("tournament_id", tournamentId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return {
@@ -678,7 +1081,28 @@ export async function updateMatchResult(
     };
   }
 
+  if (!updatedMatch?.id) {
+    return {
+      ok: false,
+      message: "No pudimos guardar el partido.",
+    };
+  }
+
+  await recordAuditEvent(supabase, {
+    tournamentId,
+    actor: admin,
+    entityType: "match_result",
+    entityId: matchId,
+    action: "updated",
+    summary: "Corrigió resultado de un partido",
+    metadata: {
+      homeScore: payload.home_score,
+      awayScore: payload.away_score,
+    },
+  });
+
   revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath(`/admin/usuarios/${admin.id}`);
   revalidatePath("/veedor");
   revalidatePath("/futbol");
 
@@ -743,9 +1167,23 @@ export async function submitViewerMatchResult(
     };
   }
 
+  await recordAuditEvent(supabase, {
+    tournamentId: match.tournament_id,
+    actor: viewer,
+    entityType: "match_result",
+    entityId: matchId,
+    action: "submitted",
+    summary: "Cargó resultado final",
+    metadata: {
+      homeScore: payload.home_score,
+      awayScore: payload.away_score,
+    },
+  });
+
   revalidatePath("/veedor");
   revalidatePath("/futbol");
   revalidatePath(`/admin/torneos/${match.tournament_id}`);
+  revalidatePath(`/admin/usuarios/${viewer.id}`);
 
   return {
     ok: true,

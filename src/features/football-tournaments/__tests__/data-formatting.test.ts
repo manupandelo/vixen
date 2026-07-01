@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  formatAuditEvent,
   formatAdminDashboardSummary,
   formatPublicTournament,
   formatPublicTournamentRows,
@@ -8,6 +9,36 @@ import {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("formatAuditEvent", () => {
+  it("maps database audit rows to the admin activity shape", () => {
+    const event = formatAuditEvent({
+      id: "audit-1",
+      tournament_id: "tournament-1",
+      actor_profile_id: "admin-1",
+      actor_email: "admin@vixen.test",
+      entity_type: "tournament",
+      entity_id: "tournament-1",
+      action: "updated",
+      summary: "Actualizó datos del torneo",
+      metadata: { changedFields: ["status"] },
+      created_at: "2026-07-01T12:30:00-03:00",
+    });
+
+    expect(event).toEqual({
+      id: "audit-1",
+      tournamentId: "tournament-1",
+      actorProfileId: "admin-1",
+      actorEmail: "admin@vixen.test",
+      entityType: "tournament",
+      entityId: "tournament-1",
+      action: "updated",
+      summary: "Actualizó datos del torneo",
+      metadata: { changedFields: ["status"] },
+      createdAt: "2026-07-01T12:30:00-03:00",
+    });
+  });
 });
 
 describe("formatAdminDashboardSummary", () => {

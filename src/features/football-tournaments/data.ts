@@ -161,6 +161,34 @@ type StaffActivityMatchRow = AdminMatchRow & {
     | null;
 };
 
+export type AuditEntityType =
+  | "tournament"
+  | "team"
+  | "match"
+  | "viewer_assignment"
+  | "match_result";
+
+export type AuditAction =
+  | "created"
+  | "updated"
+  | "deleted"
+  | "removed_from_tournament"
+  | "assigned"
+  | "submitted";
+
+export type AuditEventRow = {
+  id: string;
+  tournament_id: string | null;
+  actor_profile_id: string | null;
+  actor_email: string;
+  entity_type: AuditEntityType;
+  entity_id: string;
+  action: AuditAction;
+  summary: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 export type AdminTournament = {
   id: string;
   name: string;
@@ -219,6 +247,19 @@ export type StaffActivityMatch = {
   status: FootballMatchStatus;
 };
 
+export type AuditEvent = {
+  id: string;
+  tournamentId: string | null;
+  actorProfileId: string | null;
+  actorEmail: string;
+  entityType: AuditEntityType;
+  entityId: string;
+  action: AuditAction;
+  summary: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
 export type StaffProfileDetail = {
   profile: StaffProfile;
   metrics: {
@@ -228,6 +269,7 @@ export type StaffProfileDetail = {
   };
   assignedMatches: StaffActivityMatch[];
   submittedMatches: StaffActivityMatch[];
+  auditEvents: AuditEvent[];
 };
 
 export type AdminDashboardSummary = {
@@ -689,6 +731,21 @@ function formatStaffActivityMatch(
   };
 }
 
+export function formatAuditEvent(row: AuditEventRow): AuditEvent {
+  return {
+    id: row.id,
+    tournamentId: row.tournament_id,
+    actorProfileId: row.actor_profile_id,
+    actorEmail: row.actor_email,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    action: row.action,
+    summary: row.summary,
+    metadata: row.metadata ?? {},
+    createdAt: row.created_at,
+  };
+}
+
 export async function getAdminTournaments(): Promise<AdminTournament[]> {
   await requireAdmin();
 
@@ -885,6 +942,48 @@ export async function getAdminMatches(
   return ((data ?? []) as AdminMatchRow[]).map(formatAdminMatch);
 }
 
+export async function getTournamentAuditEvents(
+  tournamentId: string,
+): Promise<AuditEvent[]> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("football_audit_events")
+    .select(
+      "id, tournament_id, actor_profile_id, actor_email, entity_type, entity_id, action, summary, metadata, created_at",
+    )
+    .eq("tournament_id", tournamentId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as AuditEventRow[]).map(formatAuditEvent);
+}
+
+export async function getStaffAuditEvents(
+  profileId: string,
+): Promise<AuditEvent[]> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("football_audit_events")
+    .select(
+      "id, tournament_id, actor_profile_id, actor_email, entity_type, entity_id, action, summary, metadata, created_at",
+    )
+    .eq("actor_profile_id", profileId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as AuditEventRow[]).map(formatAuditEvent);
+}
+
 export async function getAdminViewers(): Promise<StaffProfile[]> {
   await requireAdmin();
 
@@ -953,8 +1052,11 @@ export async function getAdminStaffProfileDetail(
     home_team:football_teams!football_matches_home_team_id_fkey(name),
     away_team:football_teams!football_matches_away_team_id_fkey(name)
   `;
-  const [{ data: assigned, error: assignedError }, { data: submitted, error }] =
-    await Promise.all([
+  const [
+    { data: assigned, error: assignedError },
+    { data: submitted, error },
+    auditEvents,
+  ] = await Promise.all([
       supabase
         .from("football_matches")
         .select(matchSelect)
@@ -965,6 +1067,7 @@ export async function getAdminStaffProfileDetail(
         .select(matchSelect)
         .eq("result_submitted_by", id)
         .order("scheduled_at", { ascending: false }),
+      getStaffAuditEvents(id),
     ]);
 
   if (assignedError) {
@@ -993,6 +1096,7 @@ export async function getAdminStaffProfileDetail(
     },
     assignedMatches,
     submittedMatches,
+    auditEvents,
   };
 }
 

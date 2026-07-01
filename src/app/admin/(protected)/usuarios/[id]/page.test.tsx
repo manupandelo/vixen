@@ -80,6 +80,20 @@ describe("AdminUserDetailPage", () => {
           status: "scheduled",
         },
       ],
+      auditEvents: [
+        {
+          id: "audit-1",
+          tournamentId: "tournament-1",
+          actorProfileId: "viewer-1",
+          actorEmail: "veedor@vixen.test",
+          entityType: "match_result",
+          entityId: "match-1",
+          action: "submitted",
+          summary: "Cargó resultado final",
+          metadata: { matchId: "match-1" },
+          createdAt: "2026-07-01T12:30:00-03:00",
+        },
+      ],
     });
 
     render(
@@ -100,6 +114,8 @@ describe("AdminUserDetailPage", () => {
     expect(screen.getAllByText("Apertura Vixen").length).toBeGreaterThan(0);
     expect(screen.getByText("Norte 2 - 1 Sur")).toBeInTheDocument();
     expect(screen.getByText("Este vs Oeste")).toBeInTheDocument();
+    expect(screen.getByText("Actividad reciente")).toBeInTheDocument();
+    expect(screen.getByText("Cargó resultado final")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Actualizar" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Suspender" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Eliminar" })).toBeInTheDocument();
