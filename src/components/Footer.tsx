@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { content } from "@/content";
 
+const COPYRIGHT_YEAR = 2026;
+
 export function Footer() {
   const { site, nav } = content;
   const sectionLabelClass =
@@ -109,7 +111,7 @@ export function Footer() {
               ))}
             </nav>
             <p className="text-xs text-[var(--color-muted)]">
-              © {new Date().getFullYear()} {site.name}. Todos los derechos reservados.
+              © {COPYRIGHT_YEAR} {site.name}. Todos los derechos reservados.
             </p>
           </div>
         </div>

@@ -33,7 +33,7 @@ export function LoginForm() {
           type="email"
           autoComplete="email"
           required
-          className="min-h-12 rounded-[0.8rem] border border-white/12 bg-white/[0.035] px-4 text-base text-[var(--color-ink)] outline-none transition placeholder:text-white/30 focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/30"
+          className="min-h-12 rounded-[0.8rem] border border-white/12 bg-white/[0.035] px-4 text-base text-white caret-white outline-none transition placeholder:text-white/34 focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/30"
           placeholder="admin@vixenclub.com"
         />
       </div>
@@ -51,7 +51,7 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="min-h-12 rounded-[0.8rem] border border-white/12 bg-white/[0.035] px-4 text-base text-[var(--color-ink)] outline-none transition placeholder:text-white/30 focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/30"
+          className="min-h-12 rounded-[0.8rem] border border-white/12 bg-white/[0.035] px-4 text-base text-white caret-white outline-none transition placeholder:text-white/34 focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/30"
         />
       </div>
 

@@ -1,4 +1,7 @@
-import type { PublicFootballTournament } from "@/features/football-tournaments/types";
+import {
+  footballTournamentFormatLabels,
+  type PublicFootballTournament,
+} from "@/features/football-tournaments/types";
 
 import { MatchList } from "./MatchList";
 import { StandingsTable } from "./StandingsTable";
@@ -22,6 +25,8 @@ export function PublicTournamentPanel({
         <div className="min-w-0">
           <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
             <span>{tournament.category}</span>
+            <span className="text-white/30">/</span>
+            <span>{footballTournamentFormatLabels[tournament.format]}</span>
             <span className="text-white/30">/</span>
             <span>Temporada {tournament.season}</span>
           </div>

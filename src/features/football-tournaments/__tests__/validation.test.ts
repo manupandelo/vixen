@@ -13,6 +13,7 @@ describe("football tournament validation", () => {
         slug: "apertura-2026",
         season: "2026",
         category: "Masculino",
+        format: "league",
         status: "published",
         startsAt: "2026-03-01",
         endsAt: "",
@@ -20,8 +21,8 @@ describe("football tournament validation", () => {
       }),
     ).toMatchObject({
       name: "Apertura 2026",
-      slug: "apertura-2026",
       status: "published",
+      format: "league",
       endsAt: null,
     });
   });
@@ -33,6 +34,7 @@ describe("football tournament validation", () => {
         slug: "apertura-2026",
         season: "2026",
         category: "Masculino",
+        format: "league",
         status: "published",
         startsAt: "2026-02-30",
         endsAt: "",
@@ -48,6 +50,7 @@ describe("football tournament validation", () => {
         slug: "apertura-2026",
         season: "2026",
         category: "Masculino",
+        format: "league",
         status: "published",
         startsAt: "2026-03-10",
         endsAt: "2026-03-01",
@@ -66,12 +69,46 @@ describe("football tournament validation", () => {
         notes: "Equipo confirmado",
       }),
     ).toEqual({
+      existingTeamId: null,
       name: "Atlas",
       shortName: null,
       captainName: null,
       contactPhone: null,
       notes: "Equipo confirmado",
     });
+  });
+
+  it("accepts an existing team registration without a new team name", () => {
+    expect(
+      teamFormSchema.parse({
+        existingTeamId: "team-1",
+        name: "",
+        shortName: "",
+        captainName: "",
+        contactPhone: "",
+        notes: "",
+      }),
+    ).toEqual({
+      existingTeamId: "team-1",
+      name: null,
+      shortName: null,
+      captainName: null,
+      contactPhone: null,
+      notes: null,
+    });
+  });
+
+  it("rejects team short names longer than three characters", () => {
+    expect(() =>
+      teamFormSchema.parse({
+        existingTeamId: "",
+        name: "Deportivo Vixen",
+        shortName: "VIXEN",
+        captainName: "",
+        contactPhone: "",
+        notes: "",
+      }),
+    ).toThrow("El nombre corto no puede superar 3 caracteres.");
   });
 
   it("rejects a completed match without scores", () => {

@@ -48,16 +48,22 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-Apply the SQL migration in
-`supabase/migrations/20260627000000_football_tournaments.sql` to the Supabase
-project.
+Apply the SQL migrations in `supabase/migrations/` to the Supabase project in
+filename order. The incremental migrations add tournament formats, viewer
+assignment/locking support, staff suspension, and the public `team-photos`
+storage bucket used for team images.
 
-To grant admin access, create a Supabase Auth user and insert a matching row:
+For the first access, create one Supabase Auth user and insert a matching admin
+profile. Admins can manage everything:
 
 ```sql
 insert into public.admin_profiles (id, email, role)
 values ('AUTH_USER_UUID', 'admin@example.com', 'admin');
 ```
+
+After that, use `/admin/usuarios` to create, update, suspend, reactivate, or
+exceptionally delete staff accounts. Viewers can only submit final results for
+assigned matches.
 
 Run locally:
 
@@ -69,3 +75,4 @@ Then open:
 
 - public football page: `http://localhost:3000/futbol`
 - private admin: `http://localhost:3000/admin`
+- viewer results panel: `http://localhost:3000/veedor`

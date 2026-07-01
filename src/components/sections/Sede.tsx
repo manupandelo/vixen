@@ -80,8 +80,7 @@ export function Sede() {
 
   return (
     <SectionShell id="sede" className="border-t border-white/5">
-      <div
-        role="region"
+      <section
         aria-labelledby="sede-title"
         className="grid gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:items-start lg:gap-12"
       >
@@ -152,6 +151,8 @@ export function Sede() {
           <iframe
             title="Mapa de Vixen Club"
             src={mapSrc}
+            sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+            referrerPolicy="no-referrer-when-downgrade"
             loading="lazy"
             className="h-80 w-full rounded-[0.95rem] border border-white/8 bg-white/5 md:h-[34rem]"
           />
@@ -162,7 +163,7 @@ export function Sede() {
             </p>
           </div>
         </div>
-      </div>
+      </section>
     </SectionShell>
   );
 }

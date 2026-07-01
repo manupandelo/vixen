@@ -11,27 +11,32 @@ export const metadata: Metadata = {
 
 export default function NewTournamentPage() {
   return (
-    <div className="grid gap-8">
-      <section className="border-b border-white/10 pb-8">
+    <div className="mx-auto grid max-w-5xl gap-6">
+      <section className="grid gap-4">
         <Link
           href="/admin/torneos"
-          className="text-sm font-semibold uppercase tracking-[0.16em] text-white/58 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+          className="w-fit text-sm font-semibold text-white/58 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
         >
           Volver a torneos
         </Link>
-        <p className="mt-6 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-          Nuevo torneo
-        </p>
-        <h1 className="mt-4 text-display-sm">Crear torneo</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-          Definí los datos base del torneo. Después vas a poder cargar equipos
-          y partidos desde la pantalla de edición.
+        <div>
+          <p className="text-sm font-semibold text-[var(--color-accent)]">
+            Nuevo torneo
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-normal text-white sm:text-4xl">
+            Configurá el torneo
+          </h1>
+        </div>
+        <p className="max-w-2xl text-base leading-7 text-[var(--color-muted)]">
+          Completá estos pasos y después cargá los equipos participantes.
         </p>
       </section>
 
-      <section className="editorial-panel p-6 sm:p-8">
-        <TournamentForm action={createTournament} submitLabel="Crear torneo" />
-      </section>
+      <TournamentForm
+        action={createTournament}
+        submitLabel="Crear torneo"
+        layout="stepped"
+      />
     </div>
   );
 }

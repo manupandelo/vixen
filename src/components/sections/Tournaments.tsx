@@ -17,7 +17,7 @@ export function Tournaments() {
       id="torneos"
       className="border-t border-white/5 bg-[var(--color-surface)]"
     >
-      <div role="region" aria-labelledby="tournaments-title">
+      <section aria-labelledby="tournaments-title">
         <div className="grid gap-6 border-b border-white/8 pb-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
           <div>
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
@@ -66,7 +66,7 @@ export function Tournaments() {
             </Button>
           </div>
         </div>
-      </div>
+      </section>
     </SectionShell>
   );
 }

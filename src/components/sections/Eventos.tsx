@@ -24,8 +24,7 @@ export function Eventos() {
       id="eventos"
       className="border-t border-white/5 bg-[var(--color-surface)]"
     >
-      <div
-        role="region"
+      <section
         aria-labelledby="eventos-title"
         className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:gap-14"
       >
@@ -91,7 +90,7 @@ export function Eventos() {
             className="aspect-[4/5] min-h-[21rem] sm:min-h-[28rem]"
           />
         </div>
-      </div>
+      </section>
     </SectionShell>
   );
 }

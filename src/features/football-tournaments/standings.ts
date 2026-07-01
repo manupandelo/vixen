@@ -75,7 +75,7 @@ export function calculateStandings(
     applyResult(away, match.awayScore, match.homeScore);
   }
 
-  return [...rows.values()].sort((a, b) => {
+  return Array.from(rows.values()).toSorted((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
     if (b.goalDifference !== a.goalDifference) {
       return b.goalDifference - a.goalDifference;

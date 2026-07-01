@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { KeyboardEvent } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { content } from "@/content";
 
@@ -11,6 +10,14 @@ type HeaderCta = {
   href: string;
   icon: "instagram" | "facebook";
 };
+
+const HEADER_CTAS: HeaderCta[] = [
+  { label: "Instagram", href: content.site.instagram, icon: "instagram" },
+  { label: "Facebook", href: content.site.facebook, icon: "facebook" },
+];
+
+const mobileActionClass =
+  "inline-flex w-full items-center justify-start gap-3 rounded-xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
 function SocialIcon({ icon }: { icon: HeaderCta["icon"] }) {
   if (icon === "instagram") {
@@ -51,35 +58,29 @@ function SocialIcon({ icon }: { icon: HeaderCta["icon"] }) {
   );
 }
 
-export function Header() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const toggleButtonRef = useRef<HTMLButtonElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const ctas: HeaderCta[] = [
-    { label: "Instagram", href: content.site.instagram, icon: "instagram" },
-    { label: "Facebook", href: content.site.facebook, icon: "facebook" },
-  ];
-  const mobileActionClass =
-    "inline-flex w-full items-center justify-start gap-3 rounded-xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
+function DesktopSocialLinks() {
+  return (
+    <>
+      {HEADER_CTAS.map((cta) => (
+        <a
+          key={cta.label}
+          href={cta.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={cta.label}
+          className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-white/[0.025] text-white/80 transition duration-200 hover:-translate-y-px hover:border-white/22 hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+        >
+          <SocialIcon icon={cta.icon} />
+        </a>
+      ))}
+    </>
+  );
+}
 
-  const renderDesktopCtas = () =>
-    ctas.map((cta) => (
-      <a
-        key={cta.label}
-        href={cta.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={cta.label}
-        className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-white/[0.025] text-white/80 transition duration-200 hover:-translate-y-px hover:border-white/22 hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
-      >
-        <SocialIcon icon={cta.icon} />
-      </a>
-    ));
-
-  const renderMobileCtas = () =>
-    ctas.map((cta) => {
-      return (
+function MobileSocialLinks({ onNavigate }: { onNavigate: () => void }) {
+  return (
+    <>
+      {HEADER_CTAS.map((cta) => (
         <a
           key={cta.label}
           href={cta.href}
@@ -87,73 +88,66 @@ export function Header() {
           rel="noopener noreferrer"
           data-mobile-menu-link="true"
           className={`${mobileActionClass} border border-[var(--color-ink)]/40 text-[var(--color-ink)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]`}
-          onClick={() => closeMobileMenu()}
+          onClick={() => onNavigate()}
         >
           <SocialIcon icon={cta.icon} />
           {cta.label}
         </a>
-      );
-    });
+      ))}
+    </>
+  );
+}
 
-  const closeMobileMenu = () => {
+export function Header() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  const closeMobileMenu = (restoreFocus = true) => {
     setIsMobileMenuOpen(false);
-    toggleButtonRef.current?.focus();
+    if (restoreFocus) {
+      toggleButtonRef.current?.focus();
+    }
   };
 
   useLayoutEffect(() => {
-    if (isMobileMenuOpen) {
+    const dialog = dialogRef.current;
+
+    if (!dialog) {
+      return;
+    }
+
+    if (isMobileMenuOpen && !dialog.open) {
+      if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute("open", "");
+      }
       closeButtonRef.current?.focus();
+      return;
+    }
+
+    if (!isMobileMenuOpen && dialog.open) {
+      if (typeof dialog.close === "function") {
+        dialog.close();
+      } else {
+        dialog.removeAttribute("open");
+      }
     }
   }, [isMobileMenuOpen]);
 
   useEffect(() => {
     document.documentElement.style.overflow = isMobileMenuOpen ? "hidden" : "";
 
-    const handleDocumentKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape" && isMobileMenuOpen) {
-        event.preventDefault();
-        setIsMobileMenuOpen(false);
-        toggleButtonRef.current?.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleDocumentKeyDown);
-
     return () => {
-      document.removeEventListener("keydown", handleDocumentKeyDown);
       document.documentElement.style.overflow = "";
     };
   }, [isMobileMenuOpen]);
 
-  const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
+  const handleDialogClose = () => {
+    if (isMobileMenuOpen) {
       closeMobileMenu();
-      return;
-    }
-
-    if (event.key !== "Tab") {
-      return;
-    }
-
-    const focusableElements = Array.from(
-      dialogRef.current?.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      ) ?? [],
-    ).filter((element) => !element.hasAttribute("disabled"));
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements.at(-1);
-
-    if (!firstElement || !lastElement) {
-      return;
-    }
-
-    if (event.shiftKey && document.activeElement === firstElement) {
-      event.preventDefault();
-      lastElement.focus();
-    } else if (!event.shiftKey && document.activeElement === lastElement) {
-      event.preventDefault();
-      firstElement.focus();
     }
   };
 
@@ -187,13 +181,12 @@ export function Header() {
             ))}
           </nav>
 
-          <div
-            role="group"
+          <nav
             aria-label="Redes sociales"
             className="hidden shrink-0 items-center gap-2 lg:flex lg:pl-4"
           >
-            {renderDesktopCtas()}
-          </div>
+            <DesktopSocialLinks />
+          </nav>
 
           <button
             ref={toggleButtonRef}
@@ -220,30 +213,20 @@ export function Header() {
       </header>
 
       {isMobileMenuOpen ? (
-        <div id="mobile-menu-root" className="fixed inset-0 z-[70]">
-          <button
-            id="mobile-menu-backdrop"
-            type="button"
-            aria-hidden="true"
-            tabIndex={-1}
-            onClick={() => closeMobileMenu()}
-            className="absolute inset-0 bg-[rgb(5_7_6_/_0.78)] backdrop-blur-md lg:hidden"
-          />
-          <div
-            ref={dialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menú principal"
-            onKeyDown={handleDialogKeyDown}
-            className="relative flex h-full w-full flex-col overflow-y-auto bg-[linear-gradient(180deg,var(--color-surface-2),var(--color-base)_78%)] px-4 py-4 sm:px-6"
-          >
+        <dialog
+          ref={dialogRef}
+          id="mobile-menu-root"
+          aria-label="Menú principal"
+          onClose={handleDialogClose}
+          className="fixed inset-0 z-[70] m-0 h-dvh max-h-none w-dvw max-w-none overflow-y-auto border-0 bg-[linear-gradient(180deg,var(--color-surface-2),var(--color-base)_78%)] px-4 py-4 text-[var(--color-ink)] backdrop:bg-[rgb(5_7_6_/_0.78)] backdrop:backdrop-blur-md sm:px-6 lg:hidden"
+        >
             <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
               <div className="flex items-center justify-between">
                 <Link
                   href="/"
                   aria-label={content.site.name}
                   data-mobile-menu-link="true"
-                  onClick={() => closeMobileMenu()}
+                  onClick={() => closeMobileMenu(false)}
                 >
                   <Image
                     src="/logo_vixen.svg"
@@ -278,7 +261,7 @@ export function Header() {
                     key={n.href}
                     href={n.href}
                     data-mobile-menu-link="true"
-                    onClick={() => closeMobileMenu()}
+                    onClick={() => closeMobileMenu(false)}
                     className="border-b border-white/8 py-4 text-display-sm text-[clamp(1.7rem,7vw,2.6rem)] leading-[0.94]"
                   >
                     {n.label}
@@ -292,13 +275,12 @@ export function Header() {
                     Seguinos
                   </p>
                   <div className="flex flex-col gap-3">
-                    {renderMobileCtas()}
+                    <MobileSocialLinks onNavigate={closeMobileMenu} />
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+        </dialog>
       ) : null}
     </>
   );

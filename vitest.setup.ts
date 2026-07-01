@@ -23,16 +23,15 @@ function normalizeImageSrc(src: NextImageMockProps["src"]): string | undefined {
 }
 
 vi.mock("next/image", () => ({
-  default: ({
-    alt = "",
-    fill: _fill,
-    priority: _priority,
-    sizes: _sizes,
-    ...props
-  }: NextImageMockProps) =>
-    createElement("img", {
+  default: ({ alt = "", fill, priority, sizes, ...props }: NextImageMockProps) => {
+    void fill;
+    void priority;
+    void sizes;
+
+    return createElement("img", {
       ...props,
       src: normalizeImageSrc(props.src),
       alt,
-    }),
+    });
+  },
 }));

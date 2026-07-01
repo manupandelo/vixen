@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  formatAdminDashboardSummary,
   formatPublicTournament,
   formatPublicTournamentRows,
 } from "../data";
@@ -9,7 +10,168 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("formatAdminDashboardSummary", () => {
+  it("calculates match progress, upcoming date and setup attention items", () => {
+    const summary = formatAdminDashboardSummary(
+      [
+        {
+          id: "tournament-1",
+          name: "Apertura",
+          slug: "apertura",
+          season: "2026",
+          category: "Primera",
+          format: "league",
+          status: "active",
+          starts_at: "2026-03-01",
+          ends_at: "2026-06-30",
+          description: null,
+          football_tournament_teams: [
+            { team_id: "team-1" },
+            { team_id: "team-2" },
+          ],
+          football_matches: [
+            {
+              id: "match-1",
+              round_label: "Fecha 1",
+              scheduled_at: "2026-06-20T20:00:00-03:00",
+              home_team_id: "team-1",
+              away_team_id: "team-2",
+              home_score: 2,
+              away_score: 1,
+              status: "completed",
+            },
+            {
+              id: "match-2",
+              round_label: "Fecha 2",
+              scheduled_at: "2026-06-29T20:00:00-03:00",
+              home_team_id: "team-1",
+              away_team_id: "team-2",
+              home_score: null,
+              away_score: null,
+              status: "scheduled",
+            },
+            {
+              id: "match-3",
+              round_label: "Fecha 3",
+              scheduled_at: "2026-07-02T20:00:00-03:00",
+              home_team_id: "team-2",
+              away_team_id: "team-1",
+              home_score: null,
+              away_score: null,
+              status: "scheduled",
+            },
+          ],
+        },
+        {
+          id: "tournament-2",
+          name: "Clausura",
+          slug: "clausura",
+          season: "2026",
+          category: "Primera",
+          format: "cup",
+          status: "draft",
+          starts_at: null,
+          ends_at: null,
+          description: null,
+          football_tournament_teams: [{ team_id: "team-3" }],
+          football_matches: [],
+        },
+      ],
+      [
+        {
+          id: "admin-1",
+          email: "admin@vixen.test",
+          role: "admin",
+          status: "active",
+          suspended_at: null,
+          suspended_reason: null,
+        },
+        {
+          id: "viewer-1",
+          email: "veedor@vixen.test",
+          role: "viewer",
+          status: "active",
+          suspended_at: null,
+          suspended_reason: null,
+        },
+      ],
+      new Date("2026-06-30T12:00:00-03:00"),
+    );
+
+    expect(summary.metrics).toMatchObject({
+      totalTournaments: 2,
+      activeTournaments: 1,
+      publishedTournaments: 0,
+      draftTournaments: 1,
+      totalMatches: 3,
+      completedMatches: 1,
+      pendingResults: 2,
+      overdueResults: 1,
+      resultProgress: 33,
+      activeViewers: 1,
+      admins: 1,
+    });
+    expect(summary.nextMatch).toMatchObject({
+      tournamentName: "Apertura",
+      roundLabel: "Fecha 3",
+      scheduledAt: "2026-07-02T20:00:00-03:00",
+    });
+    expect(summary.attentionItems).toEqual([
+      expect.objectContaining({
+        title: "Cargar resultados pendientes",
+        href: "/admin/torneos/tournament-1?tab=partidos",
+      }),
+      expect.objectContaining({
+        title: "Completar equipos",
+        href: "/admin/torneos/tournament-2?tab=equipos",
+      }),
+      expect.objectContaining({
+        title: "Crear fixture",
+        href: "/admin/torneos/tournament-2?tab=partidos",
+      }),
+    ]);
+  });
+});
+
 describe("formatPublicTournament", () => {
+  it("formats teams from tournament registrations when teams are reused", () => {
+    const row = {
+      id: "tournament-1",
+      name: "Apertura",
+      slug: "apertura",
+      season: "2026",
+      category: "Primera",
+      format: "league",
+      status: "published",
+      starts_at: "2026-03-01",
+      ends_at: "2026-05-30",
+      description: null,
+      football_teams: null,
+      football_tournament_teams: [
+        {
+          football_teams: {
+            id: "team-1",
+            name: "Vixen Rojo",
+            short_name: "VIX",
+            photo_url: "https://cdn.vixen.test/vixen-rojo.webp",
+          },
+        },
+      ],
+      football_matches: [],
+    };
+
+    const tournament = formatPublicTournament(row);
+
+    expect(tournament.teams).toEqual([
+      {
+        id: "team-1",
+        name: "Vixen Rojo",
+        shortName: "VIX",
+        photoUrl: "https://cdn.vixen.test/vixen-rojo.webp",
+      },
+    ]);
+  });
+
   it("returns public team shape and tournament dates", () => {
     const tournament = formatPublicTournament({
       id: "tournament-1",
@@ -17,6 +179,7 @@ describe("formatPublicTournament", () => {
       slug: "apertura",
       season: "2026",
       category: "Primera",
+      format: "league",
       status: "published",
       starts_at: "2026-03-01",
       ends_at: "2026-05-30",
@@ -38,6 +201,7 @@ describe("formatPublicTournament", () => {
       slug: "apertura",
       season: "2026",
       category: "Primera",
+      format: "league",
       status: "published",
       startsAt: "2026-03-01",
       endsAt: "2026-05-30",
@@ -53,6 +217,7 @@ describe("formatPublicTournament", () => {
       slug: "apertura",
       season: "2026",
       category: "Primera",
+      format: "league",
       status: "active",
       starts_at: null,
       ends_at: null,
@@ -100,6 +265,7 @@ describe("formatPublicTournament", () => {
       slug: "apertura",
       season: "2026",
       category: "Primera",
+      format: "cup",
       status: "completed",
       starts_at: "2026-03-01",
       ends_at: "2026-05-30",
@@ -164,6 +330,7 @@ describe("formatPublicTournament", () => {
       slug: "apertura",
       season: "2026",
       category: "Primera",
+      format: "league_playoff",
       status: "published",
       starts_at: "2026-03-01",
       ends_at: "2026-05-30",
@@ -249,6 +416,7 @@ describe("formatPublicTournament", () => {
         slug: "apertura",
         season: "2026",
         category: "Primera",
+        format: "league",
         status: "active",
         starts_at: null,
         ends_at: null,
@@ -286,6 +454,7 @@ describe("formatPublicTournamentRows", () => {
         slug: "apertura",
         season: "2026",
         category: "Primera",
+        format: "league",
         status: "published",
         starts_at: null,
         ends_at: null,
@@ -301,6 +470,7 @@ describe("formatPublicTournamentRows", () => {
         slug: "clausura",
         season: "2026",
         category: "Primera",
+        format: "league",
         status: "active",
         starts_at: null,
         ends_at: null,

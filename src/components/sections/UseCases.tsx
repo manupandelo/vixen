@@ -55,7 +55,7 @@ const useCaseRows = [
 export function UseCases() {
   return (
     <SectionShell id="disciplinas" className="border-t border-white/5">
-      <div role="region" aria-labelledby="use-cases-title">
+      <section aria-labelledby="use-cases-title">
         <div className="grid gap-6 border-b border-white/8 pb-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end">
           <div>
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
@@ -129,7 +129,7 @@ export function UseCases() {
             </article>
           ))}
         </div>
-      </div>
+      </section>
     </SectionShell>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { content } from "@/content";
 import { Header } from "./Header";
@@ -21,14 +21,16 @@ describe("Header", () => {
     render(<Header />);
 
     const navigation = screen.getByRole("navigation", { name: /principal/i });
-    const contactGroup = screen.getByRole("group", { name: /redes sociales/i });
+    const socialNavigation = screen.getByRole("navigation", {
+      name: /redes sociales/i,
+    });
 
     expect(within(navigation).queryByRole("link", { name: /instagram/i })).not.toBeInTheDocument();
     expect(
-      within(contactGroup).getByRole("link", { name: /instagram/i }),
+      within(socialNavigation).getByRole("link", { name: /instagram/i }),
     ).toHaveAttribute("href", content.site.instagram);
     expect(
-      within(contactGroup).getByRole("link", { name: /facebook/i }),
+      within(socialNavigation).getByRole("link", { name: /facebook/i }),
     ).toHaveAttribute("href", content.site.facebook);
   });
 
@@ -36,13 +38,15 @@ describe("Header", () => {
     render(<Header />);
 
     const navigation = screen.getByRole("navigation", { name: /principal/i });
-    const contactGroup = screen.getByRole("group", { name: /redes sociales/i });
+    const socialNavigation = screen.getByRole("navigation", {
+      name: /redes sociales/i,
+    });
     const toggle = screen.getByRole("button", { name: /abrir menú/i });
 
     expect(navigation).toHaveClass("hidden");
     expect(navigation).toHaveClass("lg:flex");
-    expect(contactGroup).toHaveClass("hidden");
-    expect(contactGroup).toHaveClass("lg:flex");
+    expect(socialNavigation).toHaveClass("hidden");
+    expect(socialNavigation).toHaveClass("lg:flex");
     expect(toggle).toHaveClass("lg:hidden");
   });
 
@@ -61,13 +65,15 @@ describe("Header", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /abrir menú/i }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: /menú principal/i });
+    expect(dialog).toBeInTheDocument();
+    expect(dialog.tagName).toBe("DIALOG");
 
     await user.click(screen.getByRole("button", { name: /cerrar menú/i }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("traps keyboard focus inside the mobile dialog", async () => {
+  it("uses native dialog semantics for the mobile menu", async () => {
     const user = userEvent.setup();
     render(<Header />);
 
@@ -75,19 +81,10 @@ describe("Header", () => {
     const dialog = screen.getByRole("dialog", { name: /menú principal/i });
     const dialogScope = within(dialog);
     const closeButton = dialogScope.getByRole("button", { name: /cerrar menú/i });
-    const logoLink = dialogScope.getByRole("link", { name: /vixen club/i });
-    const lastAction = dialogScope.getByRole("link", { name: /facebook/i });
 
+    expect(dialog.tagName).toBe("DIALOG");
+    expect(dialog).toHaveAttribute("open");
     expect(closeButton).toHaveFocus();
-
-    await user.keyboard("{Shift>}{Tab}{/Shift}");
-    expect(logoLink).toHaveFocus();
-
-    await user.keyboard("{Shift>}{Tab}{/Shift}");
-    expect(lastAction).toHaveFocus();
-
-    await user.tab();
-    expect(logoLink).toHaveFocus();
   });
 
   it("hamburger button reflects aria-expanded state", async () => {
@@ -101,15 +98,15 @@ describe("Header", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("closes the mobile menu when Escape is pressed", async () => {
+  it("syncs state when the native dialog closes", async () => {
     const user = userEvent.setup();
     render(<Header />);
     const toggle = screen.getByRole("button", { name: /abrir menú/i });
 
     await user.click(toggle);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog");
 
-    await user.keyboard("{Escape}");
+    fireEvent(dialog, new Event("close"));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(toggle).toHaveFocus();
   });

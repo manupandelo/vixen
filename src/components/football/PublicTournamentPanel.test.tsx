@@ -48,6 +48,7 @@ const tournament: PublicFootballTournament = {
   slug: "apertura-vixen",
   season: "2026",
   category: "Fútbol 7 Masculino",
+  format: "league_playoff",
   status: "active",
   startsAt: "2026-03-01",
   endsAt: null,
@@ -76,6 +77,7 @@ describe("PublicTournamentPanel", () => {
 
     expect(screen.getByText("Apertura Vixen")).toBeInTheDocument();
     expect(screen.getByText("Fútbol 7 Masculino")).toBeInTheDocument();
+    expect(screen.getByText("Liga con playoff")).toBeInTheDocument();
     expect(screen.getByText("Temporada 2026")).toBeInTheDocument();
     expect(screen.getByText("Liga semanal en Pilar.")).toBeInTheDocument();
     expect(screen.getByText("Vixen Rojo")).toBeInTheDocument();

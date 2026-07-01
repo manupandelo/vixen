@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { getCurrentStaffDashboardPath } from "@/features/football-tournaments/data";
 import { LoginForm } from "./LoginForm";
 
 export const metadata: Metadata = {
@@ -8,7 +10,13 @@ export const metadata: Metadata = {
   description: "Acceso privado al panel de torneos de fútbol de Vixen Club.",
 };
 
-export default function AdminLoginPage() {
+export default async function AdminLoginPage() {
+  const staffDashboardPath = await getCurrentStaffDashboardPath();
+
+  if (staffDashboardPath) {
+    redirect(staffDashboardPath);
+  }
+
   return (
     <main className="min-h-screen bg-[var(--color-base)] px-4 py-10 text-[var(--color-ink)] sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md flex-col justify-center">

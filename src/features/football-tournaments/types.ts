@@ -6,6 +6,12 @@ export const footballTournamentStatuses = [
   "archived",
 ] as const;
 
+export const footballTournamentFormats = [
+  "league",
+  "cup",
+  "league_playoff",
+] as const;
+
 export const footballMatchStatuses = [
   "scheduled",
   "completed",
@@ -13,15 +19,31 @@ export const footballMatchStatuses = [
   "cancelled",
 ] as const;
 
+export const staffRoles = ["admin", "viewer"] as const;
+
 export type FootballTournamentStatus =
   (typeof footballTournamentStatuses)[number];
 
+export type FootballTournamentFormat =
+  (typeof footballTournamentFormats)[number];
+
+export const footballTournamentFormatLabels = {
+  league: "Liga",
+  cup: "Copa",
+  league_playoff: "Liga con playoff",
+} satisfies Record<FootballTournamentFormat, string>;
+
 export type FootballMatchStatus = (typeof footballMatchStatuses)[number];
+
+export type StaffRole = (typeof staffRoles)[number];
+
+export type StaffStatus = "active" | "suspended";
 
 export type FootballTeam = {
   id: string;
   name: string;
   shortName: string | null;
+  photoUrl: string | null;
 };
 
 export type FootballMatchForStandings = {
@@ -52,6 +74,7 @@ export type PublicFootballTournament = {
   slug: string;
   season: string;
   category: string;
+  format: FootballTournamentFormat;
   status: FootballTournamentStatus;
   startsAt: string | null;
   endsAt: string | null;
