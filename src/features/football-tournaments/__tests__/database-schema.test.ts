@@ -7,6 +7,13 @@ const schemaSql = readFileSync(
   join(process.cwd(), "supabase/schema.sql"),
   "utf8",
 );
+const categoryMigrationSql = readFileSync(
+  join(
+    process.cwd(),
+    "supabase/migrations/20260702010000_add_football_tournament_categories.sql",
+  ),
+  "utf8",
+);
 
 function extractCreateTableBlock(tableName: string) {
   const start = schemaSql.indexOf(`create table ${tableName}`);
@@ -203,6 +210,19 @@ describe("Supabase schema", () => {
     );
     expect(matchesTable).toContain(
       "references public.football_tournament_groups(id, category_id)",
+    );
+  });
+
+  it("guards category migration backfills against legacy data drift", () => {
+    expect(categoryMigrationSql).toContain(
+      "when length(trim(coalesce(tournament.category, ''))) >= 2",
+    );
+    expect(categoryMigrationSql).toContain("else 'General'");
+    expect(categoryMigrationSql).toContain(
+      "football_tournament_group_teams contains teams that are not registered in the group category",
+    );
+    expect(categoryMigrationSql).toContain(
+      "football_matches contains groups from a different tournament category",
     );
   });
 });

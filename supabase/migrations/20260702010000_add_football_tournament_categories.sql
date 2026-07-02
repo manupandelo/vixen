@@ -33,15 +33,25 @@ insert into public.football_tournament_categories (
   starts_at,
   ends_at
 )
+with legacy_categories as (
+  select
+    tournament.*,
+    case
+      when length(trim(coalesce(tournament.category, ''))) >= 2
+        then trim(tournament.category)
+      else 'General'
+    end as category_name
+  from public.football_tournaments tournament
+)
 select
   tournament.id,
-  tournament.category,
+  tournament.category_name,
   coalesce(
     nullif(
       lower(
         trim(
           both '-'
-          from regexp_replace(tournament.category, '[^a-zA-Z0-9]+', '-', 'g')
+          from regexp_replace(tournament.category_name, '[^a-zA-Z0-9]+', '-', 'g')
         )
       ),
       ''
@@ -52,7 +62,7 @@ select
   0,
   tournament.starts_at,
   tournament.ends_at
-from public.football_tournaments tournament;
+from legacy_categories tournament;
 
 alter table public.football_tournament_teams
   add column category_id uuid references public.football_tournament_categories(id) on delete cascade;
@@ -101,6 +111,20 @@ update public.football_tournament_group_teams group_team
 set category_id = tournament_group.category_id
 from public.football_tournament_groups tournament_group
 where tournament_group.id = group_team.group_id;
+
+do $$
+begin
+  if exists (
+    select 1
+    from public.football_tournament_group_teams group_team
+    left join public.football_tournament_teams registration
+      on registration.category_id = group_team.category_id
+      and registration.team_id = group_team.team_id
+    where registration.team_id is null
+  ) then
+    raise exception 'football_tournament_group_teams contains teams that are not registered in the group category';
+  end if;
+end $$;
 
 alter table public.football_tournament_group_teams
   alter column category_id set not null,
@@ -151,6 +175,20 @@ update public.football_matches match
 set category_id = category.id
 from public.football_tournament_categories category
 where category.tournament_id = match.tournament_id;
+
+do $$
+begin
+  if exists (
+    select 1
+    from public.football_matches match
+    join public.football_tournament_groups tournament_group
+      on tournament_group.id = match.group_id
+    where match.group_id is not null
+      and tournament_group.category_id <> match.category_id
+  ) then
+    raise exception 'football_matches contains groups from a different tournament category';
+  end if;
+end $$;
 
 alter table public.football_matches
   alter column category_id set not null,
