@@ -88,9 +88,29 @@ alter table public.football_tournament_groups
   drop constraint if exists football_tournament_groups_tournament_id_position_key,
   add constraint football_tournament_groups_category_name_key unique (category_id, name),
   add constraint football_tournament_groups_category_position_key unique (category_id, position),
+  add constraint football_tournament_groups_id_category_key unique (id, category_id),
   add constraint football_tournament_groups_tournament_category_fkey
     foreign key (tournament_id, category_id)
     references public.football_tournament_categories(tournament_id, id)
+    on delete cascade;
+
+alter table public.football_tournament_group_teams
+  add column category_id uuid references public.football_tournament_categories(id) on delete cascade;
+
+update public.football_tournament_group_teams group_team
+set category_id = tournament_group.category_id
+from public.football_tournament_groups tournament_group
+where tournament_group.id = group_team.group_id;
+
+alter table public.football_tournament_group_teams
+  alter column category_id set not null,
+  add constraint football_tournament_group_teams_group_category_fkey
+    foreign key (group_id, category_id)
+    references public.football_tournament_groups(id, category_id)
+    on delete cascade,
+  add constraint football_tournament_group_teams_category_team_fkey
+    foreign key (category_id, team_id)
+    references public.football_tournament_teams(category_id, team_id)
     on delete cascade;
 
 alter table public.football_roster_entries

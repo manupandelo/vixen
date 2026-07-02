@@ -118,6 +118,7 @@ create table public.football_tournament_groups (
   updated_at timestamptz not null default now(),
   unique (category_id, name),
   unique (category_id, position),
+  unique (id, category_id),
   constraint football_tournament_groups_tournament_category_fkey
     foreign key (tournament_id, category_id)
     references public.football_tournament_categories(tournament_id, id)
@@ -127,11 +128,20 @@ create table public.football_tournament_groups (
 
 create table public.football_tournament_group_teams (
   group_id uuid not null references public.football_tournament_groups(id) on delete cascade,
+  category_id uuid not null references public.football_tournament_categories(id) on delete cascade,
   team_id uuid not null references public.football_teams(id) on delete cascade,
   seed integer not null,
   created_at timestamptz not null default now(),
   primary key (group_id, team_id),
   unique (group_id, seed),
+  constraint football_tournament_group_teams_group_category_fkey
+    foreign key (group_id, category_id)
+    references public.football_tournament_groups(id, category_id)
+    on delete cascade,
+  constraint football_tournament_group_teams_category_team_fkey
+    foreign key (category_id, team_id)
+    references public.football_tournament_teams(category_id, team_id)
+    on delete cascade,
   check (seed > 0)
 );
 

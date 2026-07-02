@@ -162,6 +162,9 @@ describe("Supabase schema", () => {
     const groupsTable = extractCreateTableBlock(
       "public.football_tournament_groups",
     );
+    const groupTeamsTable = extractCreateTableBlock(
+      "public.football_tournament_group_teams",
+    );
     const rosterTable = extractCreateTableBlock("public.football_roster_entries");
     const matchesTable = extractCreateTableBlock("public.football_matches");
 
@@ -175,6 +178,17 @@ describe("Supabase schema", () => {
     );
     expect(groupsTable).toContain("unique (category_id, name)");
     expect(groupsTable).toContain("unique (category_id, position)");
+    expect(groupsTable).toContain("unique (id, category_id)");
+
+    expect(groupTeamsTable).toContain(
+      "category_id uuid not null references public.football_tournament_categories(id) on delete cascade",
+    );
+    expect(groupTeamsTable).toContain(
+      "references public.football_tournament_groups(id, category_id)",
+    );
+    expect(groupTeamsTable).toContain(
+      "references public.football_tournament_teams(category_id, team_id)",
+    );
 
     expect(rosterTable).toContain(
       "category_id uuid not null references public.football_tournament_categories(id) on delete cascade",
