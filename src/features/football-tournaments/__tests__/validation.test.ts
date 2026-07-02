@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   matchFormSchema,
   teamFormSchema,
+  tournamentCategoryCreateSchema,
+  tournamentCategoryUpdateSchema,
   tournamentFormSchema,
 } from "../validation";
 
@@ -57,6 +59,36 @@ describe("football tournament validation", () => {
         description: "",
       }),
     ).toThrow();
+  });
+
+  it("validates tournament category creation with optional dates", () => {
+    const parsed = tournamentCategoryCreateSchema.safeParse({
+      name: " Primera ",
+      status: "published",
+      startsAt: "2026-03-01",
+      endsAt: "",
+    });
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    expect(parsed.data).toEqual({
+      name: "Primera",
+      status: "published",
+      startsAt: "2026-03-01",
+      endsAt: null,
+    });
+  });
+
+  it("rejects invalid tournament category date ranges", () => {
+    const parsed = tournamentCategoryUpdateSchema.safeParse({
+      name: "Reserva",
+      status: "active",
+      startsAt: "2026-06-30",
+      endsAt: "2026-03-01",
+    });
+
+    expect(parsed.success).toBe(false);
   });
 
   it("normalizes optional team text fields to null", () => {

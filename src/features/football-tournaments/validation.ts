@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   footballMatchStatuses,
+  footballTournamentCategoryStatuses,
   footballTournamentFormats,
   footballTournamentStatuses,
   staffRoles,
@@ -160,6 +161,33 @@ export const tournamentFormSchema = z
       });
     }
   });
+
+const tournamentCategoryBaseSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Ingresá un nombre de categoría.")
+      .max(
+        footballFormLimits.categoryName,
+        `La categoría no puede superar ${footballFormLimits.categoryName} caracteres.`,
+      ),
+    status: z.enum(footballTournamentCategoryStatuses),
+    startsAt: tournamentDate,
+    endsAt: tournamentDate,
+  })
+  .superRefine((value, ctx) => {
+    if (value.startsAt && value.endsAt && value.endsAt < value.startsAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["endsAt"],
+        message: "La fecha de fin no puede ser anterior al inicio.",
+      });
+    }
+  });
+
+export const tournamentCategoryCreateSchema = tournamentCategoryBaseSchema;
+export const tournamentCategoryUpdateSchema = tournamentCategoryBaseSchema;
 
 export const teamFormSchema = z.object({
   existingTeamId: nullableText,
@@ -342,6 +370,9 @@ export const staffDeleteFormSchema = z.object({
 });
 
 export type TournamentFormInput = z.infer<typeof tournamentFormSchema>;
+export type TournamentCategoryFormInput = z.infer<
+  typeof tournamentCategoryCreateSchema
+>;
 export type TeamFormInput = z.infer<typeof teamFormSchema>;
 export type MatchFormInput = z.infer<typeof matchFormSchema>;
 export type MatchResultFormInput = z.infer<typeof matchResultFormSchema>;

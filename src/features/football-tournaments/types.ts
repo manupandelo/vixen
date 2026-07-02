@@ -6,6 +6,14 @@ export const footballTournamentStatuses = [
   "archived",
 ] as const;
 
+export const footballTournamentCategoryStatuses = [
+  "draft",
+  "published",
+  "active",
+  "completed",
+  "archived",
+] as const;
+
 export const footballTournamentFormats = [
   "league",
   "cup",
@@ -24,8 +32,19 @@ export const staffRoles = ["admin", "viewer"] as const;
 export type FootballTournamentStatus =
   (typeof footballTournamentStatuses)[number];
 
+export type FootballTournamentCategoryStatus =
+  (typeof footballTournamentCategoryStatuses)[number];
+
 export type FootballTournamentFormat =
   (typeof footballTournamentFormats)[number];
+
+export const footballTournamentCategoryStatusLabels = {
+  draft: "Borrador",
+  published: "Publicado",
+  active: "Activo",
+  completed: "Finalizado",
+  archived: "Archivado",
+} satisfies Record<FootballTournamentCategoryStatus, string>;
 
 export const footballTournamentFormatLabels = {
   league: "Liga",
@@ -44,6 +63,17 @@ export type FootballTeam = {
   name: string;
   shortName: string | null;
   photoUrl: string | null;
+};
+
+export type FootballTournamentCategory = {
+  id: string;
+  tournamentId: string;
+  name: string;
+  slug: string;
+  status: FootballTournamentCategoryStatus;
+  position: number;
+  startsAt: string | null;
+  endsAt: string | null;
 };
 
 export type FootballMatchForStandings = {

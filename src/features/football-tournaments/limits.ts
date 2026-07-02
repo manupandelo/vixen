@@ -2,6 +2,8 @@ export const footballFormLimits = {
   tournamentName: 70,
   tournamentCategory: 30,
   tournamentDescription: 280,
+  categoryName: 80,
+  categorySlug: 100,
   teamName: 60,
   teamShortName: 3,
   teamCaptainName: 60,
