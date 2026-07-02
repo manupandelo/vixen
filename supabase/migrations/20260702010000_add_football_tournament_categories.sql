@@ -154,10 +154,15 @@ where category.tournament_id = match.tournament_id;
 
 alter table public.football_matches
   alter column category_id set not null,
+  drop constraint if exists football_matches_group_id_fkey,
   add constraint football_matches_tournament_category_fkey
     foreign key (tournament_id, category_id)
     references public.football_tournament_categories(tournament_id, id)
-    on delete cascade;
+    on delete cascade,
+  add constraint football_matches_group_category_fkey
+    foreign key (group_id, category_id)
+    references public.football_tournament_groups(id, category_id)
+    on delete set null (group_id);
 
 create or replace function public.match_teams_belong_to_tournament()
 returns trigger

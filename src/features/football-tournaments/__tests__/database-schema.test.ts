@@ -201,5 +201,8 @@ describe("Supabase schema", () => {
     expect(matchesTable).toContain(
       "category_id uuid not null references public.football_tournament_categories(id) on delete cascade",
     );
+    expect(matchesTable).toContain(
+      "references public.football_tournament_groups(id, category_id)",
+    );
   });
 });

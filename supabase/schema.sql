@@ -223,6 +223,10 @@ create table public.football_matches (
     foreign key (tournament_id, category_id)
     references public.football_tournament_categories(tournament_id, id)
     on delete cascade,
+  constraint football_matches_group_category_fkey
+    foreign key (group_id, category_id)
+    references public.football_tournament_groups(id, category_id)
+    on delete set null (group_id),
   constraint football_matches_teams_check
     check (home_team_id is null or away_team_id is null or home_team_id <> away_team_id),
   constraint football_matches_home_score_check
