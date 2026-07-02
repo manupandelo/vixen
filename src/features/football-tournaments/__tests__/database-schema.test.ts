@@ -52,7 +52,7 @@ describe("Supabase schema", () => {
       "create table public.football_tournament_group_teams",
     );
     expect(schemaSql).toContain(
-      "group_id uuid references public.football_tournament_groups(id) on delete set null",
+      "references public.football_tournament_groups(id, category_id)",
     );
     expect(schemaSql).toContain(
       'create policy "Admins can manage tournament groups"',

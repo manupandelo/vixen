@@ -208,7 +208,7 @@ create table public.football_matches (
   scheduled_at timestamptz,
   home_team_id uuid references public.football_teams(id) on delete restrict,
   away_team_id uuid references public.football_teams(id) on delete restrict,
-  group_id uuid references public.football_tournament_groups(id) on delete set null,
+  group_id uuid,
   next_match_id uuid references public.football_matches(id) on delete set null,
   home_score integer,
   away_score integer,
