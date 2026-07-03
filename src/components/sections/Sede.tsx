@@ -116,35 +116,35 @@ export function Sede() {
           </div>
 
           <dl className="mt-10 divide-y divide-white/10 border-y border-white/10">
-            {operationalFacts.map((fact) => (
-              <div
-                key={fact.label}
-                className="grid gap-2 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-4"
-              >
-                <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-                  {fact.label}
-                </dt>
-                <dd className="text-sm text-white/82">{fact.value}</dd>
-              </div>
-            ))}
+            <div className="grid gap-2 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-4 items-center">
+              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
+                Dirección
+              </dt>
+              <dd>
+                <a
+                  href={mapHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-white/82 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+                >
+                  {sede.addressLabel}
+                </a>
+              </dd>
+            </div>
+            <div className="grid gap-2 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-4 items-center">
+              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
+                Teléfono
+              </dt>
+              <dd>
+                <a
+                  href={site.phoneHref}
+                  className="text-sm text-white/82 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+                >
+                  {site.phoneDisplay}
+                </a>
+              </dd>
+            </div>
           </dl>
-
-          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
-            <a
-              href={mapHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-md border border-white/12 bg-white/5 px-5 py-3 text-white transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
-            >
-              Abrir en Google Maps
-            </a>
-            <a
-              href={site.phoneHref}
-              className="text-white/72 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
-            >
-              {site.phoneDisplay}
-            </a>
-          </div>
         </div>
 
         <div className="space-y-4">
@@ -156,12 +156,6 @@ export function Sede() {
             loading="lazy"
             className="h-80 w-full rounded-[0.95rem] border border-white/8 bg-white/5 md:h-[34rem]"
           />
-          <div className="flex flex-col gap-2 border-t border-white/10 pt-4 sm:flex-row sm:items-baseline sm:justify-between">
-            <p className="text-sm text-white/82">{sede.addressLabel}</p>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-              Pilar · Buenos Aires
-            </p>
-          </div>
         </div>
       </section>
     </SectionShell>

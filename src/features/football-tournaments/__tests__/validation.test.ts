@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   matchFormSchema,
+  rosterEntryCreateSchema,
+  rosterEntryUpdateSchema,
   teamFormSchema,
   tournamentCategoryCreateSchema,
   tournamentCategoryUpdateSchema,
@@ -247,5 +249,76 @@ describe("football tournament validation", () => {
         awayScore: 1,
       }),
     ).toThrow();
+  });
+});
+
+describe("roster entry validation", () => {
+  it("allows creating a player without a document number", () => {
+    const parsed = rosterEntryCreateSchema.safeParse({
+      mode: "new",
+      firstName: "Juan",
+      lastName: "Perez",
+      publicName: "",
+      documentNumber: "",
+      birthDate: "",
+      phone: "",
+      playerNotes: "",
+      shirtNumber: "10",
+      status: "active",
+      medicalStatus: "pending",
+      insuranceStatus: "pending",
+      rosterNotes: "",
+    });
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect((parsed.data as any).documentNumber).toBeNull();
+    expect(parsed.data.shirtNumber).toBe(10);
+  });
+
+  it("allows adding an existing player to a roster", () => {
+    const parsed = rosterEntryCreateSchema.safeParse({
+      mode: "existing",
+      playerId: "player-1",
+      shirtNumber: "",
+      status: "active",
+      medicalStatus: "approved",
+      insuranceStatus: "expired",
+      rosterNotes: "Debe renovar seguro.",
+    });
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect((parsed.data as any).playerId).toBe("player-1");
+    expect(parsed.data.shirtNumber).toBeNull();
+  });
+
+  it("rejects duplicate-form submissions without an existing player or names", () => {
+    const parsed = rosterEntryCreateSchema.safeParse({
+      mode: "new",
+      firstName: "",
+      lastName: "",
+      shirtNumber: "",
+      status: "active",
+      medicalStatus: "pending",
+      insuranceStatus: "pending",
+      rosterNotes: "",
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it("validates roster updates with optional shirt numbers", () => {
+    const parsed = rosterEntryUpdateSchema.safeParse({
+      shirtNumber: "",
+      status: "suspended",
+      medicalStatus: "expired",
+      insuranceStatus: "approved",
+      rosterNotes: "Suspendido una fecha.",
+    });
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.shirtNumber).toBeNull();
   });
 });

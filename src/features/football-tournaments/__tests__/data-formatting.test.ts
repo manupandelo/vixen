@@ -2,8 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   formatAuditEvent,
+  formatAdminTournamentCategories,
+  formatAdminAvailablePlayers,
   formatAdminDashboardSummary,
+  formatAdminRosterEntries,
+  formatAdminRosteredPlayerIds,
   formatPublicTournament,
+  formatPublicTournamentWithCategories,
   formatPublicTournamentRows,
 } from "../data";
 
@@ -164,9 +169,214 @@ describe("formatAdminDashboardSummary", () => {
   });
 });
 
+describe("admin roster formatting", () => {
+  it("formats roster entries with nested player names", () => {
+    const entries = formatAdminRosterEntries([
+      {
+        id: "entry-1",
+        tournament_id: "tournament-1",
+        team_id: "team-1",
+        player_id: "player-1",
+        shirt_number: 10,
+        status: "active",
+        medical_status: "approved",
+        insurance_status: "pending",
+        registered_at: "2026-07-02T12:00:00-03:00",
+        notes: "Trae apto el lunes.",
+        football_players: {
+          id: "player-1",
+          first_name: "Juan",
+          last_name: "Perez",
+          public_name: null,
+          document_number: null,
+          birth_date: null,
+          phone: null,
+          notes: null,
+        },
+      },
+    ]);
+
+    expect(entries).toEqual([
+      {
+        id: "entry-1",
+        tournamentId: "tournament-1",
+        teamId: "team-1",
+        playerId: "player-1",
+        shirtNumber: 10,
+        status: "active",
+        medicalStatus: "approved",
+        insuranceStatus: "pending",
+        registeredAt: "2026-07-02T12:00:00-03:00",
+        notes: "Trae apto el lunes.",
+        player: {
+          id: "player-1",
+          firstName: "Juan",
+          lastName: "Perez",
+          publicName: null,
+          documentNumber: null,
+          birthDate: null,
+          phone: null,
+          notes: null,
+        },
+      },
+    ]);
+  });
+
+  it("filters existing players already present in a tournament", () => {
+    const players = formatAdminAvailablePlayers(
+      [
+        {
+          id: "player-1",
+          first_name: "Juan",
+          last_name: "Perez",
+          public_name: null,
+          document_number: null,
+          birth_date: null,
+          phone: null,
+          notes: null,
+        },
+        {
+          id: "player-2",
+          first_name: "Ana",
+          last_name: "Lopez",
+          public_name: "Anita",
+          document_number: "123",
+          birth_date: null,
+          phone: null,
+          notes: null,
+        },
+      ],
+      new Set(["player-1"]),
+    );
+
+    expect(players).toEqual([
+      {
+        id: "player-2",
+        firstName: "Ana",
+        lastName: "Lopez",
+        publicName: "Anita",
+        documentNumber: "123",
+        birthDate: null,
+        phone: null,
+        notes: null,
+      },
+    ]);
+  });
+
+  it("filters rostered players from raw roster rows when player hydration is missing", () => {
+    const rosteredPlayerIds = formatAdminRosteredPlayerIds([
+      { player_id: "player-1" },
+      { player_id: null },
+    ]);
+
+    const players = formatAdminAvailablePlayers(
+      [
+        {
+          id: "player-1",
+          first_name: "Juan",
+          last_name: "Perez",
+          public_name: null,
+          document_number: null,
+          birth_date: null,
+          phone: null,
+          notes: null,
+        },
+        {
+          id: "player-2",
+          first_name: "Ana",
+          last_name: "Lopez",
+          public_name: null,
+          document_number: null,
+          birth_date: null,
+          phone: null,
+          notes: null,
+        },
+      ],
+      rosteredPlayerIds,
+    );
+
+    expect(players.map((player) => player.id)).toEqual(["player-2"]);
+  });
+});
+
 describe("formatPublicTournament", () => {
+  it("formats admin tournament categories in position order", () => {
+    const categories = formatAdminTournamentCategories([
+      {
+        id: "category-2",
+        tournament_id: "tournament-1",
+        name: "Reserva",
+        slug: "reserva",
+        status: "active",
+        position: 2,
+        starts_at: null,
+        ends_at: null,
+      },
+      {
+        id: "category-1",
+        tournament_id: "tournament-1",
+        name: "Primera",
+        slug: "primera",
+        status: "published",
+        position: 1,
+        starts_at: "2026-03-01",
+        ends_at: null,
+      },
+    ]);
+
+    expect(categories.map((category) => category.slug)).toEqual([
+      "primera",
+      "reserva",
+    ]);
+  });
+
+  it("formats a public tournament with visible categories only", () => {
+    const tournament = formatPublicTournamentWithCategories({
+      id: "tournament-1",
+      name: "Apertura",
+      slug: "apertura",
+      season: "2026",
+      category: "Primera",
+      format: "league",
+      status: "active",
+      starts_at: "2026-03-01",
+      ends_at: null,
+      description: null,
+      football_tournament_categories: [
+        {
+          id: "category-1",
+          tournament_id: "tournament-1",
+          name: "Primera",
+          slug: "primera",
+          status: "active",
+          position: 1,
+          starts_at: null,
+          ends_at: null,
+          football_tournament_teams: [],
+          football_matches: [],
+        },
+        {
+          id: "category-2",
+          tournament_id: "tournament-1",
+          name: "Menores",
+          slug: "menores",
+          status: "archived",
+          position: 2,
+          starts_at: null,
+          ends_at: null,
+          football_tournament_teams: [],
+          football_matches: [],
+        },
+      ],
+    });
+
+    expect(tournament.categories.map((category) => category.slug)).toEqual([
+      "primera",
+    ]);
+  });
+
   it("formats teams from tournament registrations when teams are reused", () => {
-    const row = {
+    const row: Parameters<typeof formatPublicTournament>[0] = {
       id: "tournament-1",
       name: "Apertura",
       slug: "apertura",
@@ -328,9 +538,13 @@ describe("formatPublicTournament", () => {
         awayTeamId: "team-2",
         homeTeamName: "Vixen Rojo",
         awayTeamName: "La Banda",
+        homeTeamShortName: "VIX",
+        awayTeamShortName: "LBD",
         homeScore: 3,
         awayScore: 1,
         status: "completed",
+        isKnockout: true,
+        nextMatchId: null,
       },
     ]);
     expect(tournament.standings).toEqual([
@@ -350,6 +564,62 @@ describe("formatPublicTournament", () => {
         played: 1,
         lost: 1,
         points: 0,
+      }),
+    ]);
+  });
+
+  it("derives playoff matches from format and group membership", () => {
+    const tournament = formatPublicTournament({
+      id: "tournament-1",
+      name: "Apertura",
+      slug: "apertura",
+      season: "2026",
+      category: "Primera",
+      format: "league_playoff",
+      status: "active",
+      starts_at: null,
+      ends_at: null,
+      description: null,
+      football_teams: [
+        { id: "team-1", name: "Vixen Rojo", short_name: "VIX" },
+        { id: "team-2", name: "La Banda", short_name: "LBD" },
+      ],
+      football_matches: [
+        {
+          id: "group-match",
+          round_label: "Zona A",
+          scheduled_at: "2026-03-02T18:00:00Z",
+          home_team_id: "team-1",
+          away_team_id: "team-2",
+          home_score: null,
+          away_score: null,
+          status: "scheduled",
+          group_id: "group-a",
+          next_match_id: null,
+        },
+        {
+          id: "playoff-match",
+          round_label: "Final",
+          scheduled_at: "2026-03-09T18:00:00Z",
+          home_team_id: null,
+          away_team_id: null,
+          home_score: null,
+          away_score: null,
+          status: "scheduled",
+          group_id: null,
+          next_match_id: null,
+        },
+      ],
+    });
+
+    expect(tournament.matches).toEqual([
+      expect.objectContaining({
+        id: "group-match",
+        isKnockout: false,
+      }),
+      expect.objectContaining({
+        id: "playoff-match",
+        isKnockout: true,
       }),
     ]);
   });

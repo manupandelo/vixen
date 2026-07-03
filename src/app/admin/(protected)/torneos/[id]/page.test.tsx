@@ -3,6 +3,24 @@ import { describe, expect, it, vi } from "vitest";
 
 import AdminTournamentWorkspacePage from "./page";
 
+vi.mock("next/navigation", async () => {
+  const actual = await vi.importActual<typeof import("next/navigation")>(
+    "next/navigation",
+  );
+
+  return {
+    ...actual,
+    notFound: vi.fn(() => {
+      throw new Error("NEXT_NOT_FOUND");
+    }),
+    usePathname: vi.fn(() => "/admin/torneos/tournament-1"),
+    useRouter: vi.fn(() => ({
+      replace: vi.fn(),
+    })),
+    useSearchParams: vi.fn(() => new URLSearchParams()),
+  };
+});
+
 vi.mock("@/features/football-tournaments/data", () => ({
   getAdminTournament: vi.fn(async () => ({
     id: "tournament-1",
@@ -28,6 +46,50 @@ vi.mock("@/features/football-tournaments/data", () => ({
     },
   ]),
   getAdminAvailableTeams: vi.fn(async () => []),
+  getAdminTournamentCategories: vi.fn(async () => [
+    {
+      id: "category-1",
+      tournamentId: "tournament-1",
+      name: "Primera",
+      slug: "primera",
+      status: "active",
+      position: 1,
+      startsAt: "2026-03-01",
+      endsAt: "2026-06-30",
+    },
+  ]),
+  getAdminRosterEntries: vi.fn(async () => [
+    {
+      id: "roster-1",
+      tournamentId: "tournament-1",
+      teamId: "team-1",
+      playerId: "player-1",
+      shirtNumber: 10,
+      status: "active",
+      medicalStatus: "pending",
+      insuranceStatus: "approved",
+      registeredAt: "2026-07-02T12:00:00-03:00",
+      notes: null,
+      player: {
+        id: "player-1",
+        firstName: "Juan",
+        lastName: "Perez",
+        publicName: null,
+        documentNumber: null,
+        birthDate: null,
+        phone: null,
+        notes: null,
+      },
+    },
+  ]),
+  formatMatchResultRosterEntry: vi.fn((entry) => ({
+    id: entry.id,
+    teamId: entry.teamId,
+    playerId: entry.playerId,
+    shirtNumber: entry.shirtNumber,
+    displayName: entry.player.publicName ?? `${entry.player.firstName} ${entry.player.lastName}`,
+  })),
+  getAdminAvailablePlayers: vi.fn(async () => []),
   getAdminMatches: vi.fn(async () => []),
   getTournamentAuditEvents: vi.fn(async () => [
     {
@@ -49,11 +111,21 @@ vi.mock("@/features/football-tournaments/data", () => ({
 vi.mock("@/features/football-tournaments/actions", () => ({
   assignMatchViewer: vi.fn(),
   createMatch: vi.fn(),
+  createTournamentCategory: vi.fn(),
+  createRosterEntry: vi.fn(),
   createTeam: vi.fn(),
+  deleteTournamentCategory: vi.fn(),
   removeTeamFromTournament: vi.fn(),
+  deleteRosterEntry: vi.fn(),
   deleteTournament: vi.fn(),
   generateLeagueFixture: vi.fn(),
+  generateBracketFixture: vi.fn(),
+  generateGroupPlayoffFixture: vi.fn(),
   updateMatchResult: vi.fn(),
+  updateMatch: vi.fn(),
+  updateTournamentCategory: vi.fn(),
+  updateRosterEntry: vi.fn(),
+  deleteMatch: vi.fn(),
   updateTeam: vi.fn(),
   updateTournament: vi.fn(),
 }));
@@ -74,14 +146,10 @@ describe("AdminTournamentWorkspacePage", () => {
     expect(screen.getByRole("navigation", { name: "Secciones del torneo" }).className).toContain("bg-white/[0.035]");
     expect(screen.getByRole("link", { name: "Resumen" })).toHaveAttribute(
       "href",
-      "/admin/torneos/tournament-1",
+      "/admin/torneos/tournament-1?category=primera",
     );
     expect(screen.getByRole("link", { name: "Resumen" }).className).toContain(
       "rounded-[0.72rem]",
-    );
-    expect(screen.getByRole("link", { name: "Datos" })).toHaveAttribute(
-      "href",
-      "/admin/torneos/tournament-1?tab=datos",
     );
     expect(screen.getByRole("link", { name: "Equipos" })).toHaveAttribute(
       "aria-current",
@@ -89,13 +157,16 @@ describe("AdminTournamentWorkspacePage", () => {
     );
     expect(screen.getByRole("link", { name: "Partidos" })).toHaveAttribute(
       "href",
-      "/admin/torneos/tournament-1?tab=partidos",
+      "/admin/torneos/tournament-1?tab=partidos&category=primera",
     );
     expect(screen.getByRole("link", { name: "Actividad" })).toHaveAttribute(
       "href",
-      "/admin/torneos/tournament-1?tab=actividad",
+      "/admin/torneos/tournament-1?tab=actividad&category=primera",
     );
     expect(screen.getByText("Vixen Norte")).toBeInTheDocument();
+    expect(screen.getByText("Plantel")).toBeInTheDocument();
+    expect(screen.getByText("Juan Perez")).toBeInTheDocument();
+    expect(screen.getByText("#10")).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Ver partidos" }),
     ).not.toBeInTheDocument();
@@ -114,7 +185,7 @@ describe("AdminTournamentWorkspacePage", () => {
     expect(screen.getByText("Completar equipos")).toBeInTheDocument();
     expect(item).toHaveAttribute(
       "href",
-      "/admin/torneos/tournament-1?tab=equipos",
+      "/admin/torneos/tournament-1?tab=equipos&category=primera",
     );
   });
 
@@ -129,5 +200,18 @@ describe("AdminTournamentWorkspacePage", () => {
     expect(screen.getByText("Historial de cambios")).toBeInTheDocument();
     expect(screen.getByText("Actualizó datos del torneo")).toBeInTheDocument();
     expect(screen.getByText("admin@vixen.test")).toBeInTheDocument();
+  });
+
+  it("does not expose manual single-match creation from the matches tab", async () => {
+    render(
+      await AdminTournamentWorkspacePage({
+        params: Promise.resolve({ id: "tournament-1" }),
+        searchParams: Promise.resolve({ tab: "partidos" }),
+      }),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Nuevo partido" }),
+    ).not.toBeInTheDocument();
   });
 });

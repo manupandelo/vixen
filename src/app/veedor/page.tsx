@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
+import { LogOut } from "lucide-react";
 
 import { MatchResultForm } from "@/components/admin/AdminForms";
-import { submitViewerMatchResult } from "@/features/football-tournaments/actions";
+import {
+  logoutAdmin,
+  submitViewerMatchResult,
+} from "@/features/football-tournaments/actions";
 import { getViewerAssignedMatches } from "@/features/football-tournaments/data";
 
 export const metadata: Metadata = {
@@ -33,15 +37,27 @@ export default async function ViewerDashboardPage() {
   return (
     <main className="min-h-screen bg-[var(--color-base)] px-5 py-8 text-[var(--color-ink)] sm:px-8">
       <div className="mx-auto grid w-full max-w-5xl gap-8">
-        <section className="border-b border-white/10 pb-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-            Veedor
-          </p>
-          <h1 className="mt-4 text-display-sm">Mis partidos asignados</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-            Cargá solo resultados finales. Una vez guardado, el resultado queda
-            bloqueado y cualquier corrección la hace un administrador.
-          </p>
+        <section className="grid gap-5 border-b border-white/10 pb-8 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
+              Veedor
+            </p>
+            <h1 className="mt-4 text-display-sm">Mis partidos asignados</h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
+              Cargá solo resultados finales. Una vez guardado, el resultado
+              queda bloqueado y cualquier corrección la hace un administrador.
+            </p>
+          </div>
+
+          <form action={logoutAdmin}>
+            <button
+              type="submit"
+              className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-[0.8rem] border border-white/12 bg-white/[0.025] px-4 py-2 text-sm font-semibold text-white/78 transition hover:border-[var(--color-warm)]/55 hover:bg-[var(--color-warm)]/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] sm:w-auto"
+            >
+              <LogOut size={16} aria-hidden="true" />
+              Cerrar sesión
+            </button>
+          </form>
         </section>
 
         {matches.length > 0 ? (
@@ -95,6 +111,12 @@ export default async function ViewerDashboardPage() {
                       action={submitResultAction}
                       homeScore={match.homeScore}
                       awayScore={match.awayScore}
+                      homePenaltyScore={match.homePenaltyScore}
+                      awayPenaltyScore={match.awayPenaltyScore}
+                      homeTeamId={match.homeTeamId}
+                      awayTeamId={match.awayTeamId}
+                      isKnockout={match.isKnockout}
+                      rosterEntries={match.rosterEntries}
                       submitLabel="Cargar final"
                     />
                   )}

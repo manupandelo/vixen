@@ -36,7 +36,7 @@ Existing tournaments are migrated into one default category based on the former 
 - Una categoria tiene muchos equipos por `football_tournament_teams.category_id`.
 - Una categoria puede tener muchas zonas por `football_tournament_groups.category_id`.
 - Una zona tiene muchos equipos por `football_tournament_group_teams.group_id`.
-- Un equipo puede participar en muchos torneos por `football_tournament_teams.team_id`.
+- Un equipo puede participar en muchos torneos por `football_tournament_teams.team_id`, pero no puede estar en mas de una categoria del mismo torneo.
 - Un equipo tiene un unico bloque privado en `football_team_admin_details`.
 - Un jugador puede tener muchas inscripciones de plantel por `football_roster_entries.player_id`.
 - Un torneo tiene muchos jugadores de plantel por `football_roster_entries.tournament_id`.
@@ -118,6 +118,7 @@ Politicas:
 - `20260701040000_add_football_tournament_groups.sql`: zonas y equipos por zona para torneos zonas + playoff.
 - `20260702000000_add_football_players_rosters.sql`: jugadores reutilizables y planteles por torneo/equipo con estado documental.
 - `20260702010000_add_football_tournament_categories.sql`: categorias competitivas por torneo y migracion de equipos, zonas, planteles y partidos a `category_id`.
+- `20260702020000_prevent_team_multiple_tournament_categories.sql`: evita que un equipo quede anotado en mas de una categoria del mismo torneo.
 
 ## Como mantener esto
 

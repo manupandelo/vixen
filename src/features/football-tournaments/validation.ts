@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
+  footballDocumentationStatuses,
   footballMatchStatuses,
+  footballRosterEntryStatuses,
   footballTournamentCategoryStatuses,
   footballTournamentFormats,
   footballTournamentStatuses,
@@ -126,6 +128,39 @@ const nullableScore = z.preprocess(
     .nullable(),
 );
 
+const nullableShirtNumber = z.preprocess(
+  (value) => {
+    if (value === null || value === undefined) return null;
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed === "" ? null : Number(trimmed);
+    }
+
+    return value;
+  },
+  z
+    .number()
+    .int("Ingresá un número entero.")
+    .min(0, "El número no puede ser negativo.")
+    .max(99, "El número no puede superar 99.")
+    .nullable(),
+);
+
+const playerBirthDate = z.preprocess(
+  (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== "string") return value;
+
+    const trimmed = value.trim();
+    return trimmed === "" ? null : trimmed;
+  },
+  z
+    .string()
+    .refine(isValidCalendarDate, "Ingresá una fecha válida.")
+    .nullable(),
+);
+
 export const tournamentFormSchema = z
   .object({
     name: z
@@ -224,6 +259,69 @@ export const teamFormSchema = z.object({
   }
 });
 
+const rosterBaseSchema = {
+  shirtNumber: nullableShirtNumber,
+  status: z.enum(footballRosterEntryStatuses),
+  medicalStatus: z.enum(footballDocumentationStatuses),
+  insuranceStatus: z.enum(footballDocumentationStatuses),
+  rosterNotes: nullableText.refine(
+    (value) => value === null || value.length <= footballFormLimits.rosterNotes,
+    `Las notas no pueden superar ${footballFormLimits.rosterNotes} caracteres.`,
+  ),
+};
+
+export const rosterEntryCreateSchema = z.discriminatedUnion("mode", [
+  z.object({
+    mode: z.literal("existing"),
+    playerId: z.string().trim().min(1, "Elegí un jugador."),
+    ...rosterBaseSchema,
+  }),
+  z.object({
+    mode: z.literal("new"),
+    firstName: z
+      .string()
+      .trim()
+      .min(2, "Ingresá el nombre.")
+      .max(
+        footballFormLimits.playerFirstName,
+        `El nombre no puede superar ${footballFormLimits.playerFirstName} caracteres.`,
+      ),
+    lastName: z
+      .string()
+      .trim()
+      .min(2, "Ingresá el apellido.")
+      .max(
+        footballFormLimits.playerLastName,
+        `El apellido no puede superar ${footballFormLimits.playerLastName} caracteres.`,
+      ),
+    publicName: nullableText.refine(
+      (value) =>
+        value === null || value.length <= footballFormLimits.playerPublicName,
+      `El nombre público no puede superar ${footballFormLimits.playerPublicName} caracteres.`,
+    ),
+    documentNumber: nullableText.refine(
+      (value) =>
+        value === null ||
+        value.length <= footballFormLimits.playerDocumentNumber,
+      `El documento no puede superar ${footballFormLimits.playerDocumentNumber} caracteres.`,
+    ),
+    birthDate: playerBirthDate,
+    phone: nullableText.refine(
+      (value) =>
+        value === null || value.length <= footballFormLimits.playerPhone,
+      `El teléfono no puede superar ${footballFormLimits.playerPhone} caracteres.`,
+    ),
+    playerNotes: nullableText.refine(
+      (value) =>
+        value === null || value.length <= footballFormLimits.playerNotes,
+      `Las notas no pueden superar ${footballFormLimits.playerNotes} caracteres.`,
+    ),
+    ...rosterBaseSchema,
+  }),
+]);
+
+export const rosterEntryUpdateSchema = z.object(rosterBaseSchema);
+
 export const matchFormSchema = z
   .object({
     roundLabel: z
@@ -296,6 +394,8 @@ export const matchResultFormSchema = z.object({
       .int("Ingresá goles enteros.")
       .min(0, "Los goles no pueden ser negativos."),
   ),
+  homePenaltyScore: nullableScore,
+  awayPenaltyScore: nullableScore,
 });
 
 export const fixtureGenerationSchema = z.object({

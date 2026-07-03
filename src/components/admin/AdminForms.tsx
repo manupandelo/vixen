@@ -1,5 +1,7 @@
 "use client";
 
+import { useAutoAnimate } from "@formkit/auto-animate/react";
+
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Progress from "@radix-ui/react-progress";
@@ -10,11 +12,14 @@ import {
   ListChecks,
   Pencil,
   Plus,
+  Minus,
   Trash2,
   Trophy,
+  Settings,
 } from "lucide-react";
 import {
   useActionState,
+  useEffect,
   useMemo,
   useReducer,
   useState,
@@ -23,13 +28,21 @@ import {
   type SetStateAction,
 } from "react";
 
+import { InteractiveBracketBuilder } from "@/components/admin/InteractiveBracketBuilder";
+import { type MatchNode } from "@/lib/tree-generator";
 import { useActionToast } from "@/components/admin/AdminToast";
 import type { ActionState } from "@/features/football-tournaments/actions";
-import { buildLeagueFixture } from "@/features/football-tournaments/fixture";
+import {
+  buildGroupPlayoffFixture,
+  buildLeagueFixture,
+} from "@/features/football-tournaments/fixture";
 import type {
   AdminMatch,
+  AdminPlayer,
+  AdminRosterEntry,
   AdminTeam,
   AdminTournament,
+  MatchResultRosterEntry,
   StaffProfile,
 } from "@/features/football-tournaments/data";
 import {
@@ -39,10 +52,16 @@ import {
 } from "@/features/football-tournaments/limits";
 import {
   footballMatchStatuses,
+  footballDocumentationStatuses,
+  footballDocumentationStatusLabels,
+  footballRosterEntryStatuses,
+  footballRosterEntryStatusLabels,
   footballTournamentFormatLabels,
   footballTournamentFormats,
   footballTournamentStatuses,
+  type FootballDocumentationStatus,
   type FootballMatchStatus,
+  type FootballRosterEntryStatus,
   type FootballTournamentFormat,
   type FootballTournamentStatus,
 } from "@/features/football-tournaments/types";
@@ -77,10 +96,11 @@ type DeleteTournamentAction = (
   formData: FormData,
 ) => Promise<ActionState>;
 
-type TournamentFormProps = {
+export type TournamentFormProps = {
   action: TournamentFormAction;
   tournament?: AdminTournament;
-  submitLabel: string;
+  submitLabel?: string;
+  onSuccess?: () => void;
   layout?: "standard" | "stepped";
 };
 
@@ -117,6 +137,35 @@ type TeamEditDialogProps = {
 type TeamRemoveDialogProps = {
   action: TeamFormAction;
   teamName: string;
+};
+
+type RosterEntryFormAction = (
+  prevState: ActionState,
+  formData: FormData,
+) => Promise<ActionState>;
+
+type RosterEntryFormProps = {
+  action: RosterEntryFormAction;
+  availablePlayers?: AdminPlayer[];
+  onSuccess?: () => void;
+  rosterEntry?: AdminRosterEntry;
+  submitLabel?: string;
+};
+
+type RosterEntryCreateDialogProps = {
+  action: RosterEntryFormAction;
+  availablePlayers: AdminPlayer[];
+  teamName: string;
+};
+
+type RosterEntryEditDialogProps = {
+  action: RosterEntryFormAction;
+  rosterEntry: AdminRosterEntry;
+};
+
+type RosterEntryRemoveDialogProps = {
+  action: RosterEntryFormAction;
+  playerName: string;
 };
 
 type MatchFormProps = {
@@ -185,6 +234,12 @@ type MatchResultFormProps = {
   action: MatchAdminAction;
   homeScore: number | null;
   awayScore: number | null;
+  homePenaltyScore?: number | null;
+  awayPenaltyScore?: number | null;
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
+  isKnockout?: boolean;
+  rosterEntries?: MatchResultRosterEntry[];
   submitLabel?: string;
 };
 
@@ -200,6 +255,7 @@ const initialState: ActionState = {
 
 const EMPTY_AVAILABLE_TEAMS: Pick<AdminTeam, "id" | "name" | "shortName">[] =
   [];
+const EMPTY_AVAILABLE_PLAYERS: AdminPlayer[] = [];
 
 const tournamentWizardSteps: TournamentWizardStep[] = [
   {
@@ -256,7 +312,7 @@ const secondaryButtonClass =
 const formatDescriptions: Record<FootballTournamentFormat, string> = {
   league: "Todos contra todos. La tabla ordena el torneo.",
   cup: "Llaves o eliminación directa. Ideal para torneos cortos.",
-  league_playoff: "Fase regular con tabla y definición por playoffs.",
+  league_playoff: "Zonas de fase regular y definición por playoffs.",
 };
 
 function isOverLimit(value: string, max: number) {
@@ -741,11 +797,12 @@ function TournamentSteppedForm({
 export function TournamentForm({
   action,
   tournament,
-  submitLabel,
+  submitLabel = "Crear torneo",
+  onSuccess,
   layout = "standard",
 }: TournamentFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
-  useActionToast(state);
+  useActionToast(state, { onSuccess });
 
   const isStepped = layout === "stepped";
   const [step, setStep] = useState(0);
@@ -1436,10 +1493,474 @@ export function TeamRemoveDialog({
   );
 }
 
+function getPlayerDisplayName(player: AdminPlayer) {
+  const displayName =
+    player.publicName ?? `${player.firstName} ${player.lastName}`.trim();
+
+  return displayName || "Jugador sin nombre";
+}
+
+function RosterEntryForm({
+  action,
+  availablePlayers = EMPTY_AVAILABLE_PLAYERS,
+  onSuccess,
+  rosterEntry,
+  submitLabel,
+}: RosterEntryFormProps) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const isEditing = Boolean(rosterEntry);
+  const [mode, setMode] = useState<"new" | "existing">(
+    availablePlayers.length > 0 ? "existing" : "new",
+  );
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [publicName, setPublicName] = useState("");
+  const [documentNumber, setDocumentNumber] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [phone, setPhone] = useState("");
+  const [playerNotes, setPlayerNotes] = useState("");
+  const [selectedPlayerId, setSelectedPlayerId] = useState(
+    availablePlayers[0]?.id ?? "",
+  );
+  const [shirtNumber, setShirtNumber] = useState(
+    rosterEntry?.shirtNumber === null || rosterEntry?.shirtNumber === undefined
+      ? ""
+      : String(rosterEntry.shirtNumber),
+  );
+  const [status, setStatus] = useState<FootballRosterEntryStatus>(
+    rosterEntry?.status ?? "active",
+  );
+  const [medicalStatus, setMedicalStatus] =
+    useState<FootballDocumentationStatus>(
+      rosterEntry?.medicalStatus ?? "pending",
+    );
+  const [insuranceStatus, setInsuranceStatus] =
+    useState<FootballDocumentationStatus>(
+      rosterEntry?.insuranceStatus ?? "pending",
+    );
+  const [rosterNotes, setRosterNotes] = useState(rosterEntry?.notes ?? "");
+  const canSubmit =
+    isEditing ||
+    (mode === "existing"
+      ? Boolean(selectedPlayerId)
+      : firstName.trim().length >= 2 && lastName.trim().length >= 2);
+
+  useActionToast(state, { onSuccess });
+
+  return (
+    <form action={formAction} className="grid gap-5">
+      {!isEditing ? (
+        <section className="grid gap-4">
+          <input type="hidden" name="mode" value={mode} />
+          <div className="grid gap-2">
+            <span className={labelClass}>Jugador</span>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                aria-pressed={mode === "existing"}
+                onClick={() => setMode("existing")}
+                disabled={availablePlayers.length === 0}
+                className={
+                  mode === "existing"
+                    ? "rounded-[0.8rem] border border-[var(--color-accent)] bg-[var(--color-accent)]/12 px-4 py-3 text-left text-sm font-semibold text-white"
+                    : "rounded-[0.8rem] border border-white/10 bg-white/[0.025] px-4 py-3 text-left text-sm font-semibold text-white/68 transition hover:border-[var(--color-accent)]/45 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                }
+              >
+                Existente
+              </button>
+              <button
+                type="button"
+                aria-pressed={mode === "new"}
+                onClick={() => setMode("new")}
+                className={
+                  mode === "new"
+                    ? "rounded-[0.8rem] border border-[var(--color-accent)] bg-[var(--color-accent)]/12 px-4 py-3 text-left text-sm font-semibold text-white"
+                    : "rounded-[0.8rem] border border-white/10 bg-white/[0.025] px-4 py-3 text-left text-sm font-semibold text-white/68 transition hover:border-[var(--color-accent)]/45 hover:text-white"
+                }
+              >
+                Nuevo
+              </button>
+            </div>
+          </div>
+
+          {mode === "existing" ? (
+            <label className="grid gap-2">
+              <span className={labelClass}>Jugador guardado</span>
+              <select
+                name="playerId"
+                value={selectedPlayerId}
+                onChange={(event) => setSelectedPlayerId(event.target.value)}
+                className={inputClass}
+                disabled={availablePlayers.length === 0}
+              >
+                {availablePlayers.length === 0 ? (
+                  <option value="">No hay jugadores disponibles</option>
+                ) : null}
+                {availablePlayers.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    {getPlayerDisplayName(player)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <div className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-2">
+                  <FieldLabel
+                    value={firstName}
+                    max={footballFormLimits.playerFirstName}
+                  >
+                    Nombre
+                  </FieldLabel>
+                  <input
+                    name="firstName"
+                    aria-label="Nombre del jugador"
+                    value={firstName}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    className={inputClass}
+                    required={mode === "new"}
+                  />
+                </label>
+                <label className="grid gap-2">
+                  <FieldLabel
+                    value={lastName}
+                    max={footballFormLimits.playerLastName}
+                  >
+                    Apellido
+                  </FieldLabel>
+                  <input
+                    name="lastName"
+                    aria-label="Apellido del jugador"
+                    value={lastName}
+                    onChange={(event) => setLastName(event.target.value)}
+                    className={inputClass}
+                    required={mode === "new"}
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-2">
+                  <FieldLabel
+                    value={publicName}
+                    max={footballFormLimits.playerPublicName}
+                  >
+                    Nombre público
+                  </FieldLabel>
+                  <input
+                    name="publicName"
+                    aria-label="Nombre público"
+                    value={publicName}
+                    onChange={(event) => setPublicName(event.target.value)}
+                    className={inputClass}
+                    placeholder="Opcional"
+                  />
+                </label>
+                <label className="grid gap-2">
+                  <FieldLabel
+                    value={documentNumber}
+                    max={footballFormLimits.playerDocumentNumber}
+                  >
+                    DNI
+                  </FieldLabel>
+                  <input
+                    name="documentNumber"
+                    aria-label="DNI"
+                    value={documentNumber}
+                    onChange={(event) => setDocumentNumber(event.target.value)}
+                    className={inputClass}
+                    placeholder="Opcional"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className={labelClass}>Nacimiento</span>
+                  <input
+                    name="birthDate"
+                    aria-label="Nacimiento"
+                    type="date"
+                    value={birthDate}
+                    onChange={(event) => setBirthDate(event.target.value)}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="grid gap-2">
+                  <FieldLabel value={phone} max={footballFormLimits.playerPhone}>
+                    Teléfono
+                  </FieldLabel>
+                  <input
+                    name="phone"
+                    aria-label="Teléfono del jugador"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    className={inputClass}
+                    placeholder="Opcional"
+                  />
+                </label>
+              </div>
+
+              <label className="grid gap-2">
+                <FieldLabel
+                  value={playerNotes}
+                  max={footballFormLimits.playerNotes}
+                >
+                  Notas del jugador
+                </FieldLabel>
+                <textarea
+                  name="playerNotes"
+                  aria-label="Notas del jugador"
+                  value={playerNotes}
+                  onChange={(event) => setPlayerNotes(event.target.value)}
+                  rows={3}
+                  className={`${inputClass} resize-y py-3 leading-6`}
+                  placeholder="Opcional"
+                />
+              </label>
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      <section className="grid gap-4 border-t border-white/10 pt-5">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-2">
+            <span className={labelClass}>Camiseta</span>
+            <input
+              name="shirtNumber"
+              aria-label="Número de camiseta"
+              type="number"
+              min={0}
+              max={99}
+              value={shirtNumber}
+              onChange={(event) => setShirtNumber(event.target.value)}
+              className={inputClass}
+              placeholder="Sin número"
+            />
+          </label>
+          <label className="grid gap-2">
+            <span className={labelClass}>Estado</span>
+            <select
+              name="status"
+              value={status}
+              onChange={(event) =>
+                setStatus(event.target.value as FootballRosterEntryStatus)
+              }
+              className={inputClass}
+            >
+              {footballRosterEntryStatuses.map((entryStatus) => (
+                <option key={entryStatus} value={entryStatus}>
+                  {footballRosterEntryStatusLabels[entryStatus]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-2">
+            <span className={labelClass}>Apto médico</span>
+            <select
+              name="medicalStatus"
+              value={medicalStatus}
+              onChange={(event) =>
+                setMedicalStatus(
+                  event.target.value as FootballDocumentationStatus,
+                )
+              }
+              className={inputClass}
+            >
+              {footballDocumentationStatuses.map((documentationStatus) => (
+                <option key={documentationStatus} value={documentationStatus}>
+                  {footballDocumentationStatusLabels[documentationStatus]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-2">
+            <span className={labelClass}>Seguro</span>
+            <select
+              name="insuranceStatus"
+              value={insuranceStatus}
+              onChange={(event) =>
+                setInsuranceStatus(
+                  event.target.value as FootballDocumentationStatus,
+                )
+              }
+              className={inputClass}
+            >
+              {footballDocumentationStatuses.map((documentationStatus) => (
+                <option key={documentationStatus} value={documentationStatus}>
+                  {footballDocumentationStatusLabels[documentationStatus]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="grid gap-2">
+          <FieldLabel value={rosterNotes} max={footballFormLimits.rosterNotes}>
+            Notas de inscripción
+          </FieldLabel>
+          <textarea
+            name="rosterNotes"
+            aria-label="Notas de inscripción"
+            value={rosterNotes}
+            onChange={(event) => setRosterNotes(event.target.value)}
+            rows={3}
+            className={`${inputClass} resize-y py-3 leading-6`}
+            placeholder="Opcional"
+          />
+        </label>
+      </section>
+
+      <button
+        type="submit"
+        disabled={isPending || !canSubmit}
+        className={primaryButtonClass}
+      >
+        {isPending
+          ? "Guardando..."
+          : submitLabel ?? (isEditing ? "Guardar jugador" : "Agregar jugador")}
+      </button>
+    </form>
+  );
+}
+
+export function RosterEntryCreateDialog({
+  action,
+  availablePlayers,
+  teamName,
+}: RosterEntryCreateDialogProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger asChild>
+        <button type="button" className={`${secondaryButtonClass} gap-2`}>
+          <Plus size={15} aria-hidden="true" />
+          Agregar jugador
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[88vh] w-[min(94vw,48rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[1rem] border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <Dialog.Title className="text-2xl font-semibold text-white">
+            Agregar jugador
+          </Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Sumá un jugador al plantel de {teamName}.
+          </Dialog.Description>
+          <div className="mt-6">
+            <RosterEntryForm
+              action={action}
+              availablePlayers={availablePlayers}
+              onSuccess={() => setOpen(false)}
+            />
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+export function RosterEntryEditDialog({
+  action,
+  rosterEntry,
+}: RosterEntryEditDialogProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger asChild>
+        <button type="button" className={compactButtonClass}>
+          <Pencil size={14} aria-hidden="true" />
+          Editar jugador
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[88vh] w-[min(94vw,44rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[1rem] border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <Dialog.Title className="text-2xl font-semibold text-white">
+            Editar jugador
+          </Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Ajustá camiseta, estado y documentación de{" "}
+            {getPlayerDisplayName(rosterEntry.player)}.
+          </Dialog.Description>
+          <div className="mt-6">
+            <RosterEntryForm
+              action={action}
+              rosterEntry={rosterEntry}
+              submitLabel="Guardar jugador"
+              onSuccess={() => setOpen(false)}
+            />
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+export function RosterEntryRemoveDialog({
+  action,
+  playerName,
+}: RosterEntryRemoveDialogProps) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [open, setOpen] = useState(false);
+
+  useActionToast(state, {
+    onSuccess: () => setOpen(false),
+  });
+
+  return (
+    <AlertDialog.Root open={open} onOpenChange={setOpen}>
+      <AlertDialog.Trigger asChild>
+        <button type="button" className={dangerCompactButtonClass}>
+          <Trash2 size={14} aria-hidden="true" />
+          Quitar jugador
+        </button>
+      </AlertDialog.Trigger>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 grid w-[min(94vw,34rem)] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-[1rem] border border-[var(--color-warm)]/35 bg-[#17100d] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <div>
+            <AlertDialog.Title className="text-2xl font-semibold text-white">
+              Quitar jugador
+            </AlertDialog.Title>
+            <AlertDialog.Description className="mt-3 text-sm leading-6 text-white/68">
+              {playerName} sale de este plantel, pero el jugador queda guardado
+              para futuros torneos.
+            </AlertDialog.Description>
+          </div>
+
+          <form action={formAction} className="flex flex-wrap justify-end gap-3">
+            <AlertDialog.Cancel asChild>
+              <button type="button" className={secondaryButtonClass}>
+                Cancelar
+              </button>
+            </AlertDialog.Cancel>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="inline-flex min-h-11 items-center justify-center rounded-[0.8rem] border border-[var(--color-warm)]/50 bg-[var(--color-warm)]/18 px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-warm)]/26 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
+            >
+              {isPending ? "Quitando..." : "Quitar jugador"}
+            </button>
+          </form>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
+  );
+}
+
 export function FixtureGeneratorDialog({
   action,
   teams,
 }: FixtureGeneratorDialogProps) {
+  const [parent] = useAutoAnimate();
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [fixtureState, dispatchFixtureState] = useReducer(
@@ -1577,23 +2098,33 @@ export function FixtureGeneratorDialog({
                 </p>
               </div>
 
-              <div className="mt-4 grid max-h-80 gap-3 overflow-y-auto pr-1">
+              <div ref={parent} className="mt-4 grid max-h-[400px] gap-4 overflow-y-auto pr-2 custom-scrollbar pb-4">
                 {preview.map((round) => (
                   <div
                     key={round.label}
-                    className="rounded-[0.85rem] border border-white/10 bg-black/10 p-3"
+                    className="flex flex-col gap-3"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-white">
-                        {round.label}
-                      </p>
-                      <p className="text-xs text-[var(--color-muted)]">
-                        {round.scheduledAt
-                          ? round.scheduledAt.slice(0, 16).replace("T", " ")
-                          : "Sin horario asignado"}
-                      </p>
+                    {/* Encabezado de la Fecha */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/10">
+                        <span className="text-sm font-bold text-[var(--color-accent)] uppercase tracking-wider">
+                          {round.label}
+                        </span>
+                        {round.scheduledAt && (
+                          <>
+                            <span className="text-white/20">•</span>
+                            <span className="text-xs font-medium text-white/60">
+                              {round.scheduledAt.slice(0, 16).replace("T", " ")}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                     </div>
-                    <div className="mt-2 grid gap-2">
+
+                    {/* Partidos de la Fecha */}
+                    <div className="grid gap-2">
                       {round.matches.map((match) => {
                         const home = teams.find(
                           (team) => team.id === match.homeTeamId,
@@ -1603,13 +2134,28 @@ export function FixtureGeneratorDialog({
                         );
 
                         return (
-                          <p
+                          <div
                             key={`${match.homeTeamId}-${match.awayTeamId}`}
-                            className="text-sm text-white/76"
+                            className="group relative flex items-center justify-between rounded-xl border border-white/5 bg-[#1A211D] px-4 py-3 transition-colors hover:border-white/10 hover:bg-white/[0.04]"
                           >
-                            {home?.name ?? "Local"} vs{" "}
-                            {away?.name ?? "Visitante"}
-                          </p>
+                            <div className="flex-1 text-right">
+                              <span className="text-sm font-semibold text-white group-hover:text-[var(--color-accent)] transition-colors">
+                                {home?.name ?? "Local"}
+                              </span>
+                            </div>
+
+                            <div className="mx-4 flex shrink-0 items-center justify-center">
+                              <div className="flex h-6 w-8 items-center justify-center rounded bg-black/40 text-[10px] font-black text-white/40">
+                                VS
+                              </div>
+                            </div>
+
+                            <div className="flex-1 text-left">
+                              <span className="text-sm font-semibold text-white group-hover:text-[var(--color-accent)] transition-colors">
+                                {away?.name ?? "Visitante"}
+                              </span>
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
@@ -1630,6 +2176,338 @@ export function FixtureGeneratorDialog({
                 className={primaryButtonClass}
               >
                 {isPending ? "Guardando..." : "Guardar fixture"}
+              </button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+export type BracketGeneratorDialogProps = {
+  action: (state: ActionState, payload: FormData) => Promise<ActionState>;
+  teams: Pick<AdminTeam, "id" | "name">[];
+};
+
+export type GroupPlayoffGeneratorDialogProps = {
+  action: (state: ActionState, payload: FormData) => Promise<ActionState>;
+  teams: Pick<AdminTeam, "id" | "name">[];
+};
+
+export function GroupPlayoffGeneratorDialog({
+  action,
+  teams,
+}: GroupPlayoffGeneratorDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [groupCount, setGroupCount] = useState("2");
+  const [qualifiersPerGroup, setQualifiersPerGroup] = useState("1");
+  const [startsAt, setStartsAt] = useState("");
+  const [kickoffTime, setKickoffTime] = useState("");
+  const [daysBetweenGroupRounds, setDaysBetweenGroupRounds] = useState("7");
+  const [daysBetweenPlayoffRounds, setDaysBetweenPlayoffRounds] = useState("7");
+
+  const preview = useMemo(() => {
+    try {
+      return buildGroupPlayoffFixture(teams, {
+        groupCount: Number(groupCount) || 2,
+        qualifiersPerGroup: Number(qualifiersPerGroup) || 1,
+        startsAt: startsAt || null,
+        kickoffTime: kickoffTime || null,
+        daysBetweenGroupRounds: Number(daysBetweenGroupRounds) || 7,
+        daysBetweenPlayoffRounds: Number(daysBetweenPlayoffRounds) || 7,
+      });
+    } catch {
+      return null;
+    }
+  }, [
+    daysBetweenGroupRounds,
+    daysBetweenPlayoffRounds,
+    groupCount,
+    kickoffTime,
+    qualifiersPerGroup,
+    startsAt,
+    teams,
+  ]);
+  const groupMatchCount =
+    preview?.groupRounds.flatMap((round) => round.matches).length ?? 0;
+  const playoffMatchCount = preview?.playoffMatches.length ?? 0;
+  const totalMatchCount = groupMatchCount + playoffMatchCount;
+  const hasEnoughTeams = teams.length >= 2;
+
+  useActionToast(state, {
+    onSuccess: () => setOpen(false),
+  });
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger asChild>
+        <button
+          type="button"
+          disabled={!hasEnoughTeams}
+          className={`${primaryButtonClass} gap-2`}
+        >
+          <CalendarPlus size={17} aria-hidden="true" />
+          Generar zonas + playoff
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[88vh] w-[min(94vw,64rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[1rem] border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <Dialog.Title className="text-2xl font-semibold text-white">
+            Generar zonas + playoff
+          </Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Armá zonas balanceadas, fixture de grupos y una llave final con
+            clasificados pendientes.
+          </Dialog.Description>
+
+          <form action={formAction} className="mt-6 grid gap-6">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <label className="grid gap-2">
+                <span className={labelClass}>Zonas</span>
+                <input
+                  name="groupCount"
+                  type="number"
+                  min="1"
+                  max={Math.max(1, teams.length)}
+                  aria-label="Zonas"
+                  value={groupCount}
+                  onChange={(event) => setGroupCount(event.target.value)}
+                  className={inputClass}
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className={labelClass}>Clasifican por zona</span>
+                <input
+                  name="qualifiersPerGroup"
+                  type="number"
+                  min="1"
+                  aria-label="Clasifican por zona"
+                  value={qualifiersPerGroup}
+                  onChange={(event) =>
+                    setQualifiersPerGroup(event.target.value)
+                  }
+                  className={inputClass}
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className={labelClass}>Inicio</span>
+                <input
+                  name="startsAt"
+                  type="date"
+                  aria-label="Inicio"
+                  value={startsAt}
+                  onChange={(event) => setStartsAt(event.target.value)}
+                  className={inputClass}
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className={labelClass}>Hora</span>
+                <input
+                  name="kickoffTime"
+                  type="time"
+                  aria-label="Hora"
+                  value={kickoffTime}
+                  onChange={(event) => setKickoffTime(event.target.value)}
+                  className={inputClass}
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className={labelClass}>Cada fecha</span>
+                <select
+                  name="daysBetweenGroupRounds"
+                  value={daysBetweenGroupRounds}
+                  onChange={(event) =>
+                    setDaysBetweenGroupRounds(event.target.value)
+                  }
+                  className={inputClass}
+                >
+                  <option value="7">7 días</option>
+                  <option value="14">14 días</option>
+                  <option value="3">3 días</option>
+                  <option value="1">1 día</option>
+                </select>
+              </label>
+
+              <label className="grid gap-2">
+                <span className={labelClass}>Cada fase playoff</span>
+                <select
+                  name="daysBetweenPlayoffRounds"
+                  value={daysBetweenPlayoffRounds}
+                  onChange={(event) =>
+                    setDaysBetweenPlayoffRounds(event.target.value)
+                  }
+                  className={inputClass}
+                >
+                  <option value="7">7 días</option>
+                  <option value="14">14 días</option>
+                  <option value="3">3 días</option>
+                  <option value="1">1 día</option>
+                </select>
+              </label>
+            </div>
+
+            <section className="rounded-[0.95rem] border border-white/10 bg-white/[0.025] p-4">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
+                    Vista previa
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold text-white">
+                    {totalMatchCount} partidos totales
+                  </h3>
+                </div>
+                <p className="text-sm text-[var(--color-muted)]">
+                  {groupMatchCount} de grupos · {playoffMatchCount} playoff
+                </p>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {preview?.groups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="rounded-[0.85rem] border border-white/10 bg-black/10 p-3"
+                  >
+                    <p className="text-sm font-semibold text-white">
+                      {group.name}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-white/70">
+                      {group.teams.map((team) => team.name).join(", ")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="flex flex-wrap justify-end gap-3">
+              <Dialog.Close asChild>
+                <button type="button" className={secondaryButtonClass}>
+                  Cancelar
+                </button>
+              </Dialog.Close>
+              <button
+                type="submit"
+                disabled={isPending || !preview || totalMatchCount === 0}
+                className={primaryButtonClass}
+              >
+                {isPending ? "Guardando..." : "Guardar zonas + playoff"}
+              </button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+export function BracketGeneratorDialog({
+  action,
+  teams,
+}: BracketGeneratorDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [showErrors, setShowErrors] = useState(false);
+
+  const [bracketMatches, setBracketMatches] = useState<MatchNode[]>([]);
+
+  const handleAction = (formData: FormData) => {
+    const hasEmptyInitialSlots = bracketMatches.some(m =>
+       (m.homeSourceType === "INITIAL" && !m.homeTeamId) ||
+       (m.awaySourceType === "INITIAL" && !m.awayTeamId)
+    );
+
+    if (hasEmptyInitialSlots) {
+       setShowErrors(true);
+       return;
+    }
+    setShowErrors(false);
+
+    const payload = {
+      initialMatches: bracketMatches,
+      startsAt: formData.get("startsAt") as string || null,
+      daysBetweenRounds: Number(formData.get("daysBetweenRounds")) || 7,
+    };
+    formData.set("bracketData", JSON.stringify(payload));
+    formAction(formData);
+  };
+
+  useActionToast(state, {
+    onSuccess: () => setOpen(false),
+  });
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger asChild>
+        <button
+          type="button"
+          disabled={teams.length < 2}
+          className={`${primaryButtonClass} gap-2`}
+        >
+          <CalendarPlus size={17} aria-hidden="true" />
+          Armar Llave
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[95vh] w-[95vw] lg:w-[min(95vw,90rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[1rem] border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <Dialog.Title className="text-2xl font-semibold text-white">
+            Armar Llave Inicial
+          </Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Asigná los cruces iniciales. El resto de la llave se armará automáticamente.
+          </Dialog.Description>
+
+          <form action={handleAction} className="mt-6 grid gap-6">
+            <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+              <label className="grid gap-2">
+                <span className={labelClass}>Fecha de inicio</span>
+                <input
+                  type="date"
+                  name="startsAt"
+                  className={inputClass}
+                />
+              </label>
+              <label className="grid gap-2">
+                <span className={labelClass}>Días entre fases</span>
+                <select
+                  name="daysBetweenRounds"
+                  defaultValue="7"
+                  className={inputClass}
+                >
+                  <option value="7">7 días</option>
+                  <option value="14">14 días</option>
+                  <option value="3">3 días</option>
+                  <option value="1">1 día</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="flex-1 min-h-[500px]">
+              <InteractiveBracketBuilder
+                teams={teams}
+                onMatchesChange={setBracketMatches}
+                showErrors={showErrors}
+              />
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-3">
+              <Dialog.Close asChild>
+                <button type="button" className={secondaryButtonClass}>
+                  Cancelar
+                </button>
+              </Dialog.Close>
+              <button
+                type="submit"
+                disabled={isPending}
+                className={primaryButtonClass}
+              >
+                {isPending ? "Generando..." : "Generar Llave"}
               </button>
             </div>
           </form>
@@ -1942,6 +2820,13 @@ export function MatchViewerAssignmentForm({
 }: MatchViewerAssignmentFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   useActionToast(state);
+  const [selectedViewerId, setSelectedViewerId] = useState(
+    assignedViewerId ?? "",
+  );
+
+  useEffect(() => {
+    setSelectedViewerId(assignedViewerId ?? "");
+  }, [assignedViewerId]);
 
   return (
     <form action={formAction} className="grid gap-2">
@@ -1949,7 +2834,8 @@ export function MatchViewerAssignmentForm({
         <span className={labelClass}>Veedor</span>
         <select
           name="assignedViewerId"
-          defaultValue={assignedViewerId ?? ""}
+          value={selectedViewerId}
+          onChange={(event) => setSelectedViewerId(event.target.value)}
           className={inputClass}
         >
           <option value="">Sin veedor</option>
@@ -1972,46 +2858,302 @@ export function MatchResultForm({
   action,
   homeScore,
   awayScore,
+  homePenaltyScore = null,
+  awayPenaltyScore = null,
+  homeTeamId = null,
+  awayTeamId = null,
+  isKnockout = false,
+  rosterEntries = [],
   submitLabel = "Guardar resultado",
 }: MatchResultFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   useActionToast(state);
 
-  return (
-    <form action={formAction} className="grid gap-2">
-      <div className="grid grid-cols-2 gap-2">
-        <label className="grid gap-2">
-          <span className={labelClass}>Local</span>
-          <input
-            name="homeScore"
-            type="number"
-            min="0"
-            step="1"
-            inputMode="numeric"
-            defaultValue={homeScore ?? ""}
-            required
-            className={inputClass}
-          />
-        </label>
+  const [localHome, setLocalHome] = useState(homeScore ?? 0);
+  const [localAway, setLocalAway] = useState(awayScore ?? 0);
+  const [localHomePenalties, setLocalHomePenalties] = useState(
+    homePenaltyScore ?? 0,
+  );
+  const [localAwayPenalties, setLocalAwayPenalties] = useState(
+    awayPenaltyScore ?? 0,
+  );
 
-        <label className="grid gap-2">
+  useEffect(() => {
+    setLocalHome(homeScore ?? 0);
+    setLocalAway(awayScore ?? 0);
+    setLocalHomePenalties(homePenaltyScore ?? 0);
+    setLocalAwayPenalties(awayPenaltyScore ?? 0);
+  }, [awayPenaltyScore, awayScore, homePenaltyScore, homeScore]);
+
+  const homeRosterEntries = useMemo(
+    () => rosterEntries.filter((entry) => entry.teamId === homeTeamId),
+    [homeTeamId, rosterEntries],
+  );
+  const awayRosterEntries = useMemo(
+    () => rosterEntries.filter((entry) => entry.teamId === awayTeamId),
+    [awayTeamId, rosterEntries],
+  );
+  const shouldShowPenalties = isKnockout && localHome === localAway;
+  const hasRosterEntries =
+    homeRosterEntries.length > 0 || awayRosterEntries.length > 0;
+
+  const updateScore = (team: "home" | "away", delta: number) => {
+    if (team === "home") {
+      setLocalHome((currentScore) => Math.max(0, currentScore + delta));
+    } else {
+      setLocalAway((currentScore) => Math.max(0, currentScore + delta));
+    }
+  };
+
+  return (
+    <form action={formAction} className="grid gap-6">
+      <div className="grid grid-cols-2 gap-4">
+        {/* Local */}
+        <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-center">
+          <span className={labelClass}>Local</span>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              aria-label="Restar gol local"
+              onClick={() => updateScore("home", -1)}
+              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
+            >
+              <Minus size={24} />
+            </button>
+            <span className="text-3xl font-bold text-white tabular-nums">
+              {localHome}
+            </span>
+            <button
+              type="button"
+              aria-label="Sumar gol local"
+              onClick={() => updateScore("home", 1)}
+              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
+            >
+              <Plus size={24} />
+            </button>
+          </div>
+          <input type="hidden" name="homeScore" value={localHome} />
+        </div>
+
+        {/* Visitante */}
+        <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-center">
           <span className={labelClass}>Visitante</span>
-          <input
-            name="awayScore"
-            type="number"
-            min="0"
-            step="1"
-            inputMode="numeric"
-            defaultValue={awayScore ?? ""}
-            required
-            className={inputClass}
-          />
-        </label>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              aria-label="Restar gol visitante"
+              onClick={() => updateScore("away", -1)}
+              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
+            >
+              <Minus size={24} />
+            </button>
+            <span className="text-3xl font-bold text-white tabular-nums">
+              {localAway}
+            </span>
+            <button
+              type="button"
+              aria-label="Sumar gol visitante"
+              onClick={() => updateScore("away", 1)}
+              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
+            >
+              <Plus size={24} />
+            </button>
+          </div>
+          <input type="hidden" name="awayScore" value={localAway} />
+        </div>
       </div>
 
-      <button type="submit" disabled={isPending} className={compactButtonClass}>
+      {shouldShowPenalties ? (
+        <div className="grid gap-3 rounded-2xl border border-[var(--color-accent)]/25 bg-[var(--color-accent)]/5 p-4">
+          <div>
+            <p className={labelClass}>Definición por penales</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+              Necesario en copa o playoff cuando el partido termina empatado.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-2">
+              <span className="text-xs font-semibold text-white/70">Local</span>
+              <input
+                type="number"
+                name="homePenaltyScore"
+                min={0}
+                value={localHomePenalties}
+                onChange={(event) =>
+                  setLocalHomePenalties(Math.max(0, Number(event.target.value)))
+                }
+                className={inputClass}
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-xs font-semibold text-white/70">
+                Visitante
+              </span>
+              <input
+                type="number"
+                name="awayPenaltyScore"
+                min={0}
+                value={localAwayPenalties}
+                onChange={(event) =>
+                  setLocalAwayPenalties(Math.max(0, Number(event.target.value)))
+                }
+                className={inputClass}
+              />
+            </label>
+          </div>
+        </div>
+      ) : null}
+
+      {hasRosterEntries ? (
+        <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+          <div>
+            <p className={labelClass}>Detalle opcional</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+              Podés asignar goles y tarjetas ahora, o guardar solo el resultado.
+            </p>
+          </div>
+
+          {([
+            ["Local", homeRosterEntries],
+            ["Visitante", awayRosterEntries],
+          ] as const).map(([title, entries]) =>
+            entries.length > 0 ? (
+              <div key={title} className="grid gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/50">
+                  {title}
+                </p>
+                <div className="grid gap-2">
+                  {entries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="grid gap-2 rounded-xl border border-white/8 bg-black/10 p-3 sm:grid-cols-[minmax(0,1fr)_4rem_4rem_4rem] sm:items-center"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">
+                          {entry.shirtNumber !== null
+                            ? `#${entry.shirtNumber} `
+                            : ""}
+                          {entry.displayName}
+                        </p>
+                      </div>
+                      <label className="grid gap-1">
+                        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white/42">
+                          Goles
+                        </span>
+                        <input
+                          type="number"
+                          name={`goals:${entry.id}`}
+                          min={0}
+                          max={50}
+                          placeholder="0"
+                          className={inputClass}
+                        />
+                      </label>
+                      <label className="grid gap-1">
+                        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white/42">
+                          Amar.
+                        </span>
+                        <input
+                          type="number"
+                          name={`yellowCards:${entry.id}`}
+                          min={0}
+                          max={2}
+                          placeholder="0"
+                          className={inputClass}
+                        />
+                      </label>
+                      <label className="grid gap-1">
+                        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white/42">
+                          Roja
+                        </span>
+                        <input
+                          type="number"
+                          name={`redCards:${entry.id}`}
+                          min={0}
+                          max={1}
+                          placeholder="0"
+                          className={inputClass}
+                        />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null,
+          )}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-xs leading-5 text-[var(--color-muted)]">
+          No hay jugadores cargados para estos equipos. Podés guardar el
+          resultado igual.
+        </div>
+      )}
+
+      <button type="submit" disabled={isPending} className={`${primaryButtonClass} w-full sm:w-full`}>
         {isPending ? "Guardando..." : submitLabel}
       </button>
     </form>
+  );
+}
+
+export type TournamentSettingsDialogProps = {
+  tournament: AdminTournament;
+  updateAction: TournamentFormAction;
+  deleteAction: DeleteTournamentAction;
+};
+
+export function TournamentSettingsDialog({
+  tournament,
+  updateAction,
+  deleteAction,
+}: TournamentSettingsDialogProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger asChild>
+        <button
+          type="button"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[0.85rem] border border-white/12 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/78 transition hover:border-[var(--color-accent)] hover:bg-white/[0.06] hover:text-white"
+        >
+          <Settings size={17} aria-hidden="true" />
+          Configuración
+        </button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 max-h-[88vh] w-[min(94vw,40rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[1rem] border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <Dialog.Title className="text-2xl font-semibold text-white">
+            Configuración del torneo
+          </Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+            Editá los detalles o eliminá el torneo permanentemente.
+          </Dialog.Description>
+
+          <div className="mt-6 grid gap-8">
+            <section>
+              <h3 className="mb-4 text-lg font-semibold text-white">Detalles del torneo</h3>
+              <TournamentForm
+                action={updateAction}
+                tournament={tournament}
+                submitLabel="Guardar cambios"
+                onSuccess={() => setOpen(false)}
+              />
+            </section>
+
+            <section className="rounded-[1rem] border border-red-500/20 bg-red-500/5 p-5">
+              <h3 className="text-lg font-semibold text-white">Zona de peligro</h3>
+              <p className="mb-4 mt-1 text-sm text-[var(--color-muted)]">
+                El estado define si el torneo aparece en la página pública. Borrar es una acción permanente.
+              </p>
+              <DeleteTournamentForm
+                action={deleteAction}
+                tournamentName={tournament.name}
+              />
+            </section>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

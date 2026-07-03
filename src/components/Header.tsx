@@ -100,6 +100,7 @@ function MobileSocialLinks({ onNavigate }: { onNavigate: () => void }) {
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -145,6 +146,15 @@ export function Header() {
     };
   }, [isMobileMenuOpen]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const handleDialogClose = () => {
     if (isMobileMenuOpen) {
       closeMobileMenu();
@@ -153,8 +163,14 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[var(--color-base)]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-8 sm:py-4 lg:gap-8 lg:py-5">
+      <header
+        className={`sticky top-0 z-50 border-b transition-all duration-300 ${
+          isScrolled
+            ? "border-white/10 bg-[var(--color-base)]/80 py-2 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.3)]"
+            : "border-transparent bg-transparent py-4 sm:py-5"
+        }`}
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-8 lg:gap-8">
           <Link href="/" aria-label={content.site.name} className="shrink-0">
             <Image
               src="/logo_vixen.svg"

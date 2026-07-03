@@ -11,11 +11,14 @@ const matches: PublicFootballMatch[] = [
     scheduledAt: "2026-04-12T18:30:00-03:00",
     homeTeamId: "team-1",
     awayTeamId: "team-2",
-    homeTeamName: "Vixen Rojo",
+    homeTeamName: "Vixen Blanco",
     awayTeamName: "La Banda",
-    homeScore: 3,
-    awayScore: 1,
+    homeTeamShortName: null,
+    awayTeamShortName: null,
+    homeScore: 2,
+    awayScore: 0,
     status: "completed",
+    isKnockout: false,
   },
   {
     id: "match-2",
@@ -25,9 +28,12 @@ const matches: PublicFootballMatch[] = [
     awayTeamId: "team-4",
     homeTeamName: "Norte FC",
     awayTeamName: "Sur FC",
+    homeTeamShortName: null,
+    awayTeamShortName: null,
     homeScore: null,
     awayScore: null,
     status: "postponed",
+    isKnockout: false,
   },
 ];
 
@@ -37,10 +43,10 @@ describe("MatchList", () => {
 
     expect(screen.getByText("Últimos resultados")).toBeInTheDocument();
     expect(screen.getByText("Fecha 1")).toBeInTheDocument();
-    expect(screen.getByText(/Vixen Rojo/, { selector: "p" })).toHaveTextContent(
+    expect(screen.getByText(/Vixen Blanco/, { selector: "p" })).toHaveTextContent(
       /La Banda/,
     );
-    expect(screen.getByText("3 - 1")).toBeInTheDocument();
+    expect(screen.getByText("2 - 0")).toBeInTheDocument();
     expect(screen.getByText(/12 de abr de 2026/i)).toBeInTheDocument();
   });
 

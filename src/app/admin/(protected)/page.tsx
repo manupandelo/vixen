@@ -10,6 +10,7 @@ import {
   Plus,
   Trophy,
   Users,
+  ArrowRight,
 } from "lucide-react";
 
 import {
@@ -19,6 +20,8 @@ import {
   AdminPageHeader,
   AdminPanel,
   AdminStatusPill,
+  AdminTableHeader,
+  AdminMobileField,
 } from "@/components/admin/AdminUI";
 import {
   getAdminDashboardSummary,
@@ -66,19 +69,22 @@ function DashboardMetric({
   icon: ReactNode;
 }) {
   return (
-    <div className="rounded-[1rem] border border-white/10 bg-white/[0.025] p-4">
-      <div className="flex items-start justify-between gap-3">
+    <div className="group relative overflow-hidden rounded-[1rem] border border-white/5 bg-gradient-to-b from-white/[0.04] to-transparent p-5 shadow-[0_4px_24px_rgb(0_0_0_/_0.15)] transition-all duration-300 hover:border-white/10 hover:shadow-[0_8px_30px_rgb(60_191_113_/_0.1)]">
+      {/* Glow effect on hover */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[var(--color-accent)]/[0.12] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+
+      <div className="relative z-10 flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/50">
             {label}
           </p>
-          <p className="mt-2 text-3xl font-semibold text-white">{value}</p>
+          <p className="mt-3 text-3xl font-bold text-white drop-shadow-sm">{value}</p>
         </div>
-        <span className="grid size-10 place-items-center rounded-[0.85rem] border border-[var(--color-accent)]/20 bg-[var(--color-accent)]/10 text-[var(--color-accent)]">
+        <span className="grid size-11 shrink-0 place-items-center rounded-[0.85rem] border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/15 text-[var(--color-accent)] shadow-[0_0_18px_rgba(60,191,113,0.15)]">
           {icon}
         </span>
       </div>
-      <p className="mt-3 text-xs leading-5 text-[var(--color-muted)]">
+      <p className="relative z-10 mt-5 text-xs leading-5 text-white/50">
         {helper}
       </p>
     </div>
@@ -141,9 +147,12 @@ function DailyStatusPanel({ summary }: { summary: AdminDashboardSummary }) {
       : "border-[var(--color-accent)]/28 bg-[var(--color-accent)]/10 text-[var(--color-accent)]";
 
   return (
-    <AdminPanel className="p-5 sm:p-6">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
-        <div className="flex gap-4">
+    <AdminPanel className="relative overflow-hidden p-6 sm:p-8 bg-[#0F1411]/80 backdrop-blur-md border border-[var(--color-accent)]/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+      {/* Ambient background glow */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[var(--color-accent)]/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/3" />
+      
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center relative z-10">
+        <div className="flex gap-5">
           <span
             className={`mt-1 grid size-11 shrink-0 place-items-center rounded-[0.95rem] border ${toneClass}`}
           >
@@ -154,13 +163,13 @@ function DailyStatusPanel({ summary }: { summary: AdminDashboardSummary }) {
             )}
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)] sm:text-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-accent)] sm:text-sm drop-shadow-sm">
               {status.eyebrow}
             </p>
-            <h2 className="mt-3 text-2xl font-semibold text-white">
+            <h2 className="mt-2 text-3xl font-black text-white tracking-tight">
               {status.title}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60 font-medium">
               {status.description}
             </p>
             <AdminActionLink
@@ -377,24 +386,49 @@ export default async function AdminDashboardPage() {
           </div>
 
           {summary.recentTournaments.length > 0 ? (
-            <div className="mt-5 divide-y divide-white/10">
-              {summary.recentTournaments.map((tournament) => (
-                <Link
-                  key={tournament.id}
-                  href={`/admin/torneos/${tournament.id}`}
-                  className="grid gap-1 py-4 first:pt-0 last:pb-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
-                >
-                  <span className="text-base font-semibold text-white">
-                    {tournament.name}
-                  </span>
-                  <span className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--color-muted)]">
-                    <AdminStatusPill>
-                      {statusLabels[tournament.status]}
-                    </AdminStatusPill>
-                    <span>{tournament.season}</span>
-                  </span>
-                </Link>
-              ))}
+            <div className="mt-5">
+              <AdminTableHeader className="grid-cols-[1.5fr_0.8fr_0.8fr_7rem]">
+                <span>Torneo</span>
+                <span>Temporada</span>
+                <span>Estado</span>
+                <span className="text-right">Acción</span>
+              </AdminTableHeader>
+
+              <div className="divide-y divide-white/10">
+                {summary.recentTournaments.map((tournament) => (
+                  <Link
+                    key={tournament.id}
+                    href={`/admin/torneos/${tournament.id}`}
+                    className="group grid gap-4 px-5 py-5 transition hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-inset lg:grid-cols-[1.5fr_0.8fr_0.8fr_7rem] lg:items-center"
+                  >
+                    <AdminMobileField label="Torneo">
+                      <span className="text-base font-semibold text-white">
+                        {tournament.name}
+                      </span>
+                    </AdminMobileField>
+
+                    <AdminMobileField label="Temporada">
+                      <span className="text-sm text-[var(--color-muted)]">
+                        {tournament.season}
+                      </span>
+                    </AdminMobileField>
+
+                    <AdminMobileField label="Estado">
+                      <AdminStatusPill>
+                        {statusLabels[tournament.status]}
+                      </AdminStatusPill>
+                    </AdminMobileField>
+
+                    <span
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-[0.75rem] border border-white/10 bg-white/[0.025] px-3 py-2 text-sm font-semibold text-white/68 transition group-hover:border-[var(--color-accent)]/45 group-hover:bg-[var(--color-accent)]/10 group-hover:text-white lg:justify-self-end"
+                      aria-hidden="true"
+                    >
+                      Abrir
+                      <ArrowRight size={16} />
+                    </span>
+                  </Link>
+                ))}
+              </div>
             </div>
           ) : (
             <p className="mt-5 text-sm leading-6 text-[var(--color-muted)]">

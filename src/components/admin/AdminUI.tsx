@@ -286,18 +286,19 @@ export function AdminEmptyState({
   action,
 }: AdminEmptyStateProps) {
   return (
-    <AdminPanel className="p-6 sm:p-8">
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)] sm:text-sm">
-            {eyebrow}
-          </p>
-          <h2 className="mt-3 text-2xl font-semibold text-white">{title}</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-            {description}
-          </p>
+    <AdminPanel className="p-8 sm:p-12 text-center">
+      <div className="mx-auto flex max-w-lg flex-col items-center">
+        <div className="mb-6 grid size-20 place-items-center rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_0_30px_rgba(255,255,255,0.03)]">
+          <ListChecks size={32} className="text-white/40" />
         </div>
-        {action}
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)] sm:text-sm">
+          {eyebrow}
+        </p>
+        <h2 className="mt-3 text-3xl font-semibold text-white">{title}</h2>
+        <p className="mt-4 text-sm leading-6 text-[var(--color-muted)]">
+          {description}
+        </p>
+        {action ? <div className="mt-8">{action}</div> : null}
       </div>
     </AdminPanel>
   );

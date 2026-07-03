@@ -45,10 +45,14 @@ vi.mock("@/features/football-tournaments/data", () => ({
 import {
   assignMatchViewer,
   createMatch,
+  createRosterEntry,
   createTeam,
   createTournament,
   deleteMatch,
+  deleteRosterEntry,
   deleteTournament,
+  generateBracketFixture,
+  generateGroupPlayoffFixture,
   generateLeagueFixture,
   loginAdmin,
   logoutAdmin,
@@ -56,6 +60,7 @@ import {
   submitViewerMatchResult,
   updateMatch,
   updateMatchResult,
+  updateRosterEntry,
   removeTeamFromTournament,
   updateTeam,
   updateTournament,
@@ -265,10 +270,10 @@ describe("football tournament admin actions", () => {
       role: "admin",
     });
 
-    await expect(pingAdminAccess()).resolves.toEqual<ActionState>({
+    await expect(pingAdminAccess()).resolves.toEqual({
       ok: true,
       message: "Acceso de administrador verificado.",
-    });
+    } satisfies ActionState);
 
     expect(requireAdminMock).toHaveBeenCalledTimes(1);
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin");
@@ -467,10 +472,10 @@ describe("football tournament admin actions", () => {
           description: "",
         }),
       ),
-    ).resolves.toEqual<ActionState>({
+    ).resolves.toEqual({
       ok: true,
       message: "Torneo guardado.",
-    });
+    } satisfies ActionState);
 
     expect(requireAdminMock).toHaveBeenCalledTimes(1);
     expect(fromMock).toHaveBeenCalledWith("football_tournaments");
@@ -540,10 +545,10 @@ describe("football tournament admin actions", () => {
           description: "",
         }),
       ),
-    ).resolves.toEqual<ActionState>({
+    ).resolves.toEqual({
       ok: false,
       message: "No pudimos guardar el torneo.",
-    });
+    } satisfies ActionState);
 
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
@@ -888,7 +893,7 @@ describe("football tournament admin actions", () => {
         status: "scheduled",
         assignedViewerId: null,
         resultLockedAt: null,
-        resultSubmittedBy: null,
+        resultSubmittedBy: null, isKnockout: false,
       },
     ]);
 
@@ -905,6 +910,192 @@ describe("football tournament admin actions", () => {
         "No podés quitar un equipo que ya tiene partidos en este torneo.",
     });
     expect(deleteMock).not.toHaveBeenCalled();
+  });
+
+  it("creates a new player without requiring document number and adds them to a roster", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock
+      .mockReturnValueOnce({ select: selectMock })
+      .mockReturnValueOnce({ select: selectMock });
+    selectMock
+      .mockReturnValueOnce({ single: singleMock })
+      .mockReturnValueOnce({ single: singleMock });
+    singleMock
+      .mockResolvedValueOnce({ data: { id: "player-1" }, error: null })
+      .mockResolvedValueOnce({ data: { id: "roster-1" }, error: null });
+
+    const state = await createRosterEntry(
+      "tournament-1",
+      "team-1",
+      { ok: false, message: "" },
+      formData({
+        mode: "new",
+        firstName: "  Juan  ",
+        lastName: "  Perez  ",
+        publicName: "",
+        documentNumber: "",
+        birthDate: "",
+        phone: "  11 5555-1111  ",
+        playerNotes: "  Zurdo  ",
+        shirtNumber: "10",
+        status: "active",
+        medicalStatus: "pending",
+        insuranceStatus: "approved",
+        rosterNotes: "  Titular  ",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Jugador agregado al plantel.",
+    });
+    expect(fromMock).toHaveBeenNthCalledWith(1, "football_players");
+    expect(insertMock).toHaveBeenNthCalledWith(1, {
+      first_name: "Juan",
+      last_name: "Perez",
+      public_name: null,
+      document_number: null,
+      birth_date: null,
+      phone: "11 5555-1111",
+      notes: "Zurdo",
+    });
+    expect(fromMock).toHaveBeenNthCalledWith(2, "football_roster_entries");
+    expect(insertMock).toHaveBeenNthCalledWith(2, {
+      tournament_id: "tournament-1",
+      team_id: "team-1",
+      player_id: "player-1",
+      shirt_number: 10,
+      status: "active",
+      medical_status: "pending",
+      insurance_status: "approved",
+      notes: "Titular",
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1",
+    );
+    expect(revalidatePathMock).not.toHaveBeenCalledWith("/futbol");
+  });
+
+  it("adds an existing player to a roster without duplicating the player record", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock.mockReturnValueOnce({ select: selectMock });
+    selectMock.mockReturnValueOnce({ single: singleMock });
+    singleMock.mockResolvedValueOnce({ data: { id: "roster-1" }, error: null });
+
+    const state = await createRosterEntry(
+      "tournament-1",
+      "team-1",
+      { ok: false, message: "" },
+      formData({
+        mode: "existing",
+        playerId: "player-1",
+        shirtNumber: "",
+        status: "active",
+        medicalStatus: "approved",
+        insuranceStatus: "approved",
+        rosterNotes: "",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Jugador agregado al plantel.",
+    });
+    expect(fromMock).toHaveBeenCalledWith("football_roster_entries");
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    expect(insertMock).toHaveBeenCalledWith({
+      tournament_id: "tournament-1",
+      team_id: "team-1",
+      player_id: "player-1",
+      shirt_number: null,
+      status: "active",
+      medical_status: "approved",
+      insurance_status: "approved",
+      notes: null,
+    });
+  });
+
+  it("updates roster entry status and documentation fields", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: { id: "roster-1" },
+      error: null,
+    });
+
+    const state = await updateRosterEntry(
+      "tournament-1",
+      "roster-1",
+      { ok: false, message: "" },
+      formData({
+        shirtNumber: "7",
+        status: "suspended",
+        medicalStatus: "expired",
+        insuranceStatus: "pending",
+        rosterNotes: "  Falta actualizar seguro  ",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Jugador del plantel guardado.",
+    });
+    expect(fromMock).toHaveBeenCalledWith("football_roster_entries");
+    expect(updateMock).toHaveBeenCalledWith({
+      shirt_number: 7,
+      status: "suspended",
+      medical_status: "expired",
+      insurance_status: "pending",
+      notes: "Falta actualizar seguro",
+    });
+    expect(eqMock).toHaveBeenCalledWith("id", "roster-1");
+    expect(eqMock).toHaveBeenCalledWith("tournament_id", "tournament-1");
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1",
+    );
+  });
+
+  it("removes a roster entry from a tournament", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: { id: "roster-1" },
+      error: null,
+    });
+
+    const state = await deleteRosterEntry(
+      "tournament-1",
+      "roster-1",
+      { ok: false, message: "" },
+      formData({}),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Jugador quitado del plantel.",
+    });
+    expect(fromMock).toHaveBeenCalledWith("football_roster_entries");
+    expect(deleteMock).toHaveBeenCalledTimes(1);
+    expect(eqMock).toHaveBeenCalledWith("id", "roster-1");
+    expect(eqMock).toHaveBeenCalledWith("tournament_id", "tournament-1");
+    expect(selectMock).toHaveBeenCalledWith("id");
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1",
+    );
   });
 
   it("requires admin access before rejecting invalid match data", async () => {
@@ -1126,7 +1317,7 @@ describe("football tournament admin actions", () => {
         status: "scheduled",
         assignedViewerId: null,
         resultLockedAt: null,
-        resultSubmittedBy: null,
+        resultSubmittedBy: null, isKnockout: false,
       },
     ]);
     requireAdminMock.mockResolvedValue({
@@ -1143,6 +1334,347 @@ describe("football tournament admin actions", () => {
         startsAt: "",
         kickoffTime: "",
         daysBetweenRounds: "7",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message: "Este torneo ya tiene partidos cargados.",
+    });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("explains when the bracket migration is missing from Supabase", async () => {
+    vi.mocked(getAdminMatches).mockResolvedValue([]);
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock.mockResolvedValue({
+      data: null,
+      error: {
+        message:
+          "Could not find the 'next_match_id' column of 'football_matches' in the schema cache",
+      },
+    });
+
+    const state = await generateBracketFixture(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({
+        bracketData: JSON.stringify({
+          startsAt: "2026-03-01",
+          daysBetweenRounds: 7,
+          initialMatches: [
+            {
+              id: "match-1",
+              roundLabel: "Semifinales",
+              depth: 1,
+              homeTeamId: "team-1",
+              awayTeamId: "team-2",
+              nextMatchId: "match-3",
+            },
+            {
+              id: "match-2",
+              roundLabel: "Semifinales",
+              depth: 1,
+              homeTeamId: "team-3",
+              awayTeamId: "team-4",
+              nextMatchId: "match-3",
+            },
+            {
+              id: "match-3",
+              roundLabel: "Final",
+              depth: 0,
+              homeTeamId: null,
+              awayTeamId: null,
+              nextMatchId: null,
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message:
+        "Falta aplicar la migración de llaves de copa en Supabase. Ejecutá la migración 20260701020000_update_football_matches_for_brackets.sql y recargá el schema cache.",
+    });
+  });
+
+  it("maps temporary bracket node ids to database UUIDs before inserting", async () => {
+    vi.mocked(getAdminMatches).mockResolvedValue([]);
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock.mockResolvedValue({ data: null, error: null });
+
+    const state = await generateBracketFixture(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({
+        bracketData: JSON.stringify({
+          startsAt: "2026-03-01",
+          daysBetweenRounds: 7,
+          initialMatches: [
+            {
+              id: "ezgbmft",
+              roundLabel: "Semifinales",
+              depth: 1,
+              homeTeamId: "team-1",
+              awayTeamId: "team-2",
+              nextMatchId: "finaltemp",
+            },
+            {
+              id: "abc1234",
+              roundLabel: "Semifinales",
+              depth: 1,
+              homeTeamId: "team-3",
+              awayTeamId: "team-4",
+              nextMatchId: "finaltemp",
+            },
+            {
+              id: "finaltemp",
+              roundLabel: "Final",
+              depth: 0,
+              homeTeamId: null,
+              awayTeamId: null,
+              nextMatchId: null,
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Llave generada con 3 partidos.",
+    });
+
+    const uuidPattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const insertedMatches = insertMock.mock.calls[0][0] as Array<{
+      id: string;
+      round_label: string;
+      next_match_id: string | null;
+    }>;
+    const finalMatch = insertedMatches.find(
+      (match) => match.round_label === "Final",
+    );
+
+    expect(insertedMatches).toHaveLength(3);
+    expect(insertedMatches.map((match) => match.id)).not.toContain("ezgbmft");
+    expect(insertedMatches.every((match) => uuidPattern.test(match.id))).toBe(
+      true,
+    );
+    expect(finalMatch?.id).toEqual(expect.stringMatching(uuidPattern));
+    expect(
+      insertedMatches
+        .filter((match) => match.round_label === "Semifinales")
+        .every((match) => match.next_match_id === finalMatch?.id),
+    ).toBe(true);
+  });
+
+  it("generates zones plus playoff fixtures for league playoff tournaments", async () => {
+    vi.mocked(getAdminTeams).mockResolvedValue([
+      {
+        id: "team-1",
+        name: "Vixen Norte",
+        shortName: null,
+        photoUrl: null,
+        captainName: null,
+        contactPhone: null,
+        notes: null,
+      },
+      {
+        id: "team-2",
+        name: "Vixen Sur",
+        shortName: null,
+        photoUrl: null,
+        captainName: null,
+        contactPhone: null,
+        notes: null,
+      },
+      {
+        id: "team-3",
+        name: "Vixen Este",
+        shortName: null,
+        photoUrl: null,
+        captainName: null,
+        contactPhone: null,
+        notes: null,
+      },
+      {
+        id: "team-4",
+        name: "Vixen Oeste",
+        shortName: null,
+        photoUrl: null,
+        captainName: null,
+        contactPhone: null,
+        notes: null,
+      },
+    ]);
+    vi.mocked(getAdminMatches).mockResolvedValue([]);
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock.mockResolvedValue({ data: null, error: null });
+
+    const state = await generateGroupPlayoffFixture(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({
+        groupCount: "2",
+        qualifiersPerGroup: "1",
+        startsAt: "2026-03-01",
+        kickoffTime: "20:30",
+        daysBetweenGroupRounds: "7",
+        daysBetweenPlayoffRounds: "7",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Fixture zonas + playoff generado con 3 partidos.",
+    });
+    expect(fromMock).toHaveBeenNthCalledWith(1, "football_tournament_groups");
+    expect(fromMock).toHaveBeenNthCalledWith(
+      2,
+      "football_tournament_group_teams",
+    );
+    expect(fromMock).toHaveBeenNthCalledWith(3, "football_matches");
+
+    const groupRows = insertMock.mock.calls[0][0] as Array<{
+      id: string;
+      tournament_id: string;
+      name: string;
+      position: number;
+    }>;
+    expect(groupRows).toEqual([
+      {
+        id: expect.any(String),
+        tournament_id: "tournament-1",
+        name: "Zona A",
+        position: 1,
+      },
+      {
+        id: expect.any(String),
+        tournament_id: "tournament-1",
+        name: "Zona B",
+        position: 2,
+      },
+    ]);
+
+    const groupTeamRows = insertMock.mock.calls[1][0] as Array<{
+      group_id: string;
+      team_id: string;
+      seed: number;
+    }>;
+    expect(groupTeamRows).toEqual([
+      { group_id: groupRows[0].id, team_id: "team-1", seed: 1 },
+      { group_id: groupRows[0].id, team_id: "team-3", seed: 2 },
+      { group_id: groupRows[1].id, team_id: "team-2", seed: 1 },
+      { group_id: groupRows[1].id, team_id: "team-4", seed: 2 },
+    ]);
+
+    const matchRows = insertMock.mock.calls[2][0] as Array<{
+      tournament_id: string;
+      round_label: string;
+      group_id: string | null;
+      home_team_id: string | null;
+      away_team_id: string | null;
+      next_match_id: string | null;
+    }>;
+    expect(matchRows).toHaveLength(3);
+    expect(matchRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          tournament_id: "tournament-1",
+          round_label: "Zona A - Fecha 1",
+          group_id: groupRows[0].id,
+          home_team_id: "team-1",
+          away_team_id: "team-3",
+        }),
+        expect.objectContaining({
+          tournament_id: "tournament-1",
+          round_label: "Zona B - Fecha 1",
+          group_id: groupRows[1].id,
+          home_team_id: "team-2",
+          away_team_id: "team-4",
+        }),
+        expect.objectContaining({
+          tournament_id: "tournament-1",
+          round_label: "Final",
+          group_id: null,
+          home_team_id: null,
+          away_team_id: null,
+          next_match_id: null,
+        }),
+      ]),
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/admin/torneos/tournament-1",
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
+  });
+
+  it("rejects zones plus playoff generation over existing matches", async () => {
+    vi.mocked(getAdminTeams).mockResolvedValue([
+      {
+        id: "team-1",
+        name: "Vixen Norte",
+        shortName: null,
+        photoUrl: null,
+        captainName: null,
+        contactPhone: null,
+        notes: null,
+      },
+      {
+        id: "team-2",
+        name: "Vixen Sur",
+        shortName: null,
+        photoUrl: null,
+        captainName: null,
+        contactPhone: null,
+        notes: null,
+      },
+    ]);
+    vi.mocked(getAdminMatches).mockResolvedValue([
+      {
+        id: "match-1",
+        roundLabel: "Zona A - Fecha 1",
+        scheduledAt: null,
+        homeTeamId: "team-1",
+        awayTeamId: "team-2",
+        homeScore: null,
+        awayScore: null,
+        status: "scheduled",
+        assignedViewerId: null,
+        resultLockedAt: null,
+        resultSubmittedBy: null, isKnockout: false,
+      },
+    ]);
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+
+    const state = await generateGroupPlayoffFixture(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({
+        groupCount: "2",
+        qualifiersPerGroup: "1",
+        startsAt: "",
+        kickoffTime: "",
+        daysBetweenGroupRounds: "7",
+        daysBetweenPlayoffRounds: "7",
       }),
     );
 
@@ -1300,7 +1832,21 @@ describe("football tournament admin actions", () => {
       email: "admin@vixen.test",
       role: "admin",
     });
-    maybeSingleMock.mockResolvedValue({
+    maybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-1",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: "group-1",
+        next_match_id: null,
+        result_locked_at: "2026-07-02T12:00:00-03:00",
+        football_tournaments: { format: "league" },
+      },
+      error: null,
+    });
+    maybeSingleMock.mockResolvedValueOnce({
       data: { id: "match-1" },
       error: null,
     });
@@ -1319,6 +1865,8 @@ describe("football tournament admin actions", () => {
     expect(updateMock).toHaveBeenCalledWith({
       home_score: 4,
       away_score: 2,
+      home_penalty_score: null,
+      away_penalty_score: null,
       status: "completed",
     });
     expect(eqMock).toHaveBeenCalledWith("id", "match-1");
@@ -1331,7 +1879,21 @@ describe("football tournament admin actions", () => {
       email: "admin@vixen.test",
       role: "admin",
     });
-    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "missing-match",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: "group-1",
+        next_match_id: null,
+        result_locked_at: null,
+        football_tournaments: { format: "league" },
+      },
+      error: null,
+    });
+    maybeSingleMock.mockResolvedValueOnce({ data: null, error: null });
 
     const state = await updateMatchResult(
       "tournament-1",
@@ -1357,7 +1919,13 @@ describe("football tournament admin actions", () => {
       data: {
         id: "match-1",
         tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: "group-1",
+        next_match_id: null,
         result_locked_at: null,
+        football_tournaments: { format: "league" },
       },
       error: null,
     });
@@ -1374,13 +1942,15 @@ describe("football tournament admin actions", () => {
     });
     expect(requireViewerMock).toHaveBeenCalledTimes(1);
     expect(selectMock).toHaveBeenCalledWith(
-      "id, tournament_id, result_locked_at",
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, result_locked_at, football_tournaments(format)",
     );
     expect(eqMock).toHaveBeenCalledWith("id", "match-1");
     expect(eqMock).toHaveBeenCalledWith("assigned_viewer_id", "viewer-1");
     expect(updateMock).toHaveBeenCalledWith({
       home_score: 2,
       away_score: 0,
+      home_penalty_score: null,
+      away_penalty_score: null,
       status: "completed",
       result_locked_at: expect.any(String),
       result_submitted_by: "viewer-1",

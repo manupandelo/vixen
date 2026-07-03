@@ -179,6 +179,7 @@ describe("Supabase schema", () => {
       "category_id uuid not null references public.football_tournament_categories(id) on delete cascade",
     );
     expect(teamsTable).toContain("primary key (category_id, team_id)");
+    expect(teamsTable).toContain("unique (tournament_id, team_id)");
 
     expect(groupsTable).toContain(
       "category_id uuid not null references public.football_tournament_categories(id) on delete cascade",

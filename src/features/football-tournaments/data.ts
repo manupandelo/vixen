@@ -7,11 +7,16 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { calculateStandings } from "./standings";
 import type {
+  FootballDocumentationStatus,
   FootballMatchStatus,
+  FootballRosterEntryStatus,
+  FootballTeam,
+  FootballTournamentCategoryStatus,
   FootballTournamentFormat,
   FootballTournamentStatus,
   PublicFootballMatch,
   PublicFootballTournament,
+  StandingRow,
   StaffRole,
   StaffStatus,
 } from "./types";
@@ -20,7 +25,7 @@ type TeamRow = {
   id: string;
   name: string;
   short_name: string | null;
-  photo_url: string | null;
+  photo_url?: string | null;
   [key: string]: unknown;
 };
 
@@ -28,11 +33,15 @@ type MatchRow = {
   id: string;
   round_label: string;
   scheduled_at: string | null;
-  home_team_id: string;
-  away_team_id: string;
+  home_team_id: string | null;
+  away_team_id: string | null;
   home_score: number | null;
   away_score: number | null;
+  home_penalty_score?: number | null;
+  away_penalty_score?: number | null;
   status: FootballMatchStatus;
+  group_id?: string | null;
+  next_match_id?: string | null;
   [key: string]: unknown;
 };
 
@@ -57,6 +66,78 @@ type TournamentRow = {
   football_matches: MatchRow[] | null;
   [key: string]: unknown;
 };
+
+type TournamentCategoryRow = {
+  id: string;
+  tournament_id: string;
+  name: string;
+  slug: string;
+  status: FootballTournamentCategoryStatus;
+  position: number;
+  starts_at: string | null;
+  ends_at: string | null;
+};
+
+type PublicTournamentCategoryRow = TournamentCategoryRow & {
+  football_tournament_teams?: TournamentTeamRow[] | null;
+  football_matches?: MatchRow[] | null;
+};
+
+type PublicTournamentWithCategoriesRow = {
+  id: string;
+  name: string;
+  slug: string;
+  season: string;
+  category?: string | null;
+  format: FootballTournamentFormat;
+  status: FootballTournamentStatus;
+  starts_at: string | null;
+  ends_at: string | null;
+  description: string | null;
+  football_tournament_categories?: PublicTournamentCategoryRow[] | null;
+  [key: string]: unknown;
+};
+
+const publicTournamentWithCategoriesSelect = `
+  id,
+  name,
+  slug,
+  season,
+  category,
+  format,
+  status,
+  starts_at,
+  ends_at,
+  description,
+  football_tournament_categories(
+    id,
+    tournament_id,
+    name,
+    slug,
+    status,
+    position,
+    starts_at,
+    ends_at,
+    football_tournament_teams!football_tournament_teams_category_id_fkey(
+      football_teams(id, name, short_name, photo_url)
+    ),
+    football_matches!football_matches_category_id_fkey(
+      id,
+      round_label,
+      scheduled_at,
+      home_team_id,
+      away_team_id,
+      home_score,
+      away_score,
+      status,
+      group_id,
+      next_match_id
+    )
+  )
+`;
+
+const publicTournamentStatuses = ["published", "active", "completed"] as const;
+const activePublicTournamentStatuses = ["published", "active"] as const;
 
 type AdminTournamentRow = {
   id: string;
@@ -94,22 +175,56 @@ type AdminTeamRow = {
   football_team_admin_details: AdminTeamDetailsRow | AdminTeamDetailsRow[] | null;
 };
 
+type AdminPlayerRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  public_name: string | null;
+  document_number: string | null;
+  birth_date: string | null;
+  phone: string | null;
+  notes: string | null;
+};
+
+type AdminRosterEntryRow = {
+  id: string;
+  tournament_id: string;
+  team_id: string;
+  player_id: string;
+  shirt_number: number | null;
+  status: FootballRosterEntryStatus;
+  medical_status: FootballDocumentationStatus;
+  insurance_status: FootballDocumentationStatus;
+  registered_at: string;
+  notes: string | null;
+  football_players: AdminPlayerRow | AdminPlayerRow[] | null;
+};
+
+type AdminRosteredPlayerRow = {
+  player_id: string | null;
+};
+
 type AdminTournamentTeamRow = {
   football_teams: AdminTeamRow | AdminTeamRow[] | null;
 };
 
 type AdminMatchRow = {
   id: string;
+  category_id: string;
   round_label: string;
   scheduled_at: string | null;
   home_team_id: string;
   away_team_id: string;
   home_score: number | null;
   away_score: number | null;
+  home_penalty_score: number | null;
+  away_penalty_score: number | null;
   status: FootballMatchStatus;
   assigned_viewer_id: string | null;
   result_locked_at: string | null;
   result_submitted_by: string | null;
+  next_match_id?: string | null;
+  group_id: string | null;
 };
 
 type StaffProfileRow = {
@@ -125,6 +240,7 @@ type ViewerMatchRow = AdminMatchRow & {
   football_tournaments: {
     id: string;
     name: string;
+    format: FootballTournamentFormat;
   } | null;
   home_team: {
     name: string;
@@ -132,6 +248,17 @@ type ViewerMatchRow = AdminMatchRow & {
   away_team: {
     name: string;
   } | null;
+};
+
+type ViewerAssignedMatchRosterRow = {
+  match_id: string;
+  roster_entry_id: string;
+  team_id: string;
+  player_id: string;
+  shirt_number: number | null;
+  first_name: string;
+  last_name: string;
+  public_name: string | null;
 };
 
 type StaffActivityMatchRow = AdminMatchRow & {
@@ -202,6 +329,30 @@ export type AdminTournament = {
   description: string | null;
 };
 
+export type AdminTournamentCategory = {
+  id: string;
+  tournamentId: string;
+  name: string;
+  slug: string;
+  status: FootballTournamentCategoryStatus;
+  position: number;
+  startsAt: string | null;
+  endsAt: string | null;
+};
+
+export type PublicFootballTournamentCategory = AdminTournamentCategory & {
+  teams: FootballTeam[];
+  matches: PublicFootballMatch[];
+  standings: StandingRow[];
+};
+
+export type PublicFootballTournamentWithCategories = Omit<
+  PublicFootballTournament,
+  "category" | "teams" | "matches" | "standings"
+> & {
+  categories: PublicFootballTournamentCategory[];
+};
+
 export type AdminTeam = {
   id: string;
   name: string;
@@ -212,27 +363,66 @@ export type AdminTeam = {
   notes: string | null;
 };
 
+export type AdminPlayer = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  publicName: string | null;
+  documentNumber: string | null;
+  birthDate: string | null;
+  phone: string | null;
+  notes: string | null;
+};
+
+export type AdminRosterEntry = {
+  id: string;
+  tournamentId: string;
+  teamId: string;
+  playerId: string;
+  shirtNumber: number | null;
+  status: FootballRosterEntryStatus;
+  medicalStatus: FootballDocumentationStatus;
+  insuranceStatus: FootballDocumentationStatus;
+  registeredAt: string;
+  notes: string | null;
+  player: AdminPlayer;
+};
+
 export type AdminMatch = {
   id: string;
+  categoryId: string;
   roundLabel: string;
   scheduledAt: string | null;
-  homeTeamId: string;
-  awayTeamId: string;
+  homeTeamId: string | null;
+  awayTeamId: string | null;
   homeScore: number | null;
   awayScore: number | null;
+  homePenaltyScore: number | null;
+  awayPenaltyScore: number | null;
   status: FootballMatchStatus;
   assignedViewerId: string | null;
   resultLockedAt: string | null;
   resultSubmittedBy: string | null;
+  nextMatchId?: string | null;
+  isKnockout: boolean;
 };
 
 export type StaffProfile = StaffProfileRow;
+
+export type MatchResultRosterEntry = {
+  id: string;
+  teamId: string;
+  playerId: string;
+  shirtNumber: number | null;
+  displayName: string;
+};
 
 export type ViewerAssignedMatch = AdminMatch & {
   tournamentId: string;
   tournamentName: string;
   homeTeamName: string;
   awayTeamName: string;
+  rosterEntries: MatchResultRosterEntry[];
 };
 
 export type StaffActivityMatch = {
@@ -377,6 +567,7 @@ export function formatAdminDashboardSummary(
 
     return new Date(match.scheduled_at).getTime() < now.getTime();
   });
+  const unscheduledMatches = pendingMatches.filter((match) => !match.scheduled_at);
   const nowTime = now.getTime();
   const nextMatch = pendingMatches.reduce<
     (typeof pendingMatches)[number] | null
@@ -401,6 +592,20 @@ export function formatAdminDashboardSummary(
       )} sin resultado final.`,
       href: adminTournamentTabHref(firstOverdue.tournamentId, "partidos"),
       tone: "warning",
+    });
+  }
+
+  if (unscheduledMatches.length > 0) {
+    const firstUnscheduled = unscheduledMatches[0];
+    attentionItems.push({
+      title: "Programar fechas",
+      description: `Hay ${pluralize(
+        unscheduledMatches.length,
+        "partido",
+        "partidos",
+      )} sin fecha programada.`,
+      href: adminTournamentTabHref(firstUnscheduled.tournamentId, "partidos"),
+      tone: "muted",
     });
   }
 
@@ -477,7 +682,7 @@ export function formatPublicTournament(
       id: team.id,
       name: team.name,
       shortName: team.short_name,
-      photoUrl: team.photo_url,
+      photoUrl: team.photo_url ?? null,
     }))
     .sort((left, right) => left.name.localeCompare(right.name, "es"));
   const teamNames = new Map(teams.map((team) => [team.id, team.name]));
@@ -491,8 +696,14 @@ export function formatPublicTournament(
       homeScore: match.home_score,
       awayScore: match.away_score,
       status: match.status,
-      homeTeamName: teamNames.get(match.home_team_id) ?? "Equipo local",
-      awayTeamName: teamNames.get(match.away_team_id) ?? "Equipo visitante",
+      homeTeamName: (match.home_team_id ? teamNames.get(match.home_team_id) : null) ?? "Por definirse",
+      awayTeamName: (match.away_team_id ? teamNames.get(match.away_team_id) : null) ?? "Por definirse",
+      homeTeamShortName: (match.home_team_id ? teams.find(t => t.id === match.home_team_id)?.shortName : null) ?? null,
+      awayTeamShortName: (match.away_team_id ? teams.find(t => t.id === match.away_team_id)?.shortName : null) ?? null,
+      isKnockout:
+        row.format === "cup" ||
+        (row.format === "league_playoff" && match.group_id === null),
+      nextMatchId: match.next_match_id ?? null,
     }))
     .sort((left, right) => {
       const dateOrder = compareNullableIsoDate(
@@ -527,6 +738,103 @@ export function formatPublicTournament(
   };
 }
 
+function formatTournamentCategoryBase(
+  row: TournamentCategoryRow,
+): AdminTournamentCategory {
+  return {
+    id: row.id,
+    tournamentId: row.tournament_id,
+    name: row.name,
+    slug: row.slug,
+    status: row.status,
+    position: row.position,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+  };
+}
+
+export function formatAdminTournamentCategories(
+  rows: TournamentCategoryRow[],
+): AdminTournamentCategory[] {
+  return rows
+    .map(formatTournamentCategoryBase)
+    .sort((left, right) => left.position - right.position);
+}
+
+export function formatPublicTournamentWithCategories(
+  row: PublicTournamentWithCategoriesRow,
+): PublicFootballTournamentWithCategories {
+  const categories = (row.football_tournament_categories ?? [])
+    .filter((category) => category.status !== "archived")
+    .map((category) => {
+      const base = formatTournamentCategoryBase(category);
+      const formatted = formatPublicTournament({
+        ...row,
+        category: category.name,
+        football_tournament_teams: category.football_tournament_teams ?? [],
+        football_matches: category.football_matches ?? [],
+      });
+
+      return {
+        ...base,
+        teams: formatted.teams,
+        matches: formatted.matches,
+        standings: formatted.standings,
+      };
+    })
+    .sort((left, right) => left.position - right.position);
+
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    season: row.season,
+    format: row.format,
+    status: row.status,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    description: row.description,
+    categories,
+  };
+}
+
+function flattenTournamentPrimaryCategory(
+  tournament: PublicFootballTournamentWithCategories,
+): PublicFootballTournament | null {
+  const category = tournament.categories[0];
+  if (!category) return null;
+
+  return flattenTournamentCategory(tournament, category.slug);
+}
+
+export function flattenTournamentCategory(
+  tournament: PublicFootballTournamentWithCategories,
+  categorySlug: string,
+): PublicFootballTournament | null {
+  const category = tournament.categories.find(
+    (candidate) => candidate.slug === categorySlug,
+  );
+  if (!category) return null;
+
+  return {
+    id: tournament.id,
+    name: tournament.name,
+    slug: tournament.slug,
+    season: tournament.season,
+    category: category.name,
+    categorySlug: category.slug,
+    format: tournament.format,
+    status: tournament.status,
+    startsAt: category.startsAt ?? tournament.startsAt,
+    endsAt: category.endsAt ?? tournament.endsAt,
+    description: tournament.description,
+    teams: category.teams,
+    matches: category.matches,
+    standings: category.standings,
+    categoriesCount: tournament.categories.length,
+  };
+}
+
 export function formatPublicTournamentRows(
   rows: TournamentRow[],
 ): PublicFootballTournament[] {
@@ -548,38 +856,44 @@ export function formatPublicTournamentRows(
   return tournaments;
 }
 
+export function formatPublicTournamentRowsWithCategories(
+  rows: PublicTournamentWithCategoriesRow[],
+): PublicFootballTournamentWithCategories[] {
+  const tournaments: PublicFootballTournamentWithCategories[] = [];
+
+  for (const row of rows) {
+    try {
+      tournaments.push(formatPublicTournamentWithCategories(row));
+    } catch (error) {
+      console.error("Skipping malformed public football tournament row.", {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        error,
+      });
+    }
+  }
+
+  return tournaments;
+}
+
+function formatPrimaryCategoryTournamentRows(
+  rows: PublicTournamentWithCategoriesRow[],
+): PublicFootballTournament[] {
+  return formatPublicTournamentRowsWithCategories(rows)
+    .map(flattenTournamentPrimaryCategory)
+    .filter(
+      (tournament): tournament is PublicFootballTournament =>
+        tournament !== null,
+    );
+}
+
 export async function getPublicFootballTournaments() {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("football_tournaments")
-    .select(
-      `
-        id,
-        name,
-        slug,
-        season,
-        category,
-        format,
-        status,
-        starts_at,
-        ends_at,
-        description,
-        football_tournament_teams(
-          football_teams(id, name, short_name, photo_url)
-        ),
-        football_matches(
-          id,
-          round_label,
-          scheduled_at,
-          home_team_id,
-          away_team_id,
-          home_score,
-          away_score,
-          status
-        )
-      `,
-    )
-    .in("status", ["published", "active", "completed"])
+    .select(publicTournamentWithCategoriesSelect)
+    .in("status", [...publicTournamentStatuses])
     .order("starts_at", { ascending: false });
 
   if (error) {
@@ -588,7 +902,76 @@ export async function getPublicFootballTournaments() {
     });
   }
 
-  return formatPublicTournamentRows((data ?? []) as unknown as TournamentRow[]);
+  return formatPrimaryCategoryTournamentRows(
+    (data ?? []) as unknown as PublicTournamentWithCategoriesRow[],
+  );
+}
+
+export async function getActivePublicFootballTournaments() {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("football_tournaments")
+    .select(publicTournamentWithCategoriesSelect)
+    .in("status", [...activePublicTournamentStatuses])
+    .order("starts_at", { ascending: false });
+
+  if (error) {
+    throw new Error("Failed to load active football tournaments.", {
+      cause: error,
+    });
+  }
+
+  return formatPrimaryCategoryTournamentRows(
+    (data ?? []) as unknown as PublicTournamentWithCategoriesRow[],
+  );
+}
+
+export async function getPublicFootballTournamentBySlug(slug: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("football_tournaments")
+    .select(publicTournamentWithCategoriesSelect)
+    .in("status", [...publicTournamentStatuses])
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to load public football tournament.", {
+      cause: error,
+    });
+  }
+
+  if (!data) return null;
+
+  return flattenTournamentPrimaryCategory(
+    formatPublicTournamentWithCategories(
+      data as unknown as PublicTournamentWithCategoriesRow,
+    ),
+  );
+}
+
+export async function getPublicFootballTournamentWithCategoriesBySlug(
+  slug: string,
+) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("football_tournaments")
+    .select(publicTournamentWithCategoriesSelect)
+    .in("status", [...publicTournamentStatuses])
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to load public football tournament.", {
+      cause: error,
+    });
+  }
+
+  if (!data) return null;
+
+  return formatPublicTournamentWithCategories(
+    data as unknown as PublicTournamentWithCategoriesRow,
+  );
 }
 
 async function getCurrentStaffProfile(
@@ -679,29 +1062,142 @@ function formatAdminTeam(row: AdminTeamRow): AdminTeam {
   };
 }
 
+function formatAdminPlayer(row: AdminPlayerRow): AdminPlayer {
+  return {
+    id: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    publicName: row.public_name,
+    documentNumber: row.document_number,
+    birthDate: row.birth_date,
+    phone: row.phone,
+    notes: row.notes,
+  };
+}
+
+function formatMatchResultDisplayName(player: {
+  first_name?: string;
+  last_name?: string;
+  public_name?: string | null;
+  firstName?: string;
+  lastName?: string;
+  publicName?: string | null;
+}) {
+  const publicName = "public_name" in player ? player.public_name : player.publicName;
+  if (publicName) return publicName;
+
+  const firstName = "first_name" in player ? player.first_name : player.firstName;
+  const lastName = "last_name" in player ? player.last_name : player.lastName;
+
+  return `${firstName ?? ""} ${lastName ?? ""}`.trim() || "Jugador";
+}
+
+export function formatMatchResultRosterEntry(
+  rosterEntry: AdminRosterEntry,
+): MatchResultRosterEntry {
+  return {
+    id: rosterEntry.id,
+    teamId: rosterEntry.teamId,
+    playerId: rosterEntry.playerId,
+    shirtNumber: rosterEntry.shirtNumber,
+    displayName: formatMatchResultDisplayName(rosterEntry.player),
+  };
+}
+
+function formatViewerMatchRosterEntry(
+  row: ViewerAssignedMatchRosterRow,
+): MatchResultRosterEntry {
+  return {
+    id: row.roster_entry_id,
+    teamId: row.team_id,
+    playerId: row.player_id,
+    shirtNumber: row.shirt_number,
+    displayName: formatMatchResultDisplayName(row),
+  };
+}
+
+export function formatAdminRosterEntries(
+  rows: AdminRosterEntryRow[],
+): AdminRosterEntry[] {
+  return rows
+    .map((row) => {
+      const player = firstRelatedRow(row.football_players);
+      if (!player) return null;
+
+      return {
+        id: row.id,
+        tournamentId: row.tournament_id,
+        teamId: row.team_id,
+        playerId: row.player_id,
+        shirtNumber: row.shirt_number,
+        status: row.status,
+        medicalStatus: row.medical_status,
+        insuranceStatus: row.insurance_status,
+        registeredAt: row.registered_at,
+        notes: row.notes,
+        player: formatAdminPlayer(player),
+      };
+    })
+    .filter((entry): entry is AdminRosterEntry => entry !== null);
+}
+
+export function formatAdminAvailablePlayers(
+  rows: AdminPlayerRow[],
+  rosteredPlayerIds: Set<string>,
+): AdminPlayer[] {
+  return rows
+    .filter((player) => !rosteredPlayerIds.has(player.id))
+    .map(formatAdminPlayer);
+}
+
+export function formatAdminRosteredPlayerIds(
+  rows: AdminRosteredPlayerRow[],
+): Set<string> {
+  return new Set(
+    rows
+      .map((row) => row.player_id)
+      .filter((playerId): playerId is string => playerId !== null),
+  );
+}
+
 function formatAdminMatch(row: AdminMatchRow): AdminMatch {
   return {
     id: row.id,
+    categoryId: row.category_id,
     roundLabel: row.round_label,
     scheduledAt: row.scheduled_at,
     homeTeamId: row.home_team_id,
     awayTeamId: row.away_team_id,
     homeScore: row.home_score,
     awayScore: row.away_score,
+    homePenaltyScore: row.home_penalty_score,
+    awayPenaltyScore: row.away_penalty_score,
     status: row.status,
     assignedViewerId: row.assigned_viewer_id,
     resultLockedAt: row.result_locked_at,
     resultSubmittedBy: row.result_submitted_by,
+    nextMatchId: row.next_match_id ?? null,
+    isKnockout: row.group_id === null,
   };
 }
 
 function formatViewerMatch(row: ViewerMatchRow): ViewerAssignedMatch {
+  const tournament = Array.isArray(row.football_tournaments)
+    ? (row.football_tournaments[0] ?? null)
+    : row.football_tournaments;
+  const match = formatAdminMatch(row);
+  const isKnockout =
+    tournament?.format === "cup" ||
+    (tournament?.format === "league_playoff" && match.isKnockout);
+
   return {
-    ...formatAdminMatch(row),
-    tournamentId: row.football_tournaments?.id ?? "",
-    tournamentName: row.football_tournaments?.name ?? "Torneo",
+    ...match,
+    isKnockout,
+    tournamentId: tournament?.id ?? "",
+    tournamentName: tournament?.name ?? "Torneo",
     homeTeamName: row.home_team?.name ?? "Equipo local",
     awayTeamName: row.away_team?.name ?? "Equipo visitante",
+    rosterEntries: [],
   };
 }
 
@@ -854,18 +1350,67 @@ export async function getAdminTournament(
   return formatAdminTournament(data as AdminTournamentRow);
 }
 
+export const getAdminTournamentCategories = cache(
+  async (tournamentId: string): Promise<AdminTournamentCategory[]> => {
+    await requireAdmin();
+
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("football_tournament_categories")
+      .select("id, tournament_id, name, slug, status, position, starts_at, ends_at")
+      .eq("tournament_id", tournamentId)
+      .order("position", { ascending: true });
+
+    if (error) {
+      throw new Error("Failed to load football tournament categories.", {
+        cause: error,
+      });
+    }
+
+    return formatAdminTournamentCategories(
+      (data ?? []) as TournamentCategoryRow[],
+    );
+  },
+);
+
+export function resolveSelectedCategory(
+  categories: AdminTournamentCategory[],
+  categoryIdOrSlug: string | null | undefined,
+) {
+  if (categoryIdOrSlug) {
+    return (
+      categories.find(
+        (category) =>
+          category.id === categoryIdOrSlug ||
+          category.slug === categoryIdOrSlug,
+      ) ??
+      categories[0] ??
+      null
+    );
+  }
+
+  return categories[0] ?? null;
+}
+
 export async function getAdminTeams(
   tournamentId: string,
+  categoryId?: string,
 ): Promise<AdminTeam[]> {
   await requireAdmin();
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("football_tournament_teams")
     .select(
       "football_teams(id, name, short_name, photo_url, football_team_admin_details(captain_name, contact_phone, notes))",
     )
     .eq("tournament_id", tournamentId);
+
+  if (categoryId) {
+    query = query.eq("category_id", categoryId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);
@@ -878,16 +1423,20 @@ export async function getAdminTeams(
 
 export async function getAdminAvailableTeams(
   tournamentId: string,
+  _categoryId?: string,
 ): Promise<AdminTeam[]> {
+  void _categoryId;
   await requireAdmin();
 
   const supabase = await createSupabaseServerClient();
+  const registrationsQuery = supabase
+    .from("football_tournament_teams")
+    .select("team_id")
+    .eq("tournament_id", tournamentId);
+
   const [{ data: registrations, error: registrationsError }, { data, error }] =
     await Promise.all([
-      supabase
-        .from("football_tournament_teams")
-        .select("team_id")
-        .eq("tournament_id", tournamentId),
+      registrationsQuery,
       supabase
         .from("football_teams")
         .select(
@@ -921,19 +1470,110 @@ export async function getAdminAvailableTeams(
   return availableTeams;
 }
 
+export const getAdminRosterEntries = cache(
+  async (
+    tournamentId: string,
+    categoryId?: string,
+  ): Promise<AdminRosterEntry[]> => {
+    await requireAdmin();
+    const supabase = await createSupabaseServerClient();
+
+    let query = supabase
+      .from("football_roster_entries")
+      .select(
+        "id, tournament_id, team_id, player_id, shirt_number, status, medical_status, insurance_status, registered_at, notes, football_players(id, first_name, last_name, public_name, document_number, birth_date, phone, notes)",
+      )
+      .eq("tournament_id", tournamentId)
+      .order("team_id", { ascending: true })
+      .order("shirt_number", { ascending: true, nullsFirst: false });
+
+    if (categoryId) {
+      query = query.eq("category_id", categoryId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error("Failed to load football roster entries.", {
+        cause: error,
+      });
+    }
+
+    return formatAdminRosterEntries((data ?? []) as AdminRosterEntryRow[]);
+  },
+);
+
+export const getAdminAvailablePlayers = cache(
+  async (
+    tournamentId: string,
+    categoryId?: string,
+  ): Promise<AdminPlayer[]> => {
+    await requireAdmin();
+    const supabase = await createSupabaseServerClient();
+    let rosteredPlayersQuery = supabase
+      .from("football_roster_entries")
+      .select("player_id")
+      .eq("tournament_id", tournamentId);
+
+    if (categoryId) {
+      rosteredPlayersQuery = rosteredPlayersQuery.eq("category_id", categoryId);
+    }
+
+    const [
+      { data: players, error: playersError },
+      { data: rosteredPlayers, error: rosteredPlayersError },
+    ] = await Promise.all([
+      supabase
+        .from("football_players")
+        .select(
+          "id, first_name, last_name, public_name, document_number, birth_date, phone, notes",
+        )
+        .order("last_name", { ascending: true })
+        .order("first_name", { ascending: true }),
+      rosteredPlayersQuery,
+    ]);
+
+    if (playersError) {
+      throw new Error("Failed to load football players.", {
+        cause: playersError,
+      });
+    }
+
+    if (rosteredPlayersError) {
+      throw new Error("Failed to load football rostered players.", {
+        cause: rosteredPlayersError,
+      });
+    }
+
+    return formatAdminAvailablePlayers(
+      (players ?? []) as AdminPlayerRow[],
+      formatAdminRosteredPlayerIds(
+        (rosteredPlayers ?? []) as AdminRosteredPlayerRow[],
+      ),
+    );
+  },
+);
+
 export async function getAdminMatches(
   tournamentId: string,
+  categoryId?: string,
 ): Promise<AdminMatch[]> {
   await requireAdmin();
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("football_matches")
     .select(
-      "id, round_label, scheduled_at, home_team_id, away_team_id, home_score, away_score, status, assigned_viewer_id, result_locked_at, result_submitted_by",
+      "id, category_id, round_label, scheduled_at, home_team_id, away_team_id, home_score, away_score, home_penalty_score, away_penalty_score, status, assigned_viewer_id, result_locked_at, result_submitted_by, next_match_id, group_id",
     )
     .eq("tournament_id", tournamentId)
     .order("scheduled_at", { ascending: true });
+
+  if (categoryId) {
+    query = query.eq("category_id", categoryId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);
@@ -1110,17 +1750,20 @@ export async function getViewerAssignedMatches(): Promise<ViewerAssignedMatch[]>
     .select(
       `
         id,
+        category_id,
         round_label,
         scheduled_at,
         home_team_id,
         away_team_id,
         home_score,
         away_score,
+        home_penalty_score,
+        away_penalty_score,
         status,
         assigned_viewer_id,
         result_locked_at,
         result_submitted_by,
-        football_tournaments(id, name),
+        football_tournaments(id, name, format),
         home_team:football_teams!football_matches_home_team_id_fkey(name),
         away_team:football_teams!football_matches_away_team_id_fkey(name)
       `,
@@ -1132,5 +1775,29 @@ export async function getViewerAssignedMatches(): Promise<ViewerAssignedMatch[]>
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as unknown as ViewerMatchRow[]).map(formatViewerMatch);
+  const matches = ((data ?? []) as unknown as ViewerMatchRow[]).map(
+    formatViewerMatch,
+  );
+  const { data: rosterData, error: rosterError } = await supabase.rpc(
+    "get_viewer_assigned_match_rosters",
+  );
+
+  if (rosterError) {
+    throw new Error("Failed to load assigned match rosters.", {
+      cause: rosterError,
+    });
+  }
+
+  const rosterByMatch = new Map<string, MatchResultRosterEntry[]>();
+
+  for (const row of (rosterData ?? []) as ViewerAssignedMatchRosterRow[]) {
+    const current = rosterByMatch.get(row.match_id) ?? [];
+    current.push(formatViewerMatchRosterEntry(row));
+    rosterByMatch.set(row.match_id, current);
+  }
+
+  return matches.map((match) => ({
+    ...match,
+    rosterEntries: rosterByMatch.get(match.id) ?? [],
+  }));
 }

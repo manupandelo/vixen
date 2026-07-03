@@ -50,7 +50,9 @@ export function calculateStandings(
     if (
       match.status !== "completed" ||
       match.homeScore === null ||
-      match.awayScore === null
+      match.awayScore === null ||
+      match.homeTeamId === null ||
+      match.awayTeamId === null
     ) {
       continue;
     }

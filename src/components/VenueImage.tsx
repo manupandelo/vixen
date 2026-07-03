@@ -7,6 +7,7 @@ export function VenueImage({
   overlay = false,
   objectPosition = "center",
   className = "",
+  sizes = "100vw",
 }: {
   src: string;
   alt: string;
@@ -14,6 +15,7 @@ export function VenueImage({
   overlay?: boolean;
   objectPosition?: string;
   className?: string;
+  sizes?: string;
 }) {
   return (
     <div className={`venue-frame w-full max-w-full ${className}`}>
@@ -22,8 +24,8 @@ export function VenueImage({
         alt={alt}
         fill
         priority={priority}
-        sizes="(max-width: 768px) 100vw, 50vw"
-        className="object-cover"
+        sizes={sizes}
+        className="object-cover transition-transform duration-700 group-hover:scale-105"
         style={{ objectPosition }}
       />
       {overlay ? <div aria-hidden="true" className="venue-frame__overlay" /> : null}

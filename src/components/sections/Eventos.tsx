@@ -22,72 +22,51 @@ export function Eventos() {
   return (
     <SectionShell
       id="eventos"
-      className="border-t border-white/5 bg-[var(--color-surface)]"
+      className="border-t border-white/5 bg-[var(--color-surface)] py-20 sm:py-28"
     >
       <section
         aria-labelledby="eventos-title"
-        className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:gap-14"
+        className="grid gap-12 lg:grid-cols-[1fr_1fr] lg:items-center"
       >
-        <div className="lg:pt-5">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
+        <div className="flex flex-col">
+          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
             Después del partido
           </p>
-          <h2 id="eventos-title" className="text-display-sm">
+          <h2 id="eventos-title" className="text-display-sm text-4xl sm:text-5xl">
             {eventos.title}
           </h2>
-          <p className="mt-4 max-w-xl text-[var(--color-muted)]">
+          <p className="mt-6 text-[1.1rem] sm:text-[1.15rem] leading-relaxed text-[var(--color-muted)]">
             {eventos.body}
           </p>
 
-          <div className="mt-10 divide-y divide-white/10 border-y border-white/10">
+          <div className="mt-12 grid gap-8 sm:grid-cols-2">
             {eventMoments.map((moment) => (
-              <article key={moment.title} className="py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
-                  {moment.title}
-                </p>
-                <p className="mt-2 max-w-lg text-sm text-white/76">
-                  {moment.body}
-                </p>
-              </article>
+              <div key={moment.title} className="flex flex-col">
+                <p className="text-[1.05rem] font-bold text-white mb-2">{moment.title}</p>
+                <p className="text-[0.95rem] text-white/60 leading-relaxed">{moment.body}</p>
+              </div>
             ))}
-          </div>
-
-          <div className="mt-7 border-t border-white/10 pt-5">
-            <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-start">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-accent)]">
-                  Club social
-                </p>
-                <p className="mt-3 max-w-lg text-sm text-white/72">
-                  Bar, vista a cancha y formatos privados dentro del mismo
-                  recorrido del club, sin sentirse como un bloque aparte.
-                </p>
-              </div>
-              <VenueImage
-                src="/canchas4.jpg"
-                alt="Canchas iluminadas y predio activo en Vixen Club"
-                className="aspect-[16/11] min-h-[11rem] max-w-[13rem] rounded-[1.1rem] sm:justify-self-end"
-              />
-            </div>
-            <div className="mt-5 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-3 sm:gap-4">
-              <div className="border-t border-white/10 pt-3 text-sm text-white/72 sm:border-t-0 sm:pt-0">
-                Bar y quincho
-              </div>
-              <div className="border-t border-white/10 pt-3 text-sm text-white/72 sm:border-t-0 sm:pt-0">
-                Eventos privados
-              </div>
-              <div className="border-t border-white/10 pt-3 text-sm text-white/72 sm:border-t-0 sm:pt-0">
-                Vista a cancha
-              </div>
+            
+            <div className="flex flex-col sm:col-span-2 mt-4 pt-8 border-t border-white/10">
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--color-accent)] mb-3">
+                Club social
+              </p>
+              <h3 className="text-xl font-bold text-white mb-3">
+                Bar y quincho con vista a cancha
+              </h3>
+              <p className="text-[0.95rem] text-white/60 max-w-lg leading-relaxed">
+                Formatos privados dentro del mismo recorrido del club, sin sentirse como un bloque aparte.
+              </p>
             </div>
           </div>
         </div>
 
-        <div>
+        <div className="relative rounded-[2rem] overflow-hidden group w-full h-[600px] lg:h-[800px]">
           <VenueImage
             src="/vixen2.jpg"
             alt="Sector social de Vixen Club con mesas y vista a las canchas"
-            className="aspect-[4/5] min-h-[21rem] sm:min-h-[28rem]"
+            className="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
+            sizes="(max-width: 1024px) 100vw, 50vw"
           />
         </div>
       </section>

@@ -17,7 +17,7 @@ const navItems = [
 
 export function AdminShell({ children }: AdminShellProps) {
   return (
-    <div className="min-h-screen bg-[var(--color-base)] text-[var(--color-ink)]">
+    <div className="min-h-[100dvh] bg-[var(--color-base)] text-[var(--color-ink)]">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[var(--color-base)]/92 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
           <div>

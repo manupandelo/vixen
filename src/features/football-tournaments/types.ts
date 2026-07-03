@@ -27,6 +27,18 @@ export const footballMatchStatuses = [
   "cancelled",
 ] as const;
 
+export const footballRosterEntryStatuses = [
+  "active",
+  "inactive",
+  "suspended",
+] as const;
+
+export const footballDocumentationStatuses = [
+  "pending",
+  "approved",
+  "expired",
+] as const;
+
 export const staffRoles = ["admin", "viewer"] as const;
 
 export type FootballTournamentStatus =
@@ -49,10 +61,28 @@ export const footballTournamentCategoryStatusLabels = {
 export const footballTournamentFormatLabels = {
   league: "Liga",
   cup: "Copa",
-  league_playoff: "Liga con playoff",
+  league_playoff: "Zonas + playoff",
 } satisfies Record<FootballTournamentFormat, string>;
 
 export type FootballMatchStatus = (typeof footballMatchStatuses)[number];
+
+export type FootballRosterEntryStatus =
+  (typeof footballRosterEntryStatuses)[number];
+
+export type FootballDocumentationStatus =
+  (typeof footballDocumentationStatuses)[number];
+
+export const footballRosterEntryStatusLabels = {
+  active: "Activo",
+  inactive: "Baja",
+  suspended: "Suspendido",
+} satisfies Record<FootballRosterEntryStatus, string>;
+
+export const footballDocumentationStatusLabels = {
+  pending: "Pendiente",
+  approved: "Aprobado",
+  expired: "Vencido",
+} satisfies Record<FootballDocumentationStatus, string>;
 
 export type StaffRole = (typeof staffRoles)[number];
 
@@ -62,7 +92,7 @@ export type FootballTeam = {
   id: string;
   name: string;
   shortName: string | null;
-  photoUrl: string | null;
+  photoUrl?: string | null;
 };
 
 export type FootballTournamentCategory = {
@@ -78,8 +108,8 @@ export type FootballTournamentCategory = {
 
 export type FootballMatchForStandings = {
   id: string;
-  homeTeamId: string;
-  awayTeamId: string;
+  homeTeamId: string | null;
+  awayTeamId: string | null;
   homeScore: number | null;
   awayScore: number | null;
   status: FootballMatchStatus;
@@ -104,6 +134,7 @@ export type PublicFootballTournament = {
   slug: string;
   season: string;
   category: string;
+  categorySlug?: string;
   format: FootballTournamentFormat;
   status: FootballTournamentStatus;
   startsAt: string | null;
@@ -112,11 +143,34 @@ export type PublicFootballTournament = {
   teams: FootballTeam[];
   matches: PublicFootballMatch[];
   standings: StandingRow[];
+  categoriesCount?: number;
 };
 
 export type PublicFootballMatch = FootballMatchForStandings & {
   roundLabel: string;
   scheduledAt: string | null;
-  homeTeamName: string;
-  awayTeamName: string;
+  homeTeamName: string | null;
+  awayTeamName: string | null;
+  homeTeamShortName: string | null;
+  awayTeamShortName: string | null;
+  nextMatchId?: string | null;
+  isKnockout: boolean;
+};
+
+export type UIFootballMatch = {
+  id: string;
+  roundLabel: string;
+  scheduledAt: string | null;
+  homeTeamId: string | null;
+  awayTeamId: string | null;
+  homeTeamName: string | null;
+  awayTeamName: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  status: FootballMatchStatus;
+  nextMatchId?: string | null;
+  isKnockout: boolean;
+  assignedViewerId?: string | null;
+  resultLockedAt?: string | null;
+  resultSubmittedBy?: string | null;
 };

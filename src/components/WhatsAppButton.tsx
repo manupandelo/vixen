@@ -1,10 +1,14 @@
 import Image from "next/image";
 import { content } from "@/content";
 
-export function WhatsAppButton() {
-  const href = `${content.site.whatsappUrl}?text=${encodeURIComponent(
-    "Hola! Quiero más info sobre Vixen Club.",
-  )}`;
+export function WhatsAppButton({
+  message = "Hola! Quiero más info sobre Vixen Club.",
+  label = "Hablar con Vixen",
+}: {
+  message?: string;
+  label?: string;
+}) {
+  const href = `${content.site.whatsappUrl}?text=${encodeURIComponent(message)}`;
 
   return (
     <a
@@ -27,7 +31,7 @@ export function WhatsAppButton() {
         <span className="hidden text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-white/58 sm:block">
           Respuesta por WhatsApp
         </span>
-        <span className="block text-sm font-semibold text-white">Hablar con Vixen</span>
+        <span className="block text-sm font-semibold text-white">{label}</span>
       </span>
     </a>
   );

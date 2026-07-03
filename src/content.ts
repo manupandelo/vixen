@@ -115,20 +115,23 @@ export const content = {
   padel: {
     title: "Pádel",
     intro:
-      "Torneos americanos, clases con profes y alquiler de canchas. Para jugar suelto o competir.",
-    points: [
+      "Canchas profesionales de blindex y césped sintético. Reservá tu turno, tomá clases o anotate en nuestros torneos americanos.",
+    facilities: [
       {
-        title: "Torneos americanos",
-        body: "Diversión y juego asegurado para todos los niveles.",
+        title: "Canchas Profesionales",
+        body: "Estructura de blindex panorámico y césped sintético premium para asegurar el mejor pique.",
       },
-      { title: "Clases", body: "Mejorá tu juego con nuestros profesores." },
+      { 
+        title: "Iluminación LED", 
+        body: "Focos de última generación para jugar de noche sin sombras ni reflejos molestos." 
+      },
       {
-        title: "Alquiler de canchas",
-        body: "Reservá tu turno por WhatsApp en segundos.",
+        title: "El Tercer Tiempo",
+        body: "Sector exclusivo con bar, mesas y vista panorámica para disfrutar después del partido.",
       },
     ],
     cta: {
-      label: "Reservar cancha",
+      label: "Reservar por ATC",
       message: "Hola! Quiero reservar una cancha de pádel.",
     },
   },

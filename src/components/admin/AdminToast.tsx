@@ -56,16 +56,16 @@ export function useActionToast(
   const { notify } = useAdminToast();
   const { onSuccess } = options;
   const onSuccessRef = useRef(onSuccess);
-  const lastMessageRef = useRef("");
+  const lastStateRef = useRef<ActionState | null>(null);
 
   useEffect(() => {
     onSuccessRef.current = onSuccess;
   }, [onSuccess]);
 
   useEffect(() => {
-    if (!state.message || state.message === lastMessageRef.current) return;
+    if (!state.message || state === lastStateRef.current) return;
 
-    lastMessageRef.current = state.message;
+    lastStateRef.current = state;
     notify({
       tone: state.ok ? "success" : "error",
       message: state.message,

@@ -36,9 +36,12 @@ function match(
     awayTeamId: "team-2",
     homeTeamName: `Local ${id}`,
     awayTeamName: `Visitante ${id}`,
+    homeTeamShortName: null,
+    awayTeamShortName: null,
     homeScore: status === "completed" ? 2 : null,
     awayScore: status === "completed" ? 0 : null,
     status,
+    isKnockout: false,
   };
 }
 
@@ -77,24 +80,14 @@ describe("PublicTournamentPanel", () => {
 
     expect(screen.getByText("Apertura Vixen")).toBeInTheDocument();
     expect(screen.getByText("Fútbol 7 Masculino")).toBeInTheDocument();
-    expect(screen.getByText("Liga con playoff")).toBeInTheDocument();
+    expect(screen.getByText("Zonas + playoff")).toBeInTheDocument();
     expect(screen.getByText("Temporada 2026")).toBeInTheDocument();
     expect(screen.getByText("Liga semanal en Pilar.")).toBeInTheDocument();
     expect(screen.getByText("Vixen Rojo")).toBeInTheDocument();
 
-    expect(screen.getByText(/Local 7/, { selector: "p" })).toBeInTheDocument();
-    expect(screen.getByText(/Local 11/, { selector: "p" })).toBeInTheDocument();
-    expect(
-      screen.queryByText(/Local 12/, { selector: "p" }),
-    ).not.toBeInTheDocument();
-
-    expect(screen.getByText(/Local 6/, { selector: "p" })).toBeInTheDocument();
-    expect(screen.getByText(/Local 2/, { selector: "p" })).toBeInTheDocument();
-    expect(
-      screen.queryByText((_, node) => {
-        if (node?.tagName !== "P") return false;
-        return node.textContent === "Local 1vsVisitante 1";
-      }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("Fecha 7")).toBeInTheDocument();
+    expect(screen.getByText("Local 7")).toBeInTheDocument();
+    expect(screen.getByText("Visitante 7")).toBeInTheDocument();
+    expect(screen.queryByText("Local 11")).not.toBeInTheDocument();
   });
 });

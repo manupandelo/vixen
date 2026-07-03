@@ -5,16 +5,20 @@ import { describe, expect, it, vi } from "vitest";
 import { AdminToastProvider } from "./AdminToast";
 import {
   FixtureGeneratorDialog,
+  GroupPlayoffGeneratorDialog,
   MatchDeleteDialog,
   MatchEditDialog,
   MatchResultForm,
   MatchViewerAssignmentForm,
+  RosterEntryCreateDialog,
+  RosterEntryEditDialog,
   TeamCreatePanel,
   TeamEditDialog,
   TeamForm,
   TeamRemoveDialog,
   TournamentForm,
 } from "./AdminForms";
+import type { ActionState } from "@/features/football-tournaments/actions";
 
 describe("TournamentForm", () => {
   it("uses a guided create flow with a live summary and format choices", async () => {
@@ -40,7 +44,7 @@ describe("TournamentForm", () => {
 
     expect(screen.getByText("Formato del torneo")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Liga con playoff" }),
+      screen.getByRole("button", { name: "Zonas + playoff" }),
     ).toBeInTheDocument();
   });
 
@@ -189,6 +193,95 @@ describe("TeamForm", () => {
   });
 });
 
+describe("RosterEntryForm", () => {
+  it("submits a new player roster entry without requiring DNI", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn(async (...args: any[]) => ({
+      ok: true,
+      message: "Jugador agregado al plantel.",
+    }));
+
+    render(
+      <AdminToastProvider>
+        <RosterEntryCreateDialog
+          action={action}
+          availablePlayers={[]}
+          teamName="Vixen Norte"
+        />
+      </AdminToastProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Agregar jugador" }));
+    await user.type(screen.getByLabelText("Nombre del jugador"), "Juan");
+    await user.type(screen.getByLabelText("Apellido del jugador"), "Perez");
+    await user.type(screen.getByLabelText("Número de camiseta"), "10");
+    await user.click(screen.getByRole("button", { name: "Agregar jugador" }));
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+
+    const payload = action.mock.calls[0]?.[1] as FormData;
+    expect(payload.get("mode")).toBe("new");
+    expect(payload.get("firstName")).toBe("Juan");
+    expect(payload.get("lastName")).toBe("Perez");
+    expect(payload.get("documentNumber")).toBe("");
+    expect(payload.get("shirtNumber")).toBe("10");
+    expect(await screen.findByText("Jugador agregado al plantel.")).toBeInTheDocument();
+  });
+
+  it("edits roster documentation status without showing player identity fields", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn(async (...args: any[]) => ({
+      ok: true,
+      message: "Jugador del plantel guardado.",
+    }));
+
+    render(
+      <AdminToastProvider>
+        <RosterEntryEditDialog
+          action={action}
+          rosterEntry={{
+            id: "roster-1",
+            tournamentId: "tournament-1",
+            teamId: "team-1",
+            playerId: "player-1",
+            shirtNumber: 7,
+            status: "active",
+            medicalStatus: "pending",
+            insuranceStatus: "approved",
+            registeredAt: "2026-07-02T12:00:00-03:00",
+            notes: null,
+            player: {
+              id: "player-1",
+              firstName: "Ana",
+              lastName: "Lopez",
+              publicName: null,
+              documentNumber: null,
+              birthDate: null,
+              phone: null,
+              notes: null,
+            },
+          }}
+        />
+      </AdminToastProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Editar jugador" }));
+
+    expect(screen.queryByLabelText("Nombre del jugador")).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Apto médico"), "approved");
+    await user.clear(screen.getByLabelText("Número de camiseta"));
+    await user.type(screen.getByLabelText("Número de camiseta"), "9");
+    await user.click(screen.getByRole("button", { name: "Guardar jugador" }));
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+
+    const payload = action.mock.calls[0]?.[1] as FormData;
+    expect(payload.get("medicalStatus")).toBe("approved");
+    expect(payload.get("shirtNumber")).toBe("9");
+    expect(await screen.findByText("Jugador del plantel guardado.")).toBeInTheDocument();
+  });
+});
+
 describe("match management forms", () => {
   it("previews generated league fixture before saving it", async () => {
     const user = userEvent.setup();
@@ -229,6 +322,54 @@ describe("match management forms", () => {
     });
   });
 
+  it("previews generated zones plus playoff fixture before saving it", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn(
+      async (state: ActionState, payload: FormData) => {
+        void state;
+        void payload;
+
+        return {
+          ok: true,
+          message: "Fixture zonas + playoff generado con 3 partidos.",
+        };
+      },
+    );
+
+    render(
+      <AdminToastProvider>
+        <GroupPlayoffGeneratorDialog
+          action={action}
+          teams={[
+            { id: "team-1", name: "Vixen Norte" },
+            { id: "team-2", name: "Vixen Sur" },
+            { id: "team-3", name: "Vixen Este" },
+            { id: "team-4", name: "Vixen Oeste" },
+          ]}
+        />
+      </AdminToastProvider>,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Generar zonas + playoff" }),
+    );
+    await user.type(screen.getByLabelText("Inicio"), "2026-03-01");
+    await user.type(screen.getByLabelText("Hora"), "20:30");
+
+    expect(screen.getByText("Zona A")).toBeInTheDocument();
+    expect(screen.getByText("Zona B")).toBeInTheDocument();
+    expect(screen.getByText("3 partidos totales")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Guardar zonas + playoff" }),
+    );
+
+    expect(action).toHaveBeenCalledTimes(1);
+    const submitted = action.mock.calls[0][1] as FormData;
+    expect(submitted.get("groupCount")).toBe("2");
+    expect(submitted.get("qualifiersPerGroup")).toBe("1");
+  });
+
   it("shows a toast after assigning a viewer", async () => {
     const user = userEvent.setup();
     const action = vi.fn(async () => ({
@@ -250,6 +391,72 @@ describe("match management forms", () => {
     await user.click(screen.getByRole("button", { name: "Asignar" }));
 
     expect(await screen.findByText("Veedor asignado.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Asignar" }));
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(2));
+    await waitFor(() => {
+      expect(screen.getAllByText("Veedor asignado.")).toHaveLength(2);
+    });
+  });
+
+  it("keeps the assigned viewer select synced with server values", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn(async () => ({
+      ok: true,
+      message: "Veedor asignado.",
+    }));
+    const viewers = [
+      { id: "viewer-1", email: "veedor@vixen.test" },
+      { id: "viewer-2", email: "otro@vixen.test" },
+    ];
+
+    const { rerender } = render(
+      <AdminToastProvider>
+        <MatchViewerAssignmentForm
+          action={action}
+          viewers={viewers}
+          assignedViewerId={null}
+        />
+      </AdminToastProvider>,
+    );
+
+    await user.selectOptions(screen.getByLabelText("Veedor"), "viewer-2");
+    expect((screen.getByLabelText("Veedor") as HTMLSelectElement).value).toBe(
+      "viewer-2",
+    );
+
+    rerender(
+      <AdminToastProvider>
+        <MatchViewerAssignmentForm
+          action={action}
+          viewers={viewers}
+          assignedViewerId="viewer-1"
+        />
+      </AdminToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect((screen.getByLabelText("Veedor") as HTMLSelectElement).value).toBe(
+        "viewer-1",
+      );
+    });
+
+    rerender(
+      <AdminToastProvider>
+        <MatchViewerAssignmentForm
+          action={action}
+          viewers={viewers}
+          assignedViewerId={null}
+        />
+      </AdminToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect((screen.getByLabelText("Veedor") as HTMLSelectElement).value).toBe(
+        "",
+      );
+    });
   });
 
   it("shows a toast after saving a match result", async () => {
@@ -265,12 +472,19 @@ describe("match management forms", () => {
       </AdminToastProvider>,
     );
 
-    await user.type(screen.getByLabelText("Local"), "2");
-    await user.type(screen.getByLabelText("Visitante"), "1");
+    await user.click(screen.getByRole("button", { name: "Sumar gol local" }));
+    await user.click(screen.getByRole("button", { name: "Sumar gol local" }));
+    await user.click(
+      screen.getByRole("button", { name: "Sumar gol visitante" }),
+    );
     await user.click(
       screen.getByRole("button", { name: "Guardar resultado" }),
     );
 
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    const submitted = action.mock.calls[0][1] as FormData;
+    expect(submitted.get("homeScore")).toBe("2");
+    expect(submitted.get("awayScore")).toBe("1");
     expect(await screen.findByText("Resultado guardado.")).toBeInTheDocument();
   });
 
@@ -287,16 +501,20 @@ describe("match management forms", () => {
           action={action}
           match={{
             id: "match-1",
+            categoryId: "category-1",
             roundLabel: "Fecha 2",
             scheduledAt: "2026-03-08T20:30:00-03:00",
             homeTeamId: "team-1",
             awayTeamId: "team-2",
             homeScore: null,
             awayScore: null,
+            homePenaltyScore: null,
+            awayPenaltyScore: null,
             status: "scheduled",
             assignedViewerId: null,
             resultLockedAt: null,
             resultSubmittedBy: null,
+            isKnockout: false,
           }}
           teams={[
             { id: "team-1", name: "Vixen Norte" },

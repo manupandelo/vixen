@@ -55,7 +55,9 @@ describe("Hero", () => {
     render(<HomePage />);
 
     const main = screen.getByRole("main");
-    const mainChildren = Array.from(main.querySelectorAll(":scope > section"));
+    const mainChildren = Array.from(
+      main.querySelectorAll<HTMLElement>(":scope > section"),
+    );
 
     expect(mainChildren).toHaveLength(5);
     expect(

@@ -102,6 +102,7 @@ create table public.football_tournament_teams (
   team_id uuid not null references public.football_teams(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (category_id, team_id),
+  unique (tournament_id, team_id),
   constraint football_tournament_teams_tournament_category_fkey
     foreign key (tournament_id, category_id)
     references public.football_tournament_categories(tournament_id, id)
@@ -217,6 +218,8 @@ create table public.football_matches (
   assigned_viewer_id uuid references public.admin_profiles(id) on delete set null,
   result_locked_at timestamptz,
   result_submitted_by uuid references public.admin_profiles(id) on delete set null,
+  home_penalty_score integer,
+  away_penalty_score integer,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint football_matches_tournament_category_fkey
@@ -233,6 +236,21 @@ create table public.football_matches (
     check (home_score is null or home_score >= 0),
   constraint football_matches_away_score_check
     check (away_score is null or away_score >= 0),
+  constraint football_matches_home_penalty_score_check
+    check (home_penalty_score is null or home_penalty_score >= 0),
+  constraint football_matches_away_penalty_score_check
+    check (away_penalty_score is null or away_penalty_score >= 0),
+  constraint football_matches_penalty_pair_check
+    check (
+      (home_penalty_score is null and away_penalty_score is null)
+      or
+      (
+        home_penalty_score is not null
+        and away_penalty_score is not null
+        and home_penalty_score <> away_penalty_score
+        and home_score = away_score
+      )
+    ),
   constraint football_matches_status_check check (
     (
       status = 'completed'
@@ -246,6 +264,28 @@ create table public.football_matches (
       and away_score is null
     )
   )
+);
+
+create table public.football_match_events (
+  id uuid primary key default gen_random_uuid(),
+  match_id uuid not null references public.football_matches(id) on delete cascade,
+  tournament_id uuid not null references public.football_tournaments(id) on delete cascade,
+  category_id uuid not null references public.football_tournament_categories(id) on delete cascade,
+  team_id uuid not null references public.football_teams(id) on delete cascade,
+  roster_entry_id uuid references public.football_roster_entries(id) on delete set null,
+  player_id uuid references public.football_players(id) on delete set null,
+  event_type text not null check (event_type in ('goal', 'yellow_card', 'red_card')),
+  quantity integer not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint football_match_events_quantity_check
+    check (
+      (event_type = 'goal' and quantity >= 1)
+      or
+      (event_type = 'yellow_card' and quantity between 1 and 2)
+      or
+      (event_type = 'red_card' and quantity = 1)
+    )
 );
 
 create table public.football_audit_events (
@@ -282,6 +322,13 @@ create table public.football_audit_events (
 
 create index football_audit_events_tournament_created_idx
 on public.football_audit_events (tournament_id, created_at desc);
+
+create index football_match_events_match_idx
+on public.football_match_events(match_id);
+
+create index football_match_events_player_idx
+on public.football_match_events(player_id)
+where player_id is not null;
 
 create index football_audit_events_actor_created_idx
 on public.football_audit_events (actor_profile_id, created_at desc);
@@ -332,6 +379,10 @@ create trigger football_matches_set_updated_at
 before update on public.football_matches
 for each row execute function public.set_updated_at();
 
+create trigger football_match_events_set_updated_at
+before update on public.football_match_events
+for each row execute function public.set_updated_at();
+
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -362,6 +413,40 @@ as $$
       and role = 'viewer'
       and status = 'active'
   );
+$$;
+
+create or replace function public.get_viewer_assigned_match_rosters()
+returns table (
+  match_id uuid,
+  roster_entry_id uuid,
+  team_id uuid,
+  player_id uuid,
+  shirt_number integer,
+  first_name text,
+  last_name text,
+  public_name text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    football_match.id as match_id,
+    roster.id as roster_entry_id,
+    roster.team_id,
+    player.id as player_id,
+    roster.shirt_number,
+    player.first_name,
+    player.last_name,
+    player.public_name
+  from public.football_matches football_match
+  join public.football_roster_entries roster
+    on roster.category_id = football_match.category_id
+    and roster.team_id in (football_match.home_team_id, football_match.away_team_id)
+    and roster.status = 'active'
+  join public.football_players player
+    on player.id = roster.player_id
+  where football_match.assigned_viewer_id = auth.uid();
 $$;
 
 create or replace function public.match_teams_belong_to_tournament()
@@ -406,6 +491,7 @@ alter table public.football_team_admin_details enable row level security;
 alter table public.football_players enable row level security;
 alter table public.football_roster_entries enable row level security;
 alter table public.football_matches enable row level security;
+alter table public.football_match_events enable row level security;
 alter table public.football_audit_events enable row level security;
 
 create policy "Admins can read admin profiles"
@@ -543,6 +629,32 @@ on public.football_roster_entries for all
 using (public.is_admin())
 with check (public.is_admin());
 
+create policy "Admins can manage football match events"
+on public.football_match_events for all
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "Viewers can manage assigned match events"
+on public.football_match_events for all
+using (
+  exists (
+    select 1
+    from public.football_matches football_match
+    where football_match.id = football_match_events.match_id
+      and football_match.assigned_viewer_id = auth.uid()
+      and football_match.result_locked_at is null
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.football_matches football_match
+    where football_match.id = football_match_events.match_id
+      and football_match.assigned_viewer_id = auth.uid()
+      and football_match.result_locked_at is null
+  )
+);
+
 create policy "Admins can manage matches"
 on public.football_matches for all
 using (public.is_admin())
@@ -597,6 +709,9 @@ with check (
   (public.is_admin() or public.is_viewer())
   and actor_profile_id = auth.uid()
 );
+
+revoke all on function public.get_viewer_assigned_match_rosters() from public;
+grant execute on function public.get_viewer_assigned_match_rosters() to authenticated;
 
 insert into storage.buckets (id, name, public)
 values ('team-photos', 'team-photos', true)
