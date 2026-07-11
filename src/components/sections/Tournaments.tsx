@@ -30,9 +30,6 @@ export function Tournaments() {
           </div>
 
           <div className="flex flex-col">
-            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)] drop-shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.5)]">
-              Actividad visible
-            </p>
             <h2 id="tournaments-title" className="text-display-sm text-4xl sm:text-5xl text-white">
               {tournaments.title}
             </h2>

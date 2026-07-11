@@ -23,31 +23,34 @@ describe("Hero", () => {
     ).toHaveAttribute("href", content.hero.secondaryCta.href);
   });
 
-  it("renders the hero facts as a compact club list", () => {
+  it("renders the hero facts as compact inline club proof points", () => {
     render(<Hero />);
 
     const heroSection = screen.getByRole("region", {
       name: /presentación del club/i,
     });
-    const proofList = screen.getByRole("list", { name: /datos del club/i });
 
-    expect(
-      within(heroSection).getByRole("list", { name: /datos del club/i }),
-    ).toBe(proofList);
-    expect(screen.getAllByRole("listitem")).toHaveLength(content.hero.proof.length);
     for (const item of content.hero.proof) {
-      expect(screen.getByText(item)).toBeInTheDocument();
+      expect(within(heroSection).getByText(item)).toBeInTheDocument();
     }
+    expect(within(heroSection).queryByRole("list")).not.toBeInTheDocument();
   });
 
-  it("uses the shared green brand tokens in the hero background treatment", () => {
+  it("uses an image-led hero with the shared green accent token", () => {
     render(<Hero />);
 
     const heroSection = screen.getByRole("region", { name: /presentación del club/i });
+    const heroImage = within(heroSection).getByRole("img", {
+      name: content.hero.image.alt,
+    });
 
     expect(heroSection).toHaveClass(
-      "bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--color-accent)_18%,transparent),transparent_34%),linear-gradient(180deg,var(--color-surface-2),var(--color-base)_42%)]",
+      "relative",
+      "min-h-[85vh]",
+      "overflow-hidden",
     );
+    expect(heroImage).toHaveAttribute("src", content.hero.image.src);
+    expect(heroSection.innerHTML).toContain("text-[var(--color-accent)]");
     expect(heroSection.className).not.toContain("198,240,0");
   });
 

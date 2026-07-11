@@ -7,7 +7,7 @@ const COPYRIGHT_YEAR = 2026;
 export function Footer() {
   const { site, nav } = content;
   const sectionLabelClass =
-    "text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-[var(--color-accent)]";
+    "text-sm font-bold text-white mb-4 block";
   const linkClass =
     "rounded-sm text-sm text-white/76 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]";
 
@@ -33,24 +33,7 @@ export function Footer() {
                 {site.address}
               </p>
               <div className="mt-8 border-y border-white/8 py-4">
-                <p id="footer-sponsors" className={sectionLabelClass}>
-                  Sponsors
-                </p>
-                <ul
-                  aria-label="Sponsors"
-                  aria-labelledby="footer-sponsors"
-                  className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-semibold uppercase tracking-[0.18em] text-white/72"
-                >
-                  {site.sponsors.map((sponsor) => (
-                    <li key={sponsor}>{sponsor}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="grid gap-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
-              <div>
-                <p className={sectionLabelClass}>Contacto</p>
+                <h3 className={sectionLabelClass}>Contacto</h3>
                 <ul className="mt-4 space-y-3">
                   <li>
                     <a href={`tel:+${site.whatsappNumber}`} className={linkClass}>
@@ -64,34 +47,34 @@ export function Footer() {
                   </li>
                 </ul>
               </div>
+            </div>
 
-              <div>
-                <p className={sectionLabelClass}>Social</p>
-                <nav aria-label="Redes sociales" className="mt-4">
-                  <ul className="space-y-3">
-                    <li>
-                      <a
-                        href={site.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={linkClass}
-                      >
-                        Instagram
-                      </a>
-                    </li>
-                    <li>
-                      <a
-                        href={site.facebook}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={linkClass}
-                      >
-                        Facebook
-                      </a>
-                    </li>
-                  </ul>
-                </nav>
-              </div>
+            <div>
+              <h3 className={sectionLabelClass}>Social</h3>
+              <nav aria-label="Redes sociales" className="mt-4">
+                <ul className="space-y-3">
+                  <li>
+                    <a
+                      href={site.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={linkClass}
+                    >
+                      Instagram
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href={site.facebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={linkClass}
+                    >
+                      Facebook
+                    </a>
+                  </li>
+                </ul>
+              </nav>
             </div>
           </div>
 
@@ -104,7 +87,7 @@ export function Footer() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-sm text-xs font-semibold uppercase tracking-[0.16em] text-white/46 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]"
+                  className="rounded-sm text-sm font-semibold text-white/60 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]"
                 >
                   {item.label}
                 </Link>

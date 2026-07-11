@@ -26,24 +26,24 @@ export function Hero() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.6 }}
-          className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-[var(--color-accent)] drop-shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.5)]"
+          transition={{ delay: 0.1, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-4 text-[0.8rem] font-bold uppercase tracking-[0.2em] text-[var(--color-accent)]"
         >
           {hero.kicker}
         </motion.p>
         <motion.h1
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
-          className="text-7xl sm:text-8xl md:text-[8rem] leading-[0.9] font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 drop-shadow-2xl text-balance"
+          transition={{ delay: 0.2, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="text-7xl sm:text-8xl md:text-[8rem] leading-[0.9] font-black uppercase tracking-tighter text-white text-balance"
         >
           {hero.title}
         </motion.h1>
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-          className="mt-6 max-w-2xl text-lg sm:text-xl text-white/70 font-medium leading-relaxed"
+          transition={{ delay: 0.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="mt-6 max-w-2xl text-lg sm:text-xl text-white/80 font-medium leading-relaxed"
         >
           {hero.subtitle}
         </motion.p>

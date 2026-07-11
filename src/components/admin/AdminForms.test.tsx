@@ -20,10 +20,15 @@ import {
 } from "./AdminForms";
 import type { ActionState } from "@/features/football-tournaments/actions";
 
+type TestFormAction = (
+  prevState: ActionState,
+  formData: FormData,
+) => Promise<ActionState>;
+
 describe("TournamentForm", () => {
   it("uses a guided create flow with a live summary and format choices", async () => {
     const user = userEvent.setup();
-    const action = vi.fn(async () => ({
+    const action = vi.fn<TestFormAction>(async () => ({
       ok: false,
       message: "",
     }));
@@ -50,7 +55,7 @@ describe("TournamentForm", () => {
 
   it("does not submit the tournament on the final wizard step until explicitly confirmed", async () => {
     const user = userEvent.setup();
-    const action = vi.fn(async () => ({
+    const action = vi.fn<TestFormAction>(async () => ({
       ok: false,
       message: "",
     }));
@@ -90,7 +95,7 @@ describe("TournamentForm", () => {
 describe("TeamForm", () => {
   it("shows the short name counter and disables submit when it is too long", async () => {
     const user = userEvent.setup();
-    const action = vi.fn(async () => ({
+    const action = vi.fn<TestFormAction>(async () => ({
       ok: false,
       message: "",
     }));
@@ -106,7 +111,7 @@ describe("TeamForm", () => {
 
   it("closes the create dialog and shows a toast after a successful team creation", async () => {
     const user = userEvent.setup();
-    const action = vi.fn(async () => ({
+    const action = vi.fn<TestFormAction>(async () => ({
       ok: true,
       message: "Equipo creado.",
     }));
@@ -131,7 +136,7 @@ describe("TeamForm", () => {
 
   it("edits an existing team with its current private details", async () => {
     const user = userEvent.setup();
-    const action = vi.fn(async () => ({
+    const action = vi.fn<TestFormAction>(async () => ({
       ok: true,
       message: "Equipo guardado.",
     }));
@@ -196,7 +201,7 @@ describe("TeamForm", () => {
 describe("RosterEntryForm", () => {
   it("submits a new player roster entry without requiring DNI", async () => {
     const user = userEvent.setup();
-    const action = vi.fn(async (...args: any[]) => ({
+    const action = vi.fn<TestFormAction>(async () => ({
       ok: true,
       message: "Jugador agregado al plantel.",
     }));
@@ -230,7 +235,7 @@ describe("RosterEntryForm", () => {
 
   it("edits roster documentation status without showing player identity fields", async () => {
     const user = userEvent.setup();
-    const action = vi.fn(async (...args: any[]) => ({
+    const action = vi.fn<TestFormAction>(async () => ({
       ok: true,
       message: "Jugador del plantel guardado.",
     }));
@@ -365,14 +370,14 @@ describe("match management forms", () => {
     );
 
     expect(action).toHaveBeenCalledTimes(1);
-    const submitted = action.mock.calls[0][1] as FormData;
+    const submitted = action.mock.calls[0][1];
     expect(submitted.get("groupCount")).toBe("2");
     expect(submitted.get("qualifiersPerGroup")).toBe("1");
   });
 
   it("shows a toast after assigning a viewer", async () => {
     const user = userEvent.setup();
-    const action = vi.fn(async () => ({
+    const action = vi.fn<TestFormAction>(async () => ({
       ok: true,
       message: "Veedor asignado.",
     }));
@@ -461,7 +466,7 @@ describe("match management forms", () => {
 
   it("shows a toast after saving a match result", async () => {
     const user = userEvent.setup();
-    const action = vi.fn(async () => ({
+    const action = vi.fn<TestFormAction>(async () => ({
       ok: true,
       message: "Resultado guardado.",
     }));
@@ -482,10 +487,89 @@ describe("match management forms", () => {
     );
 
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
-    const submitted = action.mock.calls[0][1] as FormData;
+    const [, submitted] = action.mock.calls[0] as unknown as [
+      ActionState,
+      FormData,
+    ];
     expect(submitted.get("homeScore")).toBe("2");
     expect(submitted.get("awayScore")).toBe("1");
     expect(await screen.findByText("Resultado guardado.")).toBeInTheDocument();
+  });
+
+  it("prefills player match events and summarizes assigned goals", async () => {
+    const user = userEvent.setup();
+    const action = vi.fn<TestFormAction>(async () => ({
+      ok: true,
+      message: "Resultado guardado.",
+    }));
+
+    render(
+      <AdminToastProvider>
+        <MatchResultForm
+          action={action}
+          homeScore={2}
+          awayScore={1}
+          homeTeamId="team-home"
+          awayTeamId="team-away"
+          rosterEntries={[
+            {
+              id: "roster-10",
+              teamId: "team-home",
+              playerId: "player-10",
+              shirtNumber: 10,
+              displayName: "Juan Perez",
+            },
+            {
+              id: "roster-7",
+              teamId: "team-away",
+              playerId: "player-7",
+              shirtNumber: 7,
+              displayName: "Ana Lopez",
+            },
+          ]}
+          matchEvents={[
+            {
+              rosterEntryId: "roster-10",
+              playerId: "player-10",
+              teamId: "team-home",
+              eventType: "goal",
+              quantity: 2,
+            },
+            {
+              rosterEntryId: "roster-7",
+              playerId: "player-7",
+              teamId: "team-away",
+              eventType: "yellow_card",
+              quantity: 1,
+            },
+          ]}
+        />
+      </AdminToastProvider>,
+    );
+
+    expect(screen.getByText("Local: 2/2 goles asignados")).toBeInTheDocument();
+    expect(
+      screen.getByText("Visitante: 0/1 goles asignados"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Goles de Juan Perez"),
+    ).toHaveValue(2);
+    expect(
+      screen.getByLabelText("Amarillas de Ana Lopez"),
+    ).toHaveValue(1);
+
+    await user.clear(screen.getByLabelText("Goles de Juan Perez"));
+    await user.type(screen.getByLabelText("Goles de Juan Perez"), "1");
+    expect(screen.getByText("Local: 1/2 goles asignados")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Guardar resultado" }),
+    );
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    const submitted = action.mock.calls[0][1];
+    expect(submitted.get("goals:roster-10")).toBe("1");
+    expect(submitted.get("yellowCards:roster-7")).toBe("1");
   });
 
   it("edits an existing match with its current values", async () => {
@@ -515,6 +599,7 @@ describe("match management forms", () => {
             resultLockedAt: null,
             resultSubmittedBy: null,
             isKnockout: false,
+            events: [],
           }}
           teams={[
             { id: "team-1", name: "Vixen Norte" },

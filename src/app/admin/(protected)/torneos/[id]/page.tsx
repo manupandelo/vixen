@@ -6,13 +6,11 @@ import {
   BarChart3,
   CalendarClock,
   History,
-  Settings2,
   Users,
   type LucideIcon,
 } from "lucide-react";
 
 import {
-  DeleteTournamentForm,
   FixtureGeneratorDialog,
   RosterEntryCreateDialog,
   RosterEntryEditDialog,
@@ -20,9 +18,9 @@ import {
   TeamCreatePanel,
   TeamEditDialog,
   TeamRemoveDialog,
-  TournamentForm,
   TournamentSettingsDialog,
   BracketGeneratorDialog,
+  GroupPlayoffGeneratorDialog,
 } from "@/components/admin/AdminForms";
 import { LeagueMatchesViewer } from "@/components/admin/LeagueMatchesViewer";
 import { BracketResultsViewer } from "@/components/admin/BracketResultsViewer";
@@ -45,19 +43,16 @@ import {
   type AdminActionItem,
 } from "@/components/admin/AdminUI";
 import {
-  assignMatchViewer,
   createRosterEntry,
   createTeam,
   createTournamentCategory,
   deleteRosterEntry,
-  deleteMatch,
   deleteTournament,
   deleteTournamentCategory,
   generateLeagueFixture,
   generateBracketFixture,
+  generateGroupPlayoffFixture,
   removeTeamFromTournament,
-  updateMatch,
-  updateMatchResult,
   updateRosterEntry,
   updateTeam,
   updateTournament,
@@ -83,7 +78,6 @@ import {
   type AuditEvent,
   type StaffProfile,
 } from "@/features/football-tournaments/data";
-import type { FootballMatchStatus } from "@/features/football-tournaments/types";
 
 type TournamentWorkspacePageProps = {
   params: Promise<{
@@ -133,13 +127,6 @@ const tabs: Array<{
   },
 ];
 
-const matchStatusLabels: Record<FootballMatchStatus, string> = {
-  scheduled: "Programado",
-  completed: "Finalizado",
-  postponed: "Postergado",
-  cancelled: "Cancelado",
-};
-
 const scheduledAtFormatter = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "short",
   timeStyle: "short",
@@ -179,22 +166,262 @@ function formatScheduledAt(value: string | null) {
   return scheduledAtFormatter.format(new Date(value));
 }
 
-function formatScore(
-  status: FootballMatchStatus,
-  homeScore: number | null,
-  awayScore: number | null,
-) {
-  if (status !== "completed") return "Sin resultado";
-  if (homeScore === null || awayScore === null) return "Resultado incompleto";
-
-  return `${homeScore} - ${awayScore}`;
-}
-
 function isMatchCompleted(match: AdminMatch) {
   return (
     match.status === "completed" &&
     match.homeScore !== null &&
     match.awayScore !== null
+  );
+}
+
+type MatchResultRosterPlayer = ReturnType<typeof formatMatchResultRosterEntry>;
+
+type PlayerStatRow = {
+  rosterEntryId: string;
+  playerName: string;
+  teamName: string;
+  goals: number;
+  yellowCards: number;
+  redCards: number;
+};
+
+type TeamStatRow = {
+  teamId: string;
+  teamName: string;
+  goalsFor: number;
+  goalsAgainst: number;
+  yellowCards: number;
+  redCards: number;
+};
+
+function pluralizeStat(value: number, singular: string, plural: string) {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function buildCategoryMatchStats(
+  matches: AdminMatch[],
+  teams: Pick<AdminTeam, "id" | "name">[],
+  rosterEntries: MatchResultRosterPlayer[],
+) {
+  const teamNames = new Map(teams.map((team) => [team.id, team.name]));
+  const rosterById = new Map(rosterEntries.map((entry) => [entry.id, entry]));
+  const playersByRoster = new Map<string, PlayerStatRow>();
+  const teamStats = new Map<string, TeamStatRow>();
+
+  const ensureTeamStats = (teamId: string | null) => {
+    if (!teamId) return null;
+
+    const existing = teamStats.get(teamId);
+    if (existing) return existing;
+
+    const row: TeamStatRow = {
+      teamId,
+      teamName: teamNames.get(teamId) ?? "Equipo",
+      goalsFor: 0,
+      goalsAgainst: 0,
+      yellowCards: 0,
+      redCards: 0,
+    };
+    teamStats.set(teamId, row);
+
+    return row;
+  };
+
+  for (const match of matches) {
+    const homeStats = ensureTeamStats(match.homeTeamId);
+    const awayStats = ensureTeamStats(match.awayTeamId);
+
+    if (isMatchCompleted(match)) {
+      if (homeStats) {
+        homeStats.goalsFor += match.homeScore ?? 0;
+        homeStats.goalsAgainst += match.awayScore ?? 0;
+      }
+      if (awayStats) {
+        awayStats.goalsFor += match.awayScore ?? 0;
+        awayStats.goalsAgainst += match.homeScore ?? 0;
+      }
+    }
+
+    for (const event of match.events) {
+      const teamStat = ensureTeamStats(event.teamId);
+      if (teamStat && event.eventType === "yellow_card") {
+        teamStat.yellowCards += event.quantity;
+      }
+      if (teamStat && event.eventType === "red_card") {
+        teamStat.redCards += event.quantity;
+      }
+
+      if (!event.rosterEntryId) continue;
+
+      const rosterEntry = rosterById.get(event.rosterEntryId);
+      const current = playersByRoster.get(event.rosterEntryId) ?? {
+        rosterEntryId: event.rosterEntryId,
+        playerName: rosterEntry?.displayName ?? "Jugador",
+        teamName: teamNames.get(event.teamId) ?? "Equipo",
+        goals: 0,
+        yellowCards: 0,
+        redCards: 0,
+      };
+
+      if (event.eventType === "goal") current.goals += event.quantity;
+      if (event.eventType === "yellow_card") {
+        current.yellowCards += event.quantity;
+      }
+      if (event.eventType === "red_card") current.redCards += event.quantity;
+
+      playersByRoster.set(event.rosterEntryId, current);
+    }
+  }
+
+  const playerRows = [...playersByRoster.values()];
+
+  return {
+    scorers: playerRows
+      .filter((row) => row.goals > 0)
+      .sort(
+        (a, b) =>
+          b.goals - a.goals || a.playerName.localeCompare(b.playerName, "es"),
+      ),
+    discipline: playerRows
+      .filter((row) => row.yellowCards > 0 || row.redCards > 0)
+      .sort(
+        (a, b) =>
+          b.redCards - a.redCards ||
+          b.yellowCards - a.yellowCards ||
+          a.playerName.localeCompare(b.playerName, "es"),
+      ),
+    teams: [...teamStats.values()].sort((a, b) =>
+      a.teamName.localeCompare(b.teamName, "es"),
+    ),
+  };
+}
+
+function CategoryMatchStatsPanel({
+  matches,
+  teams,
+  rosterEntries,
+}: {
+  matches: AdminMatch[];
+  teams: Pick<AdminTeam, "id" | "name">[];
+  rosterEntries: MatchResultRosterPlayer[];
+}) {
+  const stats = buildCategoryMatchStats(matches, teams, rosterEntries);
+  const hasEvents = stats.scorers.length > 0 || stats.discipline.length > 0;
+
+  return (
+    <AdminPanel className="p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)] sm:text-sm">
+            Estadísticas de categoría
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-white">
+            Rendimiento y disciplina
+          </h3>
+        </div>
+        <AdminStatusPill tone={hasEvents ? "accent" : "muted"}>
+          {hasEvents ? "Con eventos" : "Sin eventos"}
+        </AdminStatusPill>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <div className="rounded-[0.85rem] border border-white/10 bg-white/[0.025] p-4">
+          <p className="text-sm font-semibold text-white">Goleadores</p>
+          <div className="mt-3 grid gap-3">
+            {stats.scorers.length > 0 ? (
+              stats.scorers.slice(0, 5).map((row) => (
+                <div
+                  key={row.rosterEntryId}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-white">
+                      {row.playerName}
+                    </p>
+                    <p className="truncate text-xs text-[var(--color-muted)]">
+                      {row.teamName}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-semibold text-[var(--color-accent)]">
+                    {pluralizeStat(row.goals, "gol", "goles")}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-[var(--color-muted)]">
+                Sin goles asignados a jugadores.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-[0.85rem] border border-white/10 bg-white/[0.025] p-4">
+          <p className="text-sm font-semibold text-white">Disciplina</p>
+          <div className="mt-3 grid gap-3">
+            {stats.discipline.length > 0 ? (
+              stats.discipline.slice(0, 5).map((row) => (
+                <div
+                  key={row.rosterEntryId}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-white">
+                      {row.playerName}
+                    </p>
+                    <p className="truncate text-xs text-[var(--color-muted)]">
+                      {row.teamName}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs font-semibold text-white/76">
+                    {[
+                      row.yellowCards > 0
+                        ? pluralizeStat(row.yellowCards, "amarilla", "amarillas")
+                        : null,
+                      row.redCards > 0
+                        ? pluralizeStat(row.redCards, "roja", "rojas")
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-[var(--color-muted)]">
+                Sin tarjetas cargadas.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-[0.85rem] border border-white/10 bg-white/[0.025] p-4">
+          <p className="text-sm font-semibold text-white">Equipos</p>
+          <div className="mt-3 grid gap-3">
+            {stats.teams.length > 0 ? (
+              stats.teams.slice(0, 5).map((row) => (
+                <div key={row.teamId} className="grid gap-1 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="truncate font-semibold text-white">
+                      {row.teamName}
+                    </p>
+                    <span className="text-xs font-semibold text-white/70">
+                      GF {row.goalsFor} · GC {row.goalsAgainst}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--color-muted)]">
+                    {row.yellowCards} amarillas · {row.redCards} rojas
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-[var(--color-muted)]">
+                Sin equipos con partidos cargados.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </AdminPanel>
   );
 }
 
@@ -622,12 +849,9 @@ function MatchesTab({
   viewers: StaffProfile[];
   rosterEntries: ReturnType<typeof formatMatchResultRosterEntry>[];
 }) {
-  const teamNames = new Map(teams.map((team) => [team.id, team.name]));
-  const viewerEmails = new Map(
-    viewers.map((viewer) => [viewer.id, viewer.email]),
-  );
   const generateFixtureAction = generateLeagueFixture.bind(null, tournament.id, selectedCategory?.id as string);
   const generateBracketAction = generateBracketFixture.bind(null, tournament.id, selectedCategory?.id as string);
+  const generateGroupPlayoffAction = generateGroupPlayoffFixture.bind(null, tournament.id, selectedCategory?.id as string);
   const canGenerateFixture = matches.length === 0;
 
   return (
@@ -644,51 +868,64 @@ function MatchesTab({
       </div>
 
       {matches.length > 0 ? (
-        tournament.format === "league" ? (
-          <LeagueMatchesViewer
-            teams={teams}
+        <>
+          <CategoryMatchStatsPanel
             matches={matches}
-            viewers={viewers}
+            teams={teams}
             rosterEntries={rosterEntries}
-            tournamentId={tournament.id}
           />
-        ) : tournament.format === "cup" || tournament.format === "league_playoff" ? (
-          <div className="flex flex-col gap-8">
-            <BracketResultsViewer
+
+          {tournament.format === "league" ? (
+            <LeagueMatchesViewer
               teams={teams}
-              matches={matches.filter((m) => m.isKnockout)}
+              matches={matches}
               viewers={viewers}
               rosterEntries={rosterEntries}
               tournamentId={tournament.id}
             />
-            {tournament.format === "league_playoff" && (
-              <div className="mt-8 border-t border-white/10 pt-8">
-                <h3 className="text-xl font-bold text-white mb-6">Fase Regular</h3>
-                <LeagueMatchesViewer
-                  teams={teams}
-                  matches={matches.filter((m) => !m.isKnockout)}
-                  viewers={viewers}
-                  rosterEntries={rosterEntries}
-                  tournamentId={tournament.id}
-                />
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-white/50">Formato de torneo no soportado</div>
-        )
+          ) : tournament.format === "cup" || tournament.format === "league_playoff" ? (
+            <div className="flex flex-col gap-8">
+              <BracketResultsViewer
+                teams={teams}
+                matches={matches.filter((m) => m.isKnockout)}
+                viewers={viewers}
+                rosterEntries={rosterEntries}
+                tournamentId={tournament.id}
+              />
+              {tournament.format === "league_playoff" && (
+                <div className="mt-8 border-t border-white/10 pt-8">
+                  <h3 className="text-xl font-bold text-white mb-6">Fase Regular</h3>
+                  <LeagueMatchesViewer
+                    teams={teams}
+                    matches={matches.filter((m) => !m.isKnockout)}
+                    viewers={viewers}
+                    rosterEntries={rosterEntries}
+                    tournamentId={tournament.id}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-white/50">Formato de torneo no soportado</div>
+          )}
+        </>
       ) : (
         <AdminEmptyState
           eyebrow="Sin partidos"
           title="Todavía no hay partidos cargados."
           description={
             canGenerateFixture
-              ? "Generá el fixture automáticamente o cargá partidos manuales si el torneo necesita ajustes."
-              : "Creá el primer partido cuando el torneo tenga al menos dos equipos."
+              ? "Generá la estructura inicial según el formato del torneo."
+              : "El fixture se habilita cuando la categoría queda lista para competir."
           }
           action={
             canGenerateFixture ? (
-              tournament.format === "cup" || tournament.format === "league_playoff" ? (
+              tournament.format === "league_playoff" ? (
+                <GroupPlayoffGeneratorDialog
+                  action={generateGroupPlayoffAction}
+                  teams={teams}
+                />
+              ) : tournament.format === "cup" ? (
                 <BracketGeneratorDialog
                   action={generateBracketAction}
                   teams={teams}

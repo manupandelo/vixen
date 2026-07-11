@@ -2,6 +2,11 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import AdminTournamentWorkspacePage from "./page";
+import {
+  getAdminMatches,
+  getAdminTeams,
+  getAdminTournament,
+} from "@/features/football-tournaments/data";
 
 vi.mock("next/navigation", async () => {
   const actual = await vi.importActual<typeof import("next/navigation")>(
@@ -213,5 +218,110 @@ describe("AdminTournamentWorkspacePage", () => {
     expect(
       screen.queryByRole("button", { name: "Nuevo partido" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("routes league plus playoff tournaments to the zones plus playoff generator", async () => {
+    vi.mocked(getAdminTournament).mockResolvedValueOnce({
+      id: "tournament-1",
+      name: "Apertura 2026",
+      slug: "apertura-2026",
+      season: "2026",
+      category: "Primera",
+      format: "league_playoff",
+      status: "draft",
+      startsAt: "2026-03-01",
+      endsAt: "2026-06-30",
+      description: null,
+    });
+    vi.mocked(getAdminTeams).mockResolvedValueOnce([
+      {
+        id: "team-1",
+        name: "Vixen Norte",
+        shortName: "VXN",
+        photoUrl: null,
+        captainName: "Ana",
+        contactPhone: "+54 11 5555-1111",
+        notes: null,
+      },
+      {
+        id: "team-2",
+        name: "Vixen Sur",
+        shortName: "VXS",
+        photoUrl: null,
+        captainName: "Luis",
+        contactPhone: "+54 11 5555-2222",
+        notes: null,
+      },
+    ]);
+
+    render(
+      await AdminTournamentWorkspacePage({
+        params: Promise.resolve({ id: "tournament-1" }),
+        searchParams: Promise.resolve({ tab: "partidos" }),
+      }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Generar zonas + playoff" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Armar Llave" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/partidos manuales/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows category scoring and discipline stats in the matches tab", async () => {
+    vi.mocked(getAdminMatches).mockResolvedValueOnce([
+      {
+        id: "match-1",
+        categoryId: "category-1",
+        roundLabel: "Fecha 1",
+        scheduledAt: "2026-07-06T20:00:00-03:00",
+        homeTeamId: "team-1",
+        awayTeamId: "team-2",
+        homeScore: 2,
+        awayScore: 1,
+        homePenaltyScore: null,
+        awayPenaltyScore: null,
+        status: "completed",
+        assignedViewerId: null,
+        resultLockedAt: null,
+        resultSubmittedBy: null,
+        nextMatchId: null,
+        isKnockout: false,
+        events: [
+          {
+            rosterEntryId: "roster-1",
+            playerId: "player-1",
+            teamId: "team-1",
+            eventType: "goal",
+            quantity: 2,
+          },
+          {
+            rosterEntryId: "roster-1",
+            playerId: "player-1",
+            teamId: "team-1",
+            eventType: "yellow_card",
+            quantity: 1,
+          },
+        ],
+      },
+    ]);
+
+    render(
+      await AdminTournamentWorkspacePage({
+        params: Promise.resolve({ id: "tournament-1" }),
+        searchParams: Promise.resolve({ tab: "partidos" }),
+      }),
+    );
+
+    expect(screen.getByText("Estadísticas de categoría")).toBeInTheDocument();
+    expect(screen.getByText("Goleadores")).toBeInTheDocument();
+    expect(screen.getByText("Disciplina")).toBeInTheDocument();
+    expect(screen.getAllByText("Juan Perez")).toHaveLength(2);
+    expect(screen.getByText("2 goles")).toBeInTheDocument();
+    expect(screen.getByText("1 amarilla")).toBeInTheDocument();
   });
 });

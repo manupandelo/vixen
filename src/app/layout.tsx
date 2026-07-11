@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Oswald, Inter } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 
-const display = Oswald({
+const display = Outfit({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["500", "600", "700", "900"],
   variable: "--font-display",
 });
-const body = Inter({ subsets: ["latin"], variable: "--font-body" });
+const body = Outfit({ subsets: ["latin"], variable: "--font-body" });
 
 export const metadata: Metadata = {
   title: "Vixen Club — Fútbol 7 y Pádel en Pilar",

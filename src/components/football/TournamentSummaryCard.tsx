@@ -48,10 +48,8 @@ export function TournamentSummaryCard({
   const completedMatches = tournament.matches.filter(
     (match) => match.status === "completed",
   ).length;
-  
   const progressPercent = totalMatches > 0 ? Math.round((completedMatches / totalMatches) * 100) : 0;
   const isCup = tournament.format === "cup";
-  const glowColor = isCup ? "rgba(255, 60, 0, 0.05)" : "rgba(0, 255, 100, 0.05)";
   const accentColor = isCup ? "text-orange-400" : "text-[var(--color-accent)]";
   const accentBg = isCup ? "bg-orange-500" : "bg-[var(--color-accent)]";
   const href = tournament.categorySlug
@@ -63,11 +61,7 @@ export function TournamentSummaryCard({
       href={href}
       className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] relative isolate"
     >
-      <div 
-        className="absolute inset-0 z-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 rounded-xl"
-        style={{ background: `radial-gradient(circle at top right, ${glowColor}, transparent 60%)` }}
-      />
-      <article className="relative z-10 grid h-full gap-5 rounded-xl border border-white/10 bg-[#111612]/90 backdrop-blur-sm p-6 transition duration-300 group-hover:-translate-y-1 group-hover:border-white/20 group-hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] overflow-hidden">
+      <article className="relative z-10 grid h-full gap-5 rounded-xl border border-white/10 bg-[#111612]/90 backdrop-blur-sm p-6 transition duration-300 group-hover:-translate-y-1 group-hover:border-white/20 group-hover:bg-[#151a16] overflow-hidden">
         
         {/* Header Tags */}
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/60">
@@ -91,14 +85,14 @@ export function TournamentSummaryCard({
 
         {/* Progress Bar */}
         <div className="flex flex-col gap-2 mt-2">
-          <div className="flex justify-between text-xs font-semibold uppercase tracking-[0.1em] text-white/50">
+          <div className="flex justify-between text-xs font-semibold text-white/50">
             <span>Progreso</span>
             <span>{progressPercent}%</span>
           </div>
           <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
             <div 
               className={`h-full ${accentBg} rounded-full transition-all duration-1000 ease-out`} 
-              style={{ width: `${progressPercent}%`, boxShadow: `0 0 10px ${accentBg}` }}
+              style={{ width: `${progressPercent}%` }}
             />
           </div>
         </div>
@@ -110,8 +104,8 @@ export function TournamentSummaryCard({
           {nextMatch ? (
             <>
               <div className="flex items-center justify-between mb-4">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 bg-white/5 px-2 py-1 rounded">
-                  Próximo Partido
+                <span className="text-[10px] font-bold text-white/40 bg-white/5 px-2 py-1 rounded">
+                  Próximo partido
                 </span>
                 <span className="text-xs font-semibold text-white/60 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />

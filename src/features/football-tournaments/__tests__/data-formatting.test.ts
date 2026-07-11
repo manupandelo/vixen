@@ -4,10 +4,12 @@ import {
   formatAuditEvent,
   formatAdminTournamentCategories,
   formatAdminAvailablePlayers,
+  formatAdminMatch,
   formatAdminDashboardSummary,
   formatAdminRosterEntries,
   formatAdminRosteredPlayerIds,
   formatPublicTournament,
+  formatPublicTournamentSummaryWithCategories,
   formatPublicTournamentWithCategories,
   formatPublicTournamentRows,
 } from "../data";
@@ -299,6 +301,62 @@ describe("admin roster formatting", () => {
   });
 });
 
+describe("admin match formatting", () => {
+  it("formats existing match events for result editing", () => {
+    const match = formatAdminMatch({
+      id: "match-1",
+      category_id: "category-1",
+      round_label: "Fecha 1",
+      scheduled_at: "2026-07-06T20:00:00-03:00",
+      home_team_id: "team-home",
+      away_team_id: "team-away",
+      home_score: 2,
+      away_score: 1,
+      home_penalty_score: null,
+      away_penalty_score: null,
+      status: "completed",
+      assigned_viewer_id: null,
+      result_locked_at: null,
+      result_submitted_by: null,
+      next_match_id: null,
+      group_id: "group-1",
+      football_match_events: [
+        {
+          roster_entry_id: "roster-10",
+          player_id: "player-10",
+          team_id: "team-home",
+          event_type: "goal",
+          quantity: 2,
+        },
+        {
+          roster_entry_id: "roster-7",
+          player_id: "player-7",
+          team_id: "team-away",
+          event_type: "yellow_card",
+          quantity: 1,
+        },
+      ],
+    });
+
+    expect(match.events).toEqual([
+      {
+        rosterEntryId: "roster-10",
+        playerId: "player-10",
+        teamId: "team-home",
+        eventType: "goal",
+        quantity: 2,
+      },
+      {
+        rosterEntryId: "roster-7",
+        playerId: "player-7",
+        teamId: "team-away",
+        eventType: "yellow_card",
+        quantity: 1,
+      },
+    ]);
+  });
+});
+
 describe("formatPublicTournament", () => {
   it("formats admin tournament categories in position order", () => {
     const categories = formatAdminTournamentCategories([
@@ -373,6 +431,71 @@ describe("formatPublicTournament", () => {
     expect(tournament.categories.map((category) => category.slug)).toEqual([
       "primera",
     ]);
+  });
+
+  it("formats public tournament summaries without calculating standings", () => {
+    const tournament = formatPublicTournamentSummaryWithCategories({
+      id: "tournament-1",
+      name: "Apertura",
+      slug: "apertura",
+      season: "2026",
+      category: "Primera",
+      format: "league",
+      status: "active",
+      starts_at: "2026-03-01",
+      ends_at: null,
+      description: null,
+      football_tournament_categories: [
+        {
+          id: "category-1",
+          tournament_id: "tournament-1",
+          name: "Primera",
+          slug: "primera",
+          status: "active",
+          position: 1,
+          starts_at: null,
+          ends_at: null,
+          football_tournament_teams: [
+            {
+              football_teams: {
+                id: "team-1",
+                name: "Vixen Norte",
+                short_name: "VXN",
+              },
+            },
+            {
+              football_teams: {
+                id: "team-2",
+                name: "Vixen Sur",
+                short_name: "VXS",
+              },
+            },
+          ],
+          football_matches: [
+            {
+              id: "match-1",
+              round_label: "Fecha 1",
+              scheduled_at: "2026-07-20T20:00:00-03:00",
+              home_team_id: "team-1",
+              away_team_id: "team-2",
+              home_score: null,
+              away_score: null,
+              status: "scheduled",
+              group_id: "group-1",
+              next_match_id: null,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(tournament.categories[0].teams).toHaveLength(2);
+    expect(tournament.categories[0].matches[0]).toMatchObject({
+      homeTeamName: "Vixen Norte",
+      awayTeamName: "Vixen Sur",
+      isKnockout: false,
+    });
+    expect(tournament.categories[0].standings).toEqual([]);
   });
 
   it("formats teams from tournament registrations when teams are reused", () => {

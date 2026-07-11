@@ -89,6 +89,7 @@ export function MatchSidePanel({
             awayTeamId={match.awayTeamId}
             isKnockout={isKnockout}
             rosterEntries={rosterEntries}
+            matchEvents={match.events}
           />
         </div>
 

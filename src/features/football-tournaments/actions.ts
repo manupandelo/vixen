@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -204,6 +204,12 @@ function getFootballMatchesInsertErrorMessage(message: string) {
   }
 
   return message;
+}
+
+function revalidatePublicFootball() {
+  revalidatePath("/futbol");
+  revalidatePath("/futbol/torneos");
+  revalidateTag("football-public", "max");
 }
 
 function getTeamRegistrationErrorMessage(message: string) {
@@ -896,7 +902,7 @@ export async function updateTournament(
   revalidatePath("/admin/torneos");
   revalidatePath(`/admin/torneos/${id}`);
   revalidatePath(`/admin/usuarios/${admin.id}`);
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
 
   return {
     ok: true,
@@ -937,7 +943,7 @@ export async function deleteTournament(
   revalidatePath("/admin");
   revalidatePath("/admin/torneos");
   revalidatePath(`/admin/torneos/${id}`);
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
   redirect("/admin/torneos");
 }
 
@@ -981,8 +987,7 @@ export async function createTournamentCategory(
   }
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
-  revalidatePath("/futbol");
-  revalidatePath("/futbol/torneos");
+  revalidatePublicFootball();
 
   return { ok: true, message: "Categoría creada con éxito." };
 }
@@ -1020,8 +1025,7 @@ export async function updateTournamentCategory(
   }
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
-  revalidatePath("/futbol");
-  revalidatePath("/futbol/torneos");
+  revalidatePublicFootball();
 
   return { ok: true, message: "Categoría actualizada con éxito." };
 }
@@ -1052,8 +1056,7 @@ export async function deleteTournamentCategory(
   }
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
-  revalidatePath("/futbol");
-  revalidatePath("/futbol/torneos");
+  revalidatePublicFootball();
 
   return { ok: true, message: "Categoría eliminada con éxito." };
 }
@@ -1104,7 +1107,7 @@ export async function createTeam(
     }
 
     revalidatePath(`/admin/torneos/${tournamentId}`);
-    revalidatePath("/futbol");
+    revalidatePublicFootball();
 
     return {
       ok: true,
@@ -1183,7 +1186,7 @@ export async function createTeam(
   }
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
 
   return {
     ok: true,
@@ -1280,7 +1283,7 @@ export async function updateTeam(
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
   revalidatePath(`/admin/usuarios/${admin.id}`);
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
 
   return {
     ok: true,
@@ -1357,7 +1360,7 @@ export async function removeTeamFromTournament(
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
   revalidatePath(`/admin/usuarios/${admin.id}`);
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
 
   return {
     ok: true,
@@ -1593,7 +1596,7 @@ export async function createMatch(
   }
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
 
   return {
     ok: true,
@@ -1656,7 +1659,7 @@ export async function updateMatch(
   revalidatePath(`/admin/torneos/${tournamentId}`);
   revalidatePath(`/admin/usuarios/${admin.id}`);
   revalidatePath("/veedor");
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
 
   return {
     ok: true,
@@ -1711,7 +1714,7 @@ export async function deleteMatch(
   revalidatePath(`/admin/torneos/${tournamentId}`);
   revalidatePath(`/admin/usuarios/${admin.id}`);
   revalidatePath("/veedor");
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
 
   return {
     ok: true,
@@ -1810,7 +1813,7 @@ export async function generateBracketFixture(
     }
 
     revalidatePath(`/admin/torneos/${tournamentId}`);
-    revalidatePath("/futbol");
+    revalidatePublicFootball();
 
     return {
       ok: true,
@@ -1969,7 +1972,7 @@ export async function generateGroupPlayoffFixture(
   }
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
 
   return {
     ok: true,
@@ -2061,7 +2064,7 @@ export async function generateLeagueFixture(
   }
 
   revalidatePath(`/admin/torneos/${tournamentId}`);
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
 
   return {
     ok: true,
@@ -2234,7 +2237,7 @@ export async function updateMatchResult(
   revalidatePath(`/admin/torneos/${tournamentId}`);
   revalidatePath(`/admin/usuarios/${admin.id}`);
   revalidatePath("/veedor");
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
 
   return {
     ok: true,
@@ -2344,7 +2347,7 @@ export async function submitViewerMatchResult(
   });
 
   revalidatePath("/veedor");
-  revalidatePath("/futbol");
+  revalidatePublicFootball();
   revalidatePath(`/admin/torneos/${match.tournament_id}`);
   revalidatePath(`/admin/usuarios/${viewer.id}`);
 

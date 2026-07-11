@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { SectionShell } from "@/components/SectionShell";
+import { Sponsors } from "@/components/Sponsors";
 import { PublicTournamentPanel } from "@/components/football/PublicTournamentPanel";
 import {
   flattenTournamentCategory,
@@ -99,6 +100,7 @@ export default async function TournamentCategoryPage({
           />
         </SectionShell>
       </main>
+      <Sponsors />
       <Footer />
     </>
   );

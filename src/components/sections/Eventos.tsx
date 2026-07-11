@@ -29,9 +29,6 @@ export function Eventos() {
         className="grid gap-12 lg:grid-cols-[1fr_1fr] lg:items-center"
       >
         <div className="flex flex-col">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-            Después del partido
-          </p>
           <h2 id="eventos-title" className="text-display-sm text-4xl sm:text-5xl">
             {eventos.title}
           </h2>
@@ -48,15 +45,20 @@ export function Eventos() {
             ))}
             
             <div className="flex flex-col sm:col-span-2 mt-4 pt-8 border-t border-white/10">
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--color-accent)] mb-3">
-                Club social
-              </p>
               <h3 className="text-xl font-bold text-white mb-3">
                 Bar y quincho con vista a cancha
               </h3>
-              <p className="text-[0.95rem] text-white/60 max-w-lg leading-relaxed">
+              <p className="text-[0.95rem] text-white/60 max-w-lg leading-relaxed mb-6">
                 Formatos privados dentro del mismo recorrido del club, sin sentirse como un bloque aparte.
               </p>
+
+              <div className="rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 p-5 flex items-start gap-4">
+                <span className="text-[var(--color-accent)] text-2xl" aria-hidden="true">🍻</span>
+                <div>
+                  <p className="font-bold text-white text-[1.05rem]">Promo Tercer Tiempo</p>
+                  <p className="text-white/70 text-sm mt-1">2x1 en Fernet Branca y picadas todos los jueves reservando tu cancha. ¡Exclusivo para jugadores!</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

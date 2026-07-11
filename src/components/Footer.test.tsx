@@ -15,8 +15,7 @@ describe("Footer", () => {
     );
     expect(screen.getByText(/las azucenas 3941/i)).toBeInTheDocument();
 
-    const sponsors = screen.getByRole("list", { name: /sponsors/i });
-    expect(within(sponsors).getByText(/puma/i)).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: /sponsors/i })).not.toBeInTheDocument();
 
     expect(
       screen.getByRole("link", { name: /\(011\) 15 3773 0713/i }),
@@ -32,5 +31,12 @@ describe("Footer", () => {
     expect(
       within(socials).getByRole("link", { name: /facebook/i }),
     ).toHaveAttribute("href", expect.stringContaining("facebook.com"));
+
+    const secondaryNav = screen.getByRole("navigation", {
+      name: /navegación secundaria/i,
+    });
+    expect(
+      within(secondaryNav).getByRole("link", { name: /fútbol/i }),
+    ).toHaveAttribute("href", "/futbol");
   });
 });

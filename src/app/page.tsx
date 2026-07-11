@@ -1,4 +1,5 @@
 import { Footer } from "@/components/Footer";
+import { Sponsors } from "@/components/Sponsors";
 import { Header } from "@/components/Header";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Hero } from "@/components/sections/Hero";
@@ -18,6 +19,7 @@ export default function HomePage() {
         <Eventos />
         <Sede />
       </main>
+      <Sponsors />
       <Footer />
       <WhatsAppButton />
     </>

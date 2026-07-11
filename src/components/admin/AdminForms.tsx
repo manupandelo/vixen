@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import {
   useActionState,
-  useEffect,
   useMemo,
   useReducer,
   useState,
@@ -42,6 +41,7 @@ import type {
   AdminRosterEntry,
   AdminTeam,
   AdminTournament,
+  MatchResultEvent,
   MatchResultRosterEntry,
   StaffProfile,
 } from "@/features/football-tournaments/data";
@@ -240,8 +240,19 @@ type MatchResultFormProps = {
   awayTeamId?: string | null;
   isKnockout?: boolean;
   rosterEntries?: MatchResultRosterEntry[];
+  matchEvents?: MatchResultEvent[];
   submitLabel?: string;
 };
+
+type MatchEventCountField = "goals" | "yellowCards" | "redCards";
+
+type MatchEventCounts = {
+  goals: number;
+  yellowCards: number;
+  redCards: number;
+};
+
+type MatchEventCountsByRoster = Record<string, MatchEventCounts>;
 
 type DeleteTournamentFormProps = {
   action: DeleteTournamentAction;
@@ -253,9 +264,55 @@ const initialState: ActionState = {
   message: "",
 };
 
+const emptyMatchEventCounts: MatchEventCounts = {
+  goals: 0,
+  yellowCards: 0,
+  redCards: 0,
+};
+
+function toMatchEventCountValue(value: number, max: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(max, Math.max(0, Math.trunc(value)));
+}
+
+function getMatchEventInputValue(value: number) {
+  return value > 0 ? String(value) : "";
+}
+
+function getInitialMatchEventCounts(
+  matchEvents: MatchResultEvent[],
+): MatchEventCountsByRoster {
+  const counts: MatchEventCountsByRoster = {};
+
+  for (const event of matchEvents) {
+    if (!event.rosterEntryId) continue;
+
+    const current = counts[event.rosterEntryId] ?? {
+      ...emptyMatchEventCounts,
+    };
+
+    if (event.eventType === "goal") {
+      current.goals += event.quantity;
+    }
+
+    if (event.eventType === "yellow_card") {
+      current.yellowCards += event.quantity;
+    }
+
+    if (event.eventType === "red_card") {
+      current.redCards += event.quantity;
+    }
+
+    counts[event.rosterEntryId] = current;
+  }
+
+  return counts;
+}
+
 const EMPTY_AVAILABLE_TEAMS: Pick<AdminTeam, "id" | "name" | "shortName">[] =
   [];
 const EMPTY_AVAILABLE_PLAYERS: AdminPlayer[] = [];
+const EMPTY_MATCH_EVENTS: MatchResultEvent[] = [];
 
 const tournamentWizardSteps: TournamentWizardStep[] = [
   {
@@ -292,22 +349,22 @@ const matchStatusLabels: Record<FootballMatchStatus, string> = {
 };
 
 const inputClass =
-  "min-h-11 rounded-[0.8rem] border border-white/12 bg-white/[0.035] px-3 text-sm text-white caret-white outline-none transition placeholder:text-white/34 focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/30 [&>option]:bg-[var(--color-surface)] [&>option]:text-white";
+  "min-h-[44px] w-full rounded-lg border border-white/20 bg-white/[0.03] px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-white/30 focus:border-[var(--color-accent)] focus:bg-white/[0.06] [&>option]:bg-[#121212] [&>option]:text-white";
 
 const labelClass =
-  "text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-ink)]/70";
+  "text-sm font-bold text-white/70";
 
 const compactButtonClass =
-  "inline-flex min-h-10 w-full items-center justify-center rounded-[0.8rem] border border-white/12 bg-white/[0.025] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/78 transition hover:border-[var(--color-accent)] hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
+  "inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/90 transition-all duration-200 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
 const dangerCompactButtonClass =
-  "inline-flex min-h-10 w-full items-center justify-center rounded-[0.8rem] border border-[var(--color-warm)]/35 bg-[var(--color-warm)]/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[var(--color-warm)]/18 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
+  "inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-warm)]/40 bg-[var(--color-warm)]/15 px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:bg-[var(--color-warm)]/25 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
 const primaryButtonClass =
-  "inline-flex min-h-12 w-full items-center justify-center rounded-[0.95rem] border border-[color-mix(in_srgb,var(--color-accent)_72%,black)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-accent)_92%,white_8%),var(--color-accent))] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#07110a] shadow-[0_10px_24px_rgb(60_191_113_/_0.12)] transition duration-200 hover:-translate-y-px hover:border-[var(--color-accent-strong)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] sm:w-fit";
+  "inline-flex min-h-[44px] w-full sm:w-fit items-center justify-center gap-2 rounded-lg border border-[var(--color-accent-strong)] bg-[var(--color-accent)] px-5 py-2.5 text-sm font-bold text-[#07110a] transition-all duration-200 hover:bg-[var(--color-accent-strong)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
 const secondaryButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-[0.8rem] border border-white/12 bg-white/[0.025] px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-white/78 transition hover:border-[var(--color-accent)] hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
+  "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/[0.03] px-5 py-2.5 text-sm font-bold text-white/90 transition-all duration-200 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
 const formatDescriptions: Record<FootballTournamentFormat, string> = {
   league: "Todos contra todos. La tabla ordena el torneo.",
@@ -2820,22 +2877,14 @@ export function MatchViewerAssignmentForm({
 }: MatchViewerAssignmentFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   useActionToast(state);
-  const [selectedViewerId, setSelectedViewerId] = useState(
-    assignedViewerId ?? "",
-  );
-
-  useEffect(() => {
-    setSelectedViewerId(assignedViewerId ?? "");
-  }, [assignedViewerId]);
 
   return (
-    <form action={formAction} className="grid gap-2">
+    <form key={assignedViewerId ?? ""} action={formAction} className="grid gap-2">
       <label className="grid gap-2">
         <span className={labelClass}>Veedor</span>
         <select
           name="assignedViewerId"
-          value={selectedViewerId}
-          onChange={(event) => setSelectedViewerId(event.target.value)}
+          defaultValue={assignedViewerId ?? ""}
           className={inputClass}
         >
           <option value="">Sin veedor</option>
@@ -2864,6 +2913,7 @@ export function MatchResultForm({
   awayTeamId = null,
   isKnockout = false,
   rosterEntries = [],
+  matchEvents = EMPTY_MATCH_EVENTS,
   submitLabel = "Guardar resultado",
 }: MatchResultFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
@@ -2877,13 +2927,9 @@ export function MatchResultForm({
   const [localAwayPenalties, setLocalAwayPenalties] = useState(
     awayPenaltyScore ?? 0,
   );
-
-  useEffect(() => {
-    setLocalHome(homeScore ?? 0);
-    setLocalAway(awayScore ?? 0);
-    setLocalHomePenalties(homePenaltyScore ?? 0);
-    setLocalAwayPenalties(awayPenaltyScore ?? 0);
-  }, [awayPenaltyScore, awayScore, homePenaltyScore, homeScore]);
+  const [eventCounts, setEventCounts] = useState<MatchEventCountsByRoster>(() =>
+    getInitialMatchEventCounts(matchEvents),
+  );
 
   const homeRosterEntries = useMemo(
     () => rosterEntries.filter((entry) => entry.teamId === homeTeamId),
@@ -2896,6 +2942,24 @@ export function MatchResultForm({
   const shouldShowPenalties = isKnockout && localHome === localAway;
   const hasRosterEntries =
     homeRosterEntries.length > 0 || awayRosterEntries.length > 0;
+  const assignedHomeGoals = useMemo(
+    () =>
+      homeRosterEntries.reduce(
+        (total, entry) => total + (eventCounts[entry.id]?.goals ?? 0),
+        0,
+      ),
+    [eventCounts, homeRosterEntries],
+  );
+  const assignedAwayGoals = useMemo(
+    () =>
+      awayRosterEntries.reduce(
+        (total, entry) => total + (eventCounts[entry.id]?.goals ?? 0),
+        0,
+      ),
+    [awayRosterEntries, eventCounts],
+  );
+  const hasEventOverflow =
+    assignedHomeGoals > localHome || assignedAwayGoals > localAway;
 
   const updateScore = (team: "home" | "away", delta: number) => {
     if (team === "home") {
@@ -2904,6 +2968,28 @@ export function MatchResultForm({
       setLocalAway((currentScore) => Math.max(0, currentScore + delta));
     }
   };
+
+  const updateEventCount = (
+    rosterEntryId: string,
+    field: MatchEventCountField,
+    value: number,
+    max: number,
+  ) => {
+    const nextValue = toMatchEventCountValue(value, max);
+
+    setEventCounts((currentCounts) => ({
+      ...currentCounts,
+      [rosterEntryId]: {
+        ...(currentCounts[rosterEntryId] ?? emptyMatchEventCounts),
+        [field]: nextValue,
+      },
+    }));
+  };
+
+  const getEventCount = (
+    rosterEntryId: string,
+    field: MatchEventCountField,
+  ) => eventCounts[rosterEntryId]?.[field] ?? 0;
 
   return (
     <form action={formAction} className="grid gap-6">
@@ -3013,6 +3099,33 @@ export function MatchResultForm({
             </p>
           </div>
 
+          <div className="grid gap-2 rounded-xl border border-white/8 bg-black/10 p-3 text-xs font-semibold text-white/70 sm:grid-cols-2">
+            <p
+              className={
+                assignedHomeGoals > localHome
+                  ? "text-red-300"
+                  : "text-white/70"
+              }
+            >
+              Local: {assignedHomeGoals}/{localHome} goles asignados
+            </p>
+            <p
+              className={
+                assignedAwayGoals > localAway
+                  ? "text-red-300"
+                  : "text-white/70"
+              }
+            >
+              Visitante: {assignedAwayGoals}/{localAway} goles asignados
+            </p>
+          </div>
+
+          {hasEventOverflow ? (
+            <p className="rounded-xl border border-red-500/20 bg-red-500/8 p-3 text-xs leading-5 text-red-200">
+              Hay más goles asignados a jugadores que goles en el resultado.
+            </p>
+          ) : null}
+
           {([
             ["Local", homeRosterEntries],
             ["Visitante", awayRosterEntries],
@@ -3043,9 +3156,21 @@ export function MatchResultForm({
                         <input
                           type="number"
                           name={`goals:${entry.id}`}
+                          aria-label={`Goles de ${entry.displayName}`}
                           min={0}
                           max={50}
                           placeholder="0"
+                          value={getMatchEventInputValue(
+                            getEventCount(entry.id, "goals"),
+                          )}
+                          onChange={(event) =>
+                            updateEventCount(
+                              entry.id,
+                              "goals",
+                              Number(event.target.value),
+                              50,
+                            )
+                          }
                           className={inputClass}
                         />
                       </label>
@@ -3056,9 +3181,21 @@ export function MatchResultForm({
                         <input
                           type="number"
                           name={`yellowCards:${entry.id}`}
+                          aria-label={`Amarillas de ${entry.displayName}`}
                           min={0}
                           max={2}
                           placeholder="0"
+                          value={getMatchEventInputValue(
+                            getEventCount(entry.id, "yellowCards"),
+                          )}
+                          onChange={(event) =>
+                            updateEventCount(
+                              entry.id,
+                              "yellowCards",
+                              Number(event.target.value),
+                              2,
+                            )
+                          }
                           className={inputClass}
                         />
                       </label>
@@ -3069,9 +3206,21 @@ export function MatchResultForm({
                         <input
                           type="number"
                           name={`redCards:${entry.id}`}
+                          aria-label={`Roja de ${entry.displayName}`}
                           min={0}
                           max={1}
                           placeholder="0"
+                          value={getMatchEventInputValue(
+                            getEventCount(entry.id, "redCards"),
+                          )}
+                          onChange={(event) =>
+                            updateEventCount(
+                              entry.id,
+                              "redCards",
+                              Number(event.target.value),
+                              1,
+                            )
+                          }
                           className={inputClass}
                         />
                       </label>
@@ -3089,7 +3238,11 @@ export function MatchResultForm({
         </div>
       )}
 
-      <button type="submit" disabled={isPending} className={`${primaryButtonClass} w-full sm:w-full`}>
+      <button
+        type="submit"
+        disabled={isPending || hasEventOverflow}
+        className={`${primaryButtonClass} w-full sm:w-full`}
+      >
         {isPending ? "Guardando..." : submitLabel}
       </button>
     </form>

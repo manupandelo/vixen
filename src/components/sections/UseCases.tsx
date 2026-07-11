@@ -1,5 +1,4 @@
 import { Button } from "@/components/Button";
-import { SectionShell } from "@/components/SectionShell";
 import { VenueImage } from "@/components/VenueImage";
 import { content } from "@/content";
 
@@ -58,9 +57,6 @@ export function UseCases() {
       <div className="mx-auto max-w-5xl px-6 mb-16">
         <div className="grid gap-6 border-b border-white/8 pb-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-end">
           <div>
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-              Actividades
-            </p>
             <h2 id="use-cases-title" className="text-display-sm text-4xl sm:text-5xl">
               Fútbol 7 y pádel.
             </h2>

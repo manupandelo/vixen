@@ -272,7 +272,8 @@ describe("roster entry validation", () => {
 
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
-    expect((parsed.data as any).documentNumber).toBeNull();
+    if (parsed.data.mode !== "new") return;
+    expect(parsed.data.documentNumber).toBeNull();
     expect(parsed.data.shirtNumber).toBe(10);
   });
 
@@ -289,7 +290,8 @@ describe("roster entry validation", () => {
 
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
-    expect((parsed.data as any).playerId).toBe("player-1");
+    if (parsed.data.mode !== "existing") return;
+    expect(parsed.data.playerId).toBe("player-1");
     expect(parsed.data.shirtNumber).toBeNull();
   });
 

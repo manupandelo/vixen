@@ -4,6 +4,7 @@ import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { SectionHeading } from "@/components/SectionHeading";
 import { SectionShell } from "@/components/SectionShell";
+import { Sponsors } from "@/components/Sponsors";
 import { TournamentSummaryCard } from "@/components/football/TournamentSummaryCard";
 import { getPublicFootballTournaments } from "@/features/football-tournaments/data";
 
@@ -96,6 +97,7 @@ export default async function TournamentsPage() {
           </section>
         </SectionShell>
       </main>
+      <Sponsors />
       <Footer />
     </>
   );

@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { Sponsors } from "@/components/Sponsors";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { SectionShell } from "@/components/SectionShell";
-import { SectionHeading } from "@/components/SectionHeading";
-import { Stat } from "@/components/Stat";
 import { Button } from "@/components/Button";
-import { ImagePlaceholder } from "@/components/ImagePlaceholder";
 import { VenueImage } from "@/components/VenueImage";
 import { content } from "@/content";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -37,10 +35,10 @@ export default function PadelPage() {
           </div>
 
           <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col items-center text-center mt-20">
-            <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-[var(--color-accent)] drop-shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.5)]">
+            <p className="mb-4 text-[0.8rem] font-bold uppercase tracking-[0.2em] text-[var(--color-accent)]">
               Pilar · Buenos Aires
             </p>
-            <h1 className="text-7xl sm:text-8xl md:text-9xl font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 drop-shadow-2xl">
+            <h1 className="text-7xl sm:text-8xl md:text-9xl font-black uppercase tracking-tighter text-white">
               {padel.title}
             </h1>
             <p className="mt-6 max-w-2xl text-lg sm:text-xl text-white/70 font-medium leading-relaxed">
@@ -70,7 +68,7 @@ export default function PadelPage() {
               return (
                 <div
                   key={p.title}
-                  className="group relative overflow-hidden rounded-[1.5rem] border border-white/10 p-8 min-h-[22rem] flex flex-col justify-end transition duration-500 hover:border-white/30 hover:shadow-[0_0_40px_rgba(255,255,255,0.05)]"
+                  className="group relative overflow-hidden rounded-3xl border border-white/10 p-8 min-h-[22rem] flex flex-col justify-end transition-colors duration-500 hover:border-white/20"
                 >
                   <div className="absolute inset-0 z-0">
                     <VenueImage
@@ -96,6 +94,7 @@ export default function PadelPage() {
 
         </SectionShell>
       </main>
+      <Sponsors />
       <Footer />
       <WhatsAppButton 
         label="Consultas Pádel" 

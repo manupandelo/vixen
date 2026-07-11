@@ -63,13 +63,13 @@ type AdminActionItemListProps = {
 };
 
 export const adminPrimaryActionClass =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[0.85rem] border border-[color-mix(in_srgb,var(--color-accent)_72%,black)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-accent)_92%,white_8%),var(--color-accent))] px-4 py-2.5 text-sm font-semibold text-[#07110a] shadow-[0_10px_24px_rgb(60_191_113_/_0.12)] transition duration-200 hover:-translate-y-px hover:border-[var(--color-accent-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
+  "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[var(--color-accent-strong)] bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-[#07110a] transition-all duration-200 hover:bg-[var(--color-accent-strong)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
 export const adminSecondaryActionClass =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[0.85rem] border border-white/12 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-white/78 transition hover:border-[var(--color-accent)] hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
+  "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/[0.03] px-5 py-2.5 text-sm font-semibold text-white/90 transition-all duration-200 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
 export const adminQuietActionClass =
-  "inline-flex min-h-10 items-center justify-center gap-2 rounded-[0.75rem] px-3 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
+  "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white/60 transition-all duration-200 hover:bg-white/10 hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
 
 const adminActionClassByVariant: Record<
   NonNullable<AdminActionLinkProps["variant"]>,
@@ -79,7 +79,7 @@ const adminActionClassByVariant: Record<
   secondary: adminSecondaryActionClass,
   quiet: adminQuietActionClass,
   danger:
-    "inline-flex min-h-11 items-center justify-center gap-2 rounded-[0.85rem] border border-[var(--color-warm)]/45 bg-[var(--color-warm)]/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--color-warm)]/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]",
+    "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[var(--color-warm)]/40 bg-[var(--color-warm)]/15 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-[var(--color-warm)]/25 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]",
 };
 
 const adminStatusPillToneClass: Record<
@@ -165,7 +165,7 @@ export function AdminPanel({ children, className }: AdminPanelProps) {
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-[1rem] border border-white/10 bg-[#101411] shadow-[0_22px_70px_rgb(0_0_0_/_0.18)]",
+        "overflow-hidden rounded-xl border border-white/10 bg-[#121212]",
         className,
       )}
     >
@@ -288,7 +288,7 @@ export function AdminEmptyState({
   return (
     <AdminPanel className="p-8 sm:p-12 text-center">
       <div className="mx-auto flex max-w-lg flex-col items-center">
-        <div className="mb-6 grid size-20 place-items-center rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_0_30px_rgba(255,255,255,0.03)]">
+        <div className="mb-6 grid size-20 place-items-center rounded-2xl border border-white/10 bg-white/[0.03]">
           <ListChecks size={32} className="text-white/40" />
         </div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)] sm:text-sm">

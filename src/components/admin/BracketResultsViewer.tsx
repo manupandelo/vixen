@@ -54,6 +54,7 @@ export function BracketResultsViewer({
 
       {selectedMatch ? (
         <MatchSidePanel
+          key={selectedMatch.id}
           match={selectedMatch}
           teams={teams}
           viewers={viewers}

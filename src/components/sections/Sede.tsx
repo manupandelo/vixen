@@ -73,10 +73,6 @@ export function Sede() {
   const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     sede.mapQuery,
   )}`;
-  const operationalFacts = [
-    { label: "Dirección", value: sede.addressLabel },
-    { label: "Teléfono", value: site.phoneDisplay },
-  ] as const;
 
   return (
     <SectionShell id="sede" className="border-t border-white/5">
@@ -85,9 +81,6 @@ export function Sede() {
         className="grid gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:items-start lg:gap-12"
       >
         <div>
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-            Dónde estamos
-          </p>
           <h2 id="sede-title" className="text-display-sm">
             {sede.title}
           </h2>
@@ -97,9 +90,9 @@ export function Sede() {
           </p>
 
           <div className="mt-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
+            <h3 className="text-sm font-bold text-[var(--color-accent)]">
               Servicios útiles
-            </p>
+            </h3>
             <ul className="mt-5 grid gap-3 sm:grid-cols-2">
               {sede.amenities.map((amenity) => (
                 <li
@@ -117,7 +110,7 @@ export function Sede() {
 
           <dl className="mt-10 divide-y divide-white/10 border-y border-white/10">
             <div className="grid gap-2 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-4 items-center">
-              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
+              <dt className="text-sm font-bold text-[var(--color-accent)]">
                 Dirección
               </dt>
               <dd>
@@ -132,7 +125,7 @@ export function Sede() {
               </dd>
             </div>
             <div className="grid gap-2 py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-4 items-center">
-              <dt className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
+              <dt className="text-sm font-bold text-[var(--color-accent)]">
                 Teléfono
               </dt>
               <dd>

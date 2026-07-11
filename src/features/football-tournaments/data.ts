@@ -1,9 +1,11 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabasePublicClient } from "@/lib/supabase/public";
 
 import { calculateStandings } from "./standings";
 import type {
@@ -136,8 +138,50 @@ const publicTournamentWithCategoriesSelect = `
   )
 `;
 
+const publicTournamentSummarySelect = `
+  id,
+  name,
+  slug,
+  season,
+  category,
+  format,
+  status,
+  starts_at,
+  ends_at,
+  description,
+  football_tournament_categories(
+    id,
+    tournament_id,
+    name,
+    slug,
+    status,
+    position,
+    starts_at,
+    ends_at,
+    football_tournament_teams!football_tournament_teams_category_id_fkey(
+      football_teams(id, name, short_name)
+    ),
+    football_matches!football_matches_category_id_fkey(
+      id,
+      round_label,
+      scheduled_at,
+      home_team_id,
+      away_team_id,
+      home_score,
+      away_score,
+      status,
+      group_id,
+      next_match_id
+    )
+  )
+`;
+
 const publicTournamentStatuses = ["published", "active", "completed"] as const;
 const activePublicTournamentStatuses = ["published", "active"] as const;
+const publicFootballCacheOptions = {
+  revalidate: 60,
+  tags: ["football-public"],
+};
 
 type AdminTournamentRow = {
   id: string;
@@ -204,6 +248,14 @@ type AdminRosteredPlayerRow = {
   player_id: string | null;
 };
 
+type MatchEventRow = {
+  roster_entry_id: string | null;
+  player_id: string | null;
+  team_id: string;
+  event_type: "goal" | "yellow_card" | "red_card";
+  quantity: number;
+};
+
 type AdminTournamentTeamRow = {
   football_teams: AdminTeamRow | AdminTeamRow[] | null;
 };
@@ -225,6 +277,7 @@ type AdminMatchRow = {
   result_submitted_by: string | null;
   next_match_id?: string | null;
   group_id: string | null;
+  football_match_events?: MatchEventRow[] | null;
 };
 
 type StaffProfileRow = {
@@ -405,6 +458,7 @@ export type AdminMatch = {
   resultSubmittedBy: string | null;
   nextMatchId?: string | null;
   isKnockout: boolean;
+  events: MatchResultEvent[];
 };
 
 export type StaffProfile = StaffProfileRow;
@@ -415,6 +469,14 @@ export type MatchResultRosterEntry = {
   playerId: string;
   shirtNumber: number | null;
   displayName: string;
+};
+
+export type MatchResultEvent = {
+  rosterEntryId: string | null;
+  playerId: string | null;
+  teamId: string;
+  eventType: "goal" | "yellow_card" | "red_card";
+  quantity: number;
 };
 
 export type ViewerAssignedMatch = AdminMatch & {
@@ -517,6 +579,69 @@ function getPublicTournamentTeams(row: TournamentRow): TeamRow[] {
   }
 
   return row.football_teams ?? [];
+}
+
+function formatPublicTeams(rows: TeamRow[]): FootballTeam[] {
+  return rows
+    .map((team) => ({
+      id: team.id,
+      name: team.name,
+      shortName: team.short_name,
+      photoUrl: team.photo_url ?? null,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name, "es"));
+}
+
+function formatPublicMatches(
+  format: FootballTournamentFormat,
+  teams: FootballTeam[],
+  matches: MatchRow[] | null | undefined,
+): PublicFootballMatch[] {
+  const teamNames = new Map(teams.map((team) => [team.id, team.name]));
+  const teamShortNames = new Map(teams.map((team) => [team.id, team.shortName]));
+
+  return (matches ?? [])
+    .map((match) => ({
+      id: match.id,
+      roundLabel: match.round_label,
+      scheduledAt: match.scheduled_at,
+      homeTeamId: match.home_team_id,
+      awayTeamId: match.away_team_id,
+      homeScore: match.home_score,
+      awayScore: match.away_score,
+      status: match.status,
+      homeTeamName:
+        (match.home_team_id ? teamNames.get(match.home_team_id) : null) ??
+        "Por definirse",
+      awayTeamName:
+        (match.away_team_id ? teamNames.get(match.away_team_id) : null) ??
+        "Por definirse",
+      homeTeamShortName:
+        (match.home_team_id ? teamShortNames.get(match.home_team_id) : null) ??
+        null,
+      awayTeamShortName:
+        (match.away_team_id ? teamShortNames.get(match.away_team_id) : null) ??
+        null,
+      isKnockout:
+        format === "cup" ||
+        (format === "league_playoff" && match.group_id === null),
+      nextMatchId: match.next_match_id ?? null,
+    }))
+    .sort((left, right) => {
+      const dateOrder = compareNullableIsoDate(
+        left.scheduledAt,
+        right.scheduledAt,
+      );
+      if (dateOrder !== 0) return dateOrder;
+
+      const roundOrder = left.roundLabel.localeCompare(
+        right.roundLabel,
+        "es",
+      );
+      if (roundOrder !== 0) return roundOrder;
+
+      return left.id.localeCompare(right.id);
+    });
 }
 
 function getAdminRegisteredTeams(rows: AdminTournamentTeamRow[]): AdminTeamRow[] {
@@ -677,49 +802,8 @@ export function formatAdminDashboardSummary(
 export function formatPublicTournament(
   row: TournamentRow,
 ): PublicFootballTournament {
-  const teams = getPublicTournamentTeams(row)
-    .map((team) => ({
-      id: team.id,
-      name: team.name,
-      shortName: team.short_name,
-      photoUrl: team.photo_url ?? null,
-    }))
-    .sort((left, right) => left.name.localeCompare(right.name, "es"));
-  const teamNames = new Map(teams.map((team) => [team.id, team.name]));
-  const matches: PublicFootballMatch[] = (row.football_matches ?? [])
-    .map((match) => ({
-      id: match.id,
-      roundLabel: match.round_label,
-      scheduledAt: match.scheduled_at,
-      homeTeamId: match.home_team_id,
-      awayTeamId: match.away_team_id,
-      homeScore: match.home_score,
-      awayScore: match.away_score,
-      status: match.status,
-      homeTeamName: (match.home_team_id ? teamNames.get(match.home_team_id) : null) ?? "Por definirse",
-      awayTeamName: (match.away_team_id ? teamNames.get(match.away_team_id) : null) ?? "Por definirse",
-      homeTeamShortName: (match.home_team_id ? teams.find(t => t.id === match.home_team_id)?.shortName : null) ?? null,
-      awayTeamShortName: (match.away_team_id ? teams.find(t => t.id === match.away_team_id)?.shortName : null) ?? null,
-      isKnockout:
-        row.format === "cup" ||
-        (row.format === "league_playoff" && match.group_id === null),
-      nextMatchId: match.next_match_id ?? null,
-    }))
-    .sort((left, right) => {
-      const dateOrder = compareNullableIsoDate(
-        left.scheduledAt,
-        right.scheduledAt,
-      );
-      if (dateOrder !== 0) return dateOrder;
-
-      const roundOrder = left.roundLabel.localeCompare(
-        right.roundLabel,
-        "es",
-      );
-      if (roundOrder !== 0) return roundOrder;
-
-      return left.id.localeCompare(right.id);
-    });
+  const teams = formatPublicTeams(getPublicTournamentTeams(row));
+  const matches = formatPublicMatches(row.format, teams, row.football_matches);
 
   return {
     id: row.id,
@@ -780,6 +864,46 @@ export function formatPublicTournamentWithCategories(
         teams: formatted.teams,
         matches: formatted.matches,
         standings: formatted.standings,
+      };
+    })
+    .sort((left, right) => left.position - right.position);
+
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    season: row.season,
+    format: row.format,
+    status: row.status,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    description: row.description,
+    categories,
+  };
+}
+
+export function formatPublicTournamentSummaryWithCategories(
+  row: PublicTournamentWithCategoriesRow,
+): PublicFootballTournamentWithCategories {
+  const categories = (row.football_tournament_categories ?? [])
+    .filter((category) => category.status !== "archived")
+    .map((category) => {
+      const base = formatTournamentCategoryBase(category);
+      const teams = formatPublicTeams(
+        (category.football_tournament_teams ?? [])
+          .map((registration) => firstRelatedRow(registration.football_teams))
+          .filter((team): team is TeamRow => team !== null),
+      );
+
+      return {
+        ...base,
+        teams,
+        matches: formatPublicMatches(
+          row.format,
+          teams,
+          category.football_matches,
+        ),
+        standings: [],
       };
     })
     .sort((left, right) => left.position - right.position);
@@ -877,10 +1001,11 @@ export function formatPublicTournamentRowsWithCategories(
   return tournaments;
 }
 
-function formatPrimaryCategoryTournamentRows(
+function formatPrimaryCategoryTournamentSummaryRows(
   rows: PublicTournamentWithCategoriesRow[],
 ): PublicFootballTournament[] {
-  return formatPublicTournamentRowsWithCategories(rows)
+  return rows
+    .map(formatPublicTournamentSummaryWithCategories)
     .map(flattenTournamentPrimaryCategory)
     .filter(
       (tournament): tournament is PublicFootballTournament =>
@@ -888,11 +1013,11 @@ function formatPrimaryCategoryTournamentRows(
     );
 }
 
-export async function getPublicFootballTournaments() {
-  const supabase = await createSupabaseServerClient();
+async function getPublicFootballTournamentsUncached() {
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("football_tournaments")
-    .select(publicTournamentWithCategoriesSelect)
+    .select(publicTournamentSummarySelect)
     .in("status", [...publicTournamentStatuses])
     .order("starts_at", { ascending: false });
 
@@ -902,16 +1027,22 @@ export async function getPublicFootballTournaments() {
     });
   }
 
-  return formatPrimaryCategoryTournamentRows(
+  return formatPrimaryCategoryTournamentSummaryRows(
     (data ?? []) as unknown as PublicTournamentWithCategoriesRow[],
   );
 }
 
-export async function getActivePublicFootballTournaments() {
-  const supabase = await createSupabaseServerClient();
+export const getPublicFootballTournaments = unstable_cache(
+  getPublicFootballTournamentsUncached,
+  ["public-football-tournaments"],
+  publicFootballCacheOptions,
+);
+
+async function getActivePublicFootballTournamentsUncached() {
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("football_tournaments")
-    .select(publicTournamentWithCategoriesSelect)
+    .select(publicTournamentSummarySelect)
     .in("status", [...activePublicTournamentStatuses])
     .order("starts_at", { ascending: false });
 
@@ -921,13 +1052,19 @@ export async function getActivePublicFootballTournaments() {
     });
   }
 
-  return formatPrimaryCategoryTournamentRows(
+  return formatPrimaryCategoryTournamentSummaryRows(
     (data ?? []) as unknown as PublicTournamentWithCategoriesRow[],
   );
 }
 
-export async function getPublicFootballTournamentBySlug(slug: string) {
-  const supabase = await createSupabaseServerClient();
+export const getActivePublicFootballTournaments = unstable_cache(
+  getActivePublicFootballTournamentsUncached,
+  ["active-public-football-tournaments"],
+  publicFootballCacheOptions,
+);
+
+async function getPublicFootballTournamentBySlugUncached(slug: string) {
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("football_tournaments")
     .select(publicTournamentWithCategoriesSelect)
@@ -950,10 +1087,16 @@ export async function getPublicFootballTournamentBySlug(slug: string) {
   );
 }
 
-export async function getPublicFootballTournamentWithCategoriesBySlug(
+export const getPublicFootballTournamentBySlug = unstable_cache(
+  getPublicFootballTournamentBySlugUncached,
+  ["public-football-tournament-by-slug"],
+  publicFootballCacheOptions,
+);
+
+async function getPublicFootballTournamentWithCategoriesBySlugUncached(
   slug: string,
 ) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
   const { data, error } = await supabase
     .from("football_tournaments")
     .select(publicTournamentWithCategoriesSelect)
@@ -973,6 +1116,12 @@ export async function getPublicFootballTournamentWithCategoriesBySlug(
     data as unknown as PublicTournamentWithCategoriesRow,
   );
 }
+
+export const getPublicFootballTournamentWithCategoriesBySlug = unstable_cache(
+  getPublicFootballTournamentWithCategoriesBySlugUncached,
+  ["public-football-tournament-with-categories-by-slug"],
+  publicFootballCacheOptions,
+);
 
 async function getCurrentStaffProfile(
   allowedRoles: StaffRole[],
@@ -1160,7 +1309,7 @@ export function formatAdminRosteredPlayerIds(
   );
 }
 
-function formatAdminMatch(row: AdminMatchRow): AdminMatch {
+export function formatAdminMatch(row: AdminMatchRow): AdminMatch {
   return {
     id: row.id,
     categoryId: row.category_id,
@@ -1178,6 +1327,13 @@ function formatAdminMatch(row: AdminMatchRow): AdminMatch {
     resultSubmittedBy: row.result_submitted_by,
     nextMatchId: row.next_match_id ?? null,
     isKnockout: row.group_id === null,
+    events: (row.football_match_events ?? []).map((event) => ({
+      rosterEntryId: event.roster_entry_id,
+      playerId: event.player_id,
+      teamId: event.team_id,
+      eventType: event.event_type,
+      quantity: event.quantity,
+    })),
   };
 }
 
@@ -1564,7 +1720,7 @@ export async function getAdminMatches(
   let query = supabase
     .from("football_matches")
     .select(
-      "id, category_id, round_label, scheduled_at, home_team_id, away_team_id, home_score, away_score, home_penalty_score, away_penalty_score, status, assigned_viewer_id, result_locked_at, result_submitted_by, next_match_id, group_id",
+      "id, category_id, round_label, scheduled_at, home_team_id, away_team_id, home_score, away_score, home_penalty_score, away_penalty_score, status, assigned_viewer_id, result_locked_at, result_submitted_by, next_match_id, group_id, football_match_events(roster_entry_id, player_id, team_id, event_type, quantity)",
     )
     .eq("tournament_id", tournamentId)
     .order("scheduled_at", { ascending: true });

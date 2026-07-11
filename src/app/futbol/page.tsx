@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { Sponsors } from "@/components/Sponsors";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { SectionShell } from "@/components/SectionShell";
 import { SectionHeading } from "@/components/SectionHeading";
@@ -40,10 +41,10 @@ export default async function FutbolPage() {
           </div>
 
           <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col items-center text-center mt-20">
-            <p className="mb-4 text-sm font-bold uppercase tracking-[0.3em] text-[var(--color-accent)] drop-shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.5)]">
+            <p className="mb-4 text-[0.8rem] font-bold uppercase tracking-[0.2em] text-[var(--color-accent)]">
               Pilar · Buenos Aires
             </p>
-            <h1 className="text-7xl sm:text-8xl md:text-9xl font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/40 drop-shadow-2xl">
+            <h1 className="text-7xl sm:text-8xl md:text-9xl font-black uppercase tracking-tighter text-white">
               {futbol.title}
             </h1>
             <p className="mt-6 max-w-2xl text-lg sm:text-xl text-white/70 font-medium leading-relaxed">
@@ -59,7 +60,7 @@ export default async function FutbolPage() {
                 <span className="text-white font-bold tracking-widest uppercase">M/F</span>
                 <span className="text-white/40 text-xs uppercase tracking-widest">Categorías</span>
               </div>
-              <div className="flex items-center gap-3 px-6 py-3 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 backdrop-blur-md shadow-[0_0_20px_rgba(var(--color-accent-rgb),0.15)]">
+              <div className="flex items-center gap-3 px-6 py-3 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 backdrop-blur-md">
                 <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
                 <span className="text-[var(--color-accent)] font-bold tracking-widest uppercase text-sm">
                   Inscripción 2026 Abierta
@@ -133,6 +134,7 @@ export default async function FutbolPage() {
           </div>
         </SectionShell>
       </main>
+      <Sponsors />
       <Footer />
       <WhatsAppButton 
         label="Consultas Fútbol" 

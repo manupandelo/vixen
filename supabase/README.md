@@ -47,6 +47,8 @@ Existing tournaments are migrated into one default category based on the former 
 - Un partido de copa puede apuntar al siguiente cruce con `next_match_id`.
 - Un partido puede tener veedor asignado por `assigned_viewer_id`.
 - Un resultado cargado por veedor queda marcado con `result_locked_at` y `result_submitted_by`.
+- Un partido eliminatorio empatado en copa o playoff requiere penales con ganador.
+- Un evento de partido solo puede quedar asociado a un equipo del partido; si referencia un plantel, ese plantel debe corresponder al mismo equipo y categoria.
 - Un evento de auditoria guarda `actor_profile_id`, `actor_email`, entidad, accion, resumen y metadata.
 
 ## Estados y reglas
@@ -103,6 +105,8 @@ Politicas:
 - `is_admin()`: valida perfil admin activo.
 - `is_viewer()`: valida perfil veedor activo.
 - `match_teams_belong_to_tournament()`: impide crear partidos con equipos que no esten registrados en la categoria, permitiendo cruces futuros de copa con equipos pendientes.
+- `elimination_matches_require_winner()`: impide guardar empates sin penales ganadores en copa o cruces de playoff.
+- `match_events_belong_to_match()`: impide cargar goles/tarjetas para equipos o planteles que no correspondan al partido.
 
 ## Migraciones aplicadas
 
@@ -119,6 +123,7 @@ Politicas:
 - `20260702000000_add_football_players_rosters.sql`: jugadores reutilizables y planteles por torneo/equipo con estado documental.
 - `20260702010000_add_football_tournament_categories.sql`: categorias competitivas por torneo y migracion de equipos, zonas, planteles y partidos a `category_id`.
 - `20260702020000_prevent_team_multiple_tournament_categories.sql`: evita que un equipo quede anotado en mas de una categoria del mismo torneo.
+- `20260704000000_harden_football_data_integrity.sql`: agrega indices para lecturas frecuentes y refuerza integridad de penales, goles y tarjetas.
 
 ## Como mantener esto
 

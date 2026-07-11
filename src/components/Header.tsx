@@ -164,13 +164,18 @@ export function Header() {
   return (
     <>
       <header
-        className={`sticky top-0 z-50 border-b transition-all duration-300 ${
+        className={`sticky top-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? "border-white/10 bg-[var(--color-base)]/80 py-2 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.3)]"
-            : "border-transparent bg-transparent py-4 sm:py-5"
+            ? "bg-[var(--color-base)]/90 backdrop-blur-xl shadow-md border-b border-white/10"
+            : "bg-transparent border-b border-transparent"
         }`}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-8 lg:gap-8">
+        {/* Promo Top Banner */}
+        <div className="bg-[var(--color-accent)] px-4 py-2 text-center text-xs sm:text-sm font-bold text-[#07110a]">
+          ¡Promo Tercer Tiempo! 2x1 en Fernet todos los jueves reservando tu cancha.
+        </div>
+
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-8 sm:py-5 lg:gap-8">
           <Link href="/" aria-label={content.site.name} className="shrink-0">
             <Image
               src="/logo_vixen.svg"
@@ -265,10 +270,7 @@ export function Header() {
                 </button>
               </div>
 
-              <div className="mt-10 border-t border-white/8 pt-5">
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[var(--color-accent)]">
-                  Navegación
-                </p>
+              <div className="mt-8 border-t border-white/10 pt-5">
               </div>
 
               <nav aria-label="Menú móvil" className="mt-4 flex flex-col">
@@ -286,10 +288,7 @@ export function Header() {
               </nav>
 
               <div className="mt-auto pt-10">
-                <div className="border-t border-white/8 pt-5">
-                  <p className="mb-3 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-white/46">
-                    Seguinos
-                  </p>
+                <div className="border-t border-white/10 pt-5">
                   <div className="flex flex-col gap-3">
                     <MobileSocialLinks onNavigate={closeMobileMenu} />
                   </div>

@@ -4,6 +4,7 @@ const redirectMock = vi.hoisted(() => vi.fn((path: string) => {
   throw new Error(`NEXT_REDIRECT:${path}`);
 }));
 const revalidatePathMock = vi.hoisted(() => vi.fn());
+const revalidateTagMock = vi.hoisted(() => vi.fn());
 const requireAdminMock = vi.hoisted(() => vi.fn());
 const requireViewerMock = vi.hoisted(() => vi.fn());
 const getUserMock = vi.hoisted(() => vi.fn());
@@ -29,6 +30,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: revalidatePathMock,
+  revalidateTag: revalidateTagMock,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -521,6 +523,7 @@ describe("football tournament admin actions", () => {
       "/admin/torneos/tournament-1",
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/futbol");
+    expect(revalidateTagMock).toHaveBeenCalledWith("football-public", "max");
   });
 
   it("reports when a tournament update did not touch any row", async () => {
@@ -884,16 +887,21 @@ describe("football tournament admin actions", () => {
     vi.mocked(getAdminMatches).mockResolvedValue([
       {
         id: "match-1",
+        categoryId: "category-1",
         roundLabel: "Fecha 1",
         scheduledAt: null,
         homeTeamId: "team-1",
         awayTeamId: "team-2",
         homeScore: null,
         awayScore: null,
+        homePenaltyScore: null,
+        awayPenaltyScore: null,
         status: "scheduled",
         assignedViewerId: null,
         resultLockedAt: null,
-        resultSubmittedBy: null, isKnockout: false,
+        resultSubmittedBy: null,
+        isKnockout: false,
+        events: [],
       },
     ]);
 
@@ -1308,16 +1316,21 @@ describe("football tournament admin actions", () => {
     vi.mocked(getAdminMatches).mockResolvedValue([
       {
         id: "match-1",
+        categoryId: "category-1",
         roundLabel: "Fecha 1",
         scheduledAt: null,
         homeTeamId: "team-1",
         awayTeamId: "team-2",
         homeScore: null,
         awayScore: null,
+        homePenaltyScore: null,
+        awayPenaltyScore: null,
         status: "scheduled",
         assignedViewerId: null,
         resultLockedAt: null,
-        resultSubmittedBy: null, isKnockout: false,
+        resultSubmittedBy: null,
+        isKnockout: false,
+        events: [],
       },
     ]);
     requireAdminMock.mockResolvedValue({
@@ -1647,16 +1660,21 @@ describe("football tournament admin actions", () => {
     vi.mocked(getAdminMatches).mockResolvedValue([
       {
         id: "match-1",
+        categoryId: "category-1",
         roundLabel: "Zona A - Fecha 1",
         scheduledAt: null,
         homeTeamId: "team-1",
         awayTeamId: "team-2",
         homeScore: null,
         awayScore: null,
+        homePenaltyScore: null,
+        awayPenaltyScore: null,
         status: "scheduled",
         assignedViewerId: null,
         resultLockedAt: null,
-        resultSubmittedBy: null, isKnockout: false,
+        resultSubmittedBy: null,
+        isKnockout: false,
+        events: [],
       },
     ]);
     requireAdminMock.mockResolvedValue({

@@ -7,10 +7,10 @@ const schemaSql = readFileSync(
   join(process.cwd(), "supabase/schema.sql"),
   "utf8",
 );
-const categoryMigrationSql = readFileSync(
+const hardeningMigrationSql = readFileSync(
   join(
     process.cwd(),
-    "supabase/migrations/20260702010000_add_football_tournament_categories.sql",
+    "supabase/migrations/20260704000000_harden_football_data_integrity.sql",
   ),
   "utf8",
 );
@@ -214,16 +214,97 @@ describe("Supabase schema", () => {
     );
   });
 
-  it("guards category migration backfills against legacy data drift", () => {
-    expect(categoryMigrationSql).toContain(
-      "when length(trim(coalesce(tournament.category, ''))) >= 2",
+  it("adds indexes for common public, admin, and viewer football reads", () => {
+    expect(schemaSql).toContain(
+      "create index football_matches_category_schedule_idx",
     );
-    expect(categoryMigrationSql).toContain("else 'General'");
-    expect(categoryMigrationSql).toContain(
-      "football_tournament_group_teams contains teams that are not registered in the group category",
+    expect(schemaSql).toContain(
+      "on public.football_matches(tournament_id, category_id, scheduled_at)",
     );
-    expect(categoryMigrationSql).toContain(
-      "football_matches contains groups from a different tournament category",
+    expect(schemaSql).toContain(
+      "create index football_matches_viewer_unlocked_idx",
+    );
+    expect(schemaSql).toContain(
+      "on public.football_matches(assigned_viewer_id, result_locked_at)",
+    );
+    expect(schemaSql).toContain(
+      "create index football_roster_entries_category_team_idx",
+    );
+    expect(schemaSql).toContain(
+      "on public.football_roster_entries(category_id, team_id)",
+    );
+    expect(schemaSql).toContain(
+      "create index football_match_events_match_team_idx",
+    );
+    expect(schemaSql).toContain(
+      "on public.football_match_events(match_id, team_id)",
+    );
+  });
+
+  it("requires penalty winners for tied elimination matches", () => {
+    expect(schemaSql).toContain(
+      "create or replace function public.elimination_matches_require_winner()",
+    );
+    expect(schemaSql).toContain("tournament_format = 'cup'");
+    expect(schemaSql).toContain(
+      "(tournament_format = 'league_playoff' and new.group_id is null)",
+    );
+    expect(schemaSql).toContain(
+      "raise exception 'tied elimination matches require a penalty winner'",
+    );
+    expect(schemaSql).toContain(
+      "create trigger football_matches_elimination_winner_check",
+    );
+  });
+
+  it("guards match events against invalid teams and roster attribution", () => {
+    expect(schemaSql).toContain(
+      "create or replace function public.match_events_belong_to_match()",
+    );
+    expect(schemaSql).toContain(
+      "new.team_id not in (football_match.home_team_id, football_match.away_team_id)",
+    );
+    expect(schemaSql).toContain(
+      "roster.id = new.roster_entry_id",
+    );
+    expect(schemaSql).toContain(
+      "roster.player_id = new.player_id",
+    );
+    expect(schemaSql).toContain(
+      "raise exception 'match event roster entry does not belong to match team'",
+    );
+    expect(schemaSql).toContain(
+      "create trigger football_match_events_match_roster_check",
+    );
+  });
+
+  it("keeps card events to one row per player and match", () => {
+    expect(schemaSql).toContain(
+      "create unique index football_match_events_player_yellow_card_key",
+    );
+    expect(schemaSql).toContain(
+      "where roster_entry_id is not null and event_type = 'yellow_card'",
+    );
+    expect(schemaSql).toContain(
+      "create unique index football_match_events_player_red_card_key",
+    );
+    expect(schemaSql).toContain(
+      "where roster_entry_id is not null and event_type = 'red_card'",
+    );
+  });
+
+  it("ships the hardening changes as a deployable migration", () => {
+    expect(hardeningMigrationSql).toContain(
+      "create index if not exists football_matches_category_schedule_idx",
+    );
+    expect(hardeningMigrationSql).toContain(
+      "create or replace function public.elimination_matches_require_winner()",
+    );
+    expect(hardeningMigrationSql).toContain(
+      "create or replace function public.match_events_belong_to_match()",
+    );
+    expect(hardeningMigrationSql).toContain(
+      "create unique index if not exists football_match_events_player_yellow_card_key",
     );
   });
 });
