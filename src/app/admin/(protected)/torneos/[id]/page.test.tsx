@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import AdminTournamentWorkspacePage from "./page";
 import {
+  getAdminFixtureStructureState,
   getAdminMatches,
   getAdminTeams,
   getAdminTournament,
@@ -95,6 +96,11 @@ vi.mock("@/features/football-tournaments/data", () => ({
     displayName: entry.player.publicName ?? `${entry.player.firstName} ${entry.player.lastName}`,
   })),
   getAdminAvailablePlayers: vi.fn(async () => []),
+  getAdminFixtureStructureState: vi.fn(async () => ({
+    matchCount: 0,
+    groupCount: 0,
+    hasStructure: false,
+  })),
   getAdminMatches: vi.fn(async () => []),
   getTournamentAuditEvents: vi.fn(async () => [
     {
@@ -270,6 +276,28 @@ describe("AdminTournamentWorkspacePage", () => {
     expect(
       screen.queryByText(/partidos manuales/i),
     ).not.toBeInTheDocument();
+  });
+
+  it("disables fixture generation when a category already has structure", async () => {
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValueOnce({
+      matchCount: 0,
+      groupCount: 2,
+      hasStructure: true,
+    });
+
+    render(
+      await AdminTournamentWorkspacePage({
+        params: Promise.resolve({ id: "tournament-1" }),
+        searchParams: Promise.resolve({ tab: "partidos" }),
+      }),
+    );
+
+    expect(
+      screen.getByText("Ya existe una estructura inicial para esta categoría."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Generar fixture" }),
+    ).toBeDisabled();
   });
 
   it("shows category scoring and discipline stats in the matches tab", async () => {

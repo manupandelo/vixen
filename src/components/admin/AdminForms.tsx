@@ -192,6 +192,7 @@ type MatchDeleteDialogProps = {
 type FixtureGeneratorDialogProps = {
   action: FixtureGeneratorAction;
   teams: Pick<AdminTeam, "id" | "name">[];
+  disabledReason?: string;
 };
 
 type FixtureGeneratorState = {
@@ -2016,6 +2017,7 @@ export function RosterEntryRemoveDialog({
 export function FixtureGeneratorDialog({
   action,
   teams,
+  disabledReason,
 }: FixtureGeneratorDialogProps) {
   const [parent] = useAutoAnimate();
   const [open, setOpen] = useState(false);
@@ -2026,6 +2028,7 @@ export function FixtureGeneratorDialog({
   );
   const { daysBetweenRounds, kickoffTime, legs, startsAt } = fixtureState;
   const hasEnoughTeams = teams.length >= 2;
+  const triggerDisabled = Boolean(disabledReason) || !hasEnoughTeams;
   const preview = useMemo(
     () =>
       buildLeagueFixture(teams, {
@@ -2047,7 +2050,8 @@ export function FixtureGeneratorDialog({
       <Dialog.Trigger asChild>
         <button
           type="button"
-          disabled={!hasEnoughTeams}
+          disabled={triggerDisabled}
+          title={disabledReason}
           className={`${primaryButtonClass} gap-2`}
         >
           <CalendarPlus size={17} aria-hidden="true" />
@@ -2245,16 +2249,19 @@ export function FixtureGeneratorDialog({
 export type BracketGeneratorDialogProps = {
   action: (state: ActionState, payload: FormData) => Promise<ActionState>;
   teams: Pick<AdminTeam, "id" | "name">[];
+  disabledReason?: string;
 };
 
 export type GroupPlayoffGeneratorDialogProps = {
   action: (state: ActionState, payload: FormData) => Promise<ActionState>;
   teams: Pick<AdminTeam, "id" | "name">[];
+  disabledReason?: string;
 };
 
 export function GroupPlayoffGeneratorDialog({
   action,
   teams,
+  disabledReason,
 }: GroupPlayoffGeneratorDialogProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(action, initialState);
@@ -2292,6 +2299,7 @@ export function GroupPlayoffGeneratorDialog({
   const playoffMatchCount = preview?.playoffMatches.length ?? 0;
   const totalMatchCount = groupMatchCount + playoffMatchCount;
   const hasEnoughTeams = teams.length >= 2;
+  const triggerDisabled = Boolean(disabledReason) || !hasEnoughTeams;
 
   useActionToast(state, {
     onSuccess: () => setOpen(false),
@@ -2302,7 +2310,8 @@ export function GroupPlayoffGeneratorDialog({
       <Dialog.Trigger asChild>
         <button
           type="button"
-          disabled={!hasEnoughTeams}
+          disabled={triggerDisabled}
+          title={disabledReason}
           className={`${primaryButtonClass} gap-2`}
         >
           <CalendarPlus size={17} aria-hidden="true" />
@@ -2466,6 +2475,7 @@ export function GroupPlayoffGeneratorDialog({
 export function BracketGeneratorDialog({
   action,
   teams,
+  disabledReason,
 }: BracketGeneratorDialogProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(action, initialState);
@@ -2503,7 +2513,8 @@ export function BracketGeneratorDialog({
       <Dialog.Trigger asChild>
         <button
           type="button"
-          disabled={teams.length < 2}
+          disabled={Boolean(disabledReason) || teams.length < 2}
+          title={disabledReason}
           className={`${primaryButtonClass} gap-2`}
         >
           <CalendarPlus size={17} aria-hidden="true" />

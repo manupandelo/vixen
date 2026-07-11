@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import {
+  getAdminFixtureStructureState,
   getAdminMatches,
   getAdminTeams,
   requireAdmin,
@@ -210,6 +211,25 @@ function revalidatePublicFootball() {
   revalidatePath("/futbol");
   revalidatePath("/futbol/torneos");
   revalidateTag("football-public", "max");
+}
+
+function revalidateTournamentFixture(tournamentId: string) {
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePublicFootball();
+}
+
+function getExistingFixtureMessage({
+  groupCount,
+  matchCount,
+}: {
+  groupCount: number;
+  matchCount: number;
+}) {
+  if (groupCount > 0 && matchCount === 0) {
+    return "Esta categoría ya tiene zonas cargadas. Revisá la estructura antes de volver a generar.";
+  }
+
+  return "Este torneo ya tiene partidos cargados.";
 }
 
 function getTeamRegistrationErrorMessage(message: string) {
@@ -1756,13 +1776,16 @@ export async function generateBracketFixture(
   }
 
   const { initialMatches, startsAt, daysBetweenRounds } = parsedBracket;
-  const existingMatches = await getAdminMatches(
+  const existingStructure = await getAdminFixtureStructureState(
     tournamentId,
     categoryId || undefined,
   );
 
-  if (existingMatches.length > 0) {
-    return { ok: false, message: "Este torneo ya tiene partidos cargados." };
+  if (existingStructure.hasStructure) {
+    return {
+      ok: false,
+      message: getExistingFixtureMessage(existingStructure),
+    };
   }
 
   try {
@@ -1812,8 +1835,7 @@ export async function generateBracketFixture(
       };
     }
 
-    revalidatePath(`/admin/torneos/${tournamentId}`);
-    revalidatePublicFootball();
+    revalidateTournamentFixture(tournamentId);
 
     return {
       ok: true,
@@ -1864,15 +1886,17 @@ export async function generateGroupPlayoffFixture(
     ),
   };
 
-  const [teams, existingMatches] = await Promise.all([
+  const [teams, existingStructure] = await Promise.all([
     getAdminTeams(tournamentId, categoryId || undefined),
-    getAdminMatches(tournamentId, categoryId || undefined),
+    getAdminFixtureStructureState(tournamentId, categoryId || undefined, {
+      includeGroups: true,
+    }),
   ]);
 
-  if (existingMatches.length > 0) {
+  if (existingStructure.hasStructure) {
     return {
       ok: false,
-      message: "Este torneo ya tiene partidos cargados.",
+      message: getExistingFixtureMessage(existingStructure),
     };
   }
 
@@ -1971,8 +1995,7 @@ export async function generateGroupPlayoffFixture(
     };
   }
 
-  revalidatePath(`/admin/torneos/${tournamentId}`);
-  revalidatePublicFootball();
+  revalidateTournamentFixture(tournamentId);
 
   return {
     ok: true,
@@ -2009,9 +2032,9 @@ export async function generateLeagueFixture(
     };
   }
 
-  const [teams, existingMatches] = await Promise.all([
+  const [teams, existingStructure] = await Promise.all([
     getAdminTeams(tournamentId, categoryId || undefined),
-    getAdminMatches(tournamentId, categoryId || undefined),
+    getAdminFixtureStructureState(tournamentId, categoryId || undefined),
   ]);
 
   if (teams.length < 2) {
@@ -2021,10 +2044,10 @@ export async function generateLeagueFixture(
     };
   }
 
-  if (existingMatches.length > 0) {
+  if (existingStructure.hasStructure) {
     return {
       ok: false,
-      message: "Este torneo ya tiene partidos cargados.",
+      message: getExistingFixtureMessage(existingStructure),
     };
   }
 
@@ -2063,8 +2086,7 @@ export async function generateLeagueFixture(
     };
   }
 
-  revalidatePath(`/admin/torneos/${tournamentId}`);
-  revalidatePublicFootball();
+  revalidateTournamentFixture(tournamentId);
 
   return {
     ok: true,

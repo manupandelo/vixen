@@ -38,6 +38,11 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/features/football-tournaments/data", () => ({
+  getAdminFixtureStructureState: vi.fn(async () => ({
+    matchCount: 0,
+    groupCount: 0,
+    hasStructure: false,
+  })),
   getAdminMatches: vi.fn(),
   getAdminTeams: vi.fn(),
   requireAdmin: requireAdminMock,
@@ -69,6 +74,7 @@ import {
   type ActionState,
 } from "@/features/football-tournaments/actions";
 import {
+  getAdminFixtureStructureState,
   getAdminMatches,
   getAdminTeams,
 } from "@/features/football-tournaments/data";
@@ -135,6 +141,12 @@ describe("football tournament admin actions", () => {
     redirectMock.mockImplementation((path: string) => {
       throw new Error(`NEXT_REDIRECT:${path}`);
     });
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValue({
+      matchCount: 0,
+      groupCount: 0,
+      hasStructure: false,
+    });
+    vi.mocked(getAdminMatches).mockResolvedValue([]);
     createSupabaseMock();
   });
 
@@ -850,7 +862,11 @@ describe("football tournament admin actions", () => {
       email: "admin@vixen.test",
       role: "admin",
     });
-    vi.mocked(getAdminMatches).mockResolvedValue([]);
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValue({
+      matchCount: 0,
+      groupCount: 0,
+      hasStructure: false,
+    });
     maybeSingleMock.mockResolvedValueOnce({
       data: { team_id: "team-1" },
       error: null,
@@ -1245,7 +1261,11 @@ describe("football tournament admin actions", () => {
         notes: null,
       },
     ]);
-    vi.mocked(getAdminMatches).mockResolvedValue([]);
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValue({
+      matchCount: 0,
+      groupCount: 0,
+      hasStructure: false,
+    });
     requireAdminMock.mockResolvedValue({
       id: "admin-1",
       email: "admin@vixen.test",
@@ -1313,26 +1333,11 @@ describe("football tournament admin actions", () => {
         notes: null,
       },
     ]);
-    vi.mocked(getAdminMatches).mockResolvedValue([
-      {
-        id: "match-1",
-        categoryId: "category-1",
-        roundLabel: "Fecha 1",
-        scheduledAt: null,
-        homeTeamId: "team-1",
-        awayTeamId: "team-2",
-        homeScore: null,
-        awayScore: null,
-        homePenaltyScore: null,
-        awayPenaltyScore: null,
-        status: "scheduled",
-        assignedViewerId: null,
-        resultLockedAt: null,
-        resultSubmittedBy: null,
-        isKnockout: false,
-        events: [],
-      },
-    ]);
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValue({
+      matchCount: 1,
+      groupCount: 0,
+      hasStructure: true,
+    });
     requireAdminMock.mockResolvedValue({
       id: "admin-1",
       email: "admin@vixen.test",
@@ -1358,7 +1363,11 @@ describe("football tournament admin actions", () => {
   });
 
   it("explains when the bracket migration is missing from Supabase", async () => {
-    vi.mocked(getAdminMatches).mockResolvedValue([]);
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValue({
+      matchCount: 0,
+      groupCount: 0,
+      hasStructure: false,
+    });
     requireAdminMock.mockResolvedValue({
       id: "admin-1",
       email: "admin@vixen.test",
@@ -1417,7 +1426,11 @@ describe("football tournament admin actions", () => {
   });
 
   it("maps temporary bracket node ids to database UUIDs before inserting", async () => {
-    vi.mocked(getAdminMatches).mockResolvedValue([]);
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValue({
+      matchCount: 0,
+      groupCount: 0,
+      hasStructure: false,
+    });
     requireAdminMock.mockResolvedValue({
       id: "admin-1",
       email: "admin@vixen.test",
@@ -1555,12 +1568,9 @@ describe("football tournament admin actions", () => {
       ok: true,
       message: "Fixture zonas + playoff generado con 3 partidos.",
     });
-    expect(fromMock).toHaveBeenNthCalledWith(1, "football_tournament_groups");
-    expect(fromMock).toHaveBeenNthCalledWith(
-      2,
-      "football_tournament_group_teams",
-    );
-    expect(fromMock).toHaveBeenNthCalledWith(3, "football_matches");
+    expect(fromMock).toHaveBeenCalledWith("football_tournament_groups");
+    expect(fromMock).toHaveBeenCalledWith("football_tournament_group_teams");
+    expect(fromMock).toHaveBeenCalledWith("football_matches");
 
     const groupRows = insertMock.mock.calls[0][0] as Array<{
       id: string;
@@ -1657,26 +1667,11 @@ describe("football tournament admin actions", () => {
         notes: null,
       },
     ]);
-    vi.mocked(getAdminMatches).mockResolvedValue([
-      {
-        id: "match-1",
-        categoryId: "category-1",
-        roundLabel: "Zona A - Fecha 1",
-        scheduledAt: null,
-        homeTeamId: "team-1",
-        awayTeamId: "team-2",
-        homeScore: null,
-        awayScore: null,
-        homePenaltyScore: null,
-        awayPenaltyScore: null,
-        status: "scheduled",
-        assignedViewerId: null,
-        resultLockedAt: null,
-        resultSubmittedBy: null,
-        isKnockout: false,
-        events: [],
-      },
-    ]);
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValue({
+      matchCount: 1,
+      groupCount: 0,
+      hasStructure: true,
+    });
     requireAdminMock.mockResolvedValue({
       id: "admin-1",
       email: "admin@vixen.test",
@@ -1699,6 +1694,59 @@ describe("football tournament admin actions", () => {
     expect(state).toEqual<ActionState>({
       ok: false,
       message: "Este torneo ya tiene partidos cargados.",
+    });
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects zones plus playoff generation over existing groups", async () => {
+    vi.mocked(getAdminTeams).mockResolvedValue([
+      {
+        id: "team-1",
+        name: "Vixen Norte",
+        shortName: null,
+        photoUrl: null,
+        captainName: null,
+        contactPhone: null,
+        notes: null,
+      },
+      {
+        id: "team-2",
+        name: "Vixen Sur",
+        shortName: null,
+        photoUrl: null,
+        captainName: null,
+        contactPhone: null,
+        notes: null,
+      },
+    ]);
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValue({
+      matchCount: 0,
+      groupCount: 2,
+      hasStructure: true,
+    });
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+
+    const state = await generateGroupPlayoffFixture(
+      "tournament-1",
+      { ok: false, message: "" },
+      formData({
+        groupCount: "2",
+        qualifiersPerGroup: "1",
+        startsAt: "",
+        kickoffTime: "",
+        daysBetweenGroupRounds: "7",
+        daysBetweenPlayoffRounds: "7",
+      }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message:
+        "Esta categoría ya tiene zonas cargadas. Revisá la estructura antes de volver a generar.",
     });
     expect(insertMock).not.toHaveBeenCalled();
   });

@@ -554,6 +554,12 @@ export type AdminDashboardSummary = {
   }>;
 };
 
+export type AdminFixtureStructureState = {
+  matchCount: number;
+  groupCount: number;
+  hasStructure: boolean;
+};
+
 function compareNullableIsoDate(
   left: string | null,
   right: string | null,
@@ -1736,6 +1742,59 @@ export async function getAdminMatches(
   }
 
   return ((data ?? []) as AdminMatchRow[]).map(formatAdminMatch);
+}
+
+export async function getAdminFixtureStructureState(
+  tournamentId: string,
+  categoryId?: string,
+  options: { includeGroups?: boolean } = {},
+): Promise<AdminFixtureStructureState> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  let matchesQuery = supabase
+    .from("football_matches")
+    .select("id", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId);
+
+  if (categoryId) {
+    matchesQuery = matchesQuery.eq("category_id", categoryId);
+  }
+
+  const { count: matchCount, error: matchesError } = await matchesQuery;
+
+  if (matchesError) {
+    throw new Error(matchesError.message);
+  }
+
+  let groupCount = 0;
+
+  if (options.includeGroups) {
+    let groupsQuery = supabase
+      .from("football_tournament_groups")
+      .select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournamentId);
+
+    if (categoryId) {
+      groupsQuery = groupsQuery.eq("category_id", categoryId);
+    }
+
+    const { count, error } = await groupsQuery;
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    groupCount = count ?? 0;
+  }
+
+  const safeMatchCount = matchCount ?? 0;
+
+  return {
+    matchCount: safeMatchCount,
+    groupCount,
+    hasStructure: safeMatchCount > 0 || groupCount > 0,
+  };
 }
 
 export async function getTournamentAuditEvents(

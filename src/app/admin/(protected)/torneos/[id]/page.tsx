@@ -62,6 +62,7 @@ import {
   getAdminAvailableTeams,
   getAdminAvailablePlayers,
   formatMatchResultRosterEntry,
+  getAdminFixtureStructureState,
   getAdminTournamentCategories,
   getAdminMatches,
   getAdminRosterEntries,
@@ -71,6 +72,7 @@ import {
   getTournamentAuditEvents,
   type AdminMatch,
   type AdminPlayer,
+  type AdminFixtureStructureState,
   type AdminRosterEntry,
   type AdminTeam,
   type AdminTournament,
@@ -839,6 +841,7 @@ function MatchesTab({
   selectedCategory,
   teams,
   matches,
+  fixtureStructure,
   viewers,
   rosterEntries,
 }: {
@@ -846,13 +849,19 @@ function MatchesTab({
   selectedCategory: AdminTournamentCategory | null;
   teams: Pick<AdminTeam, "id" | "name">[];
   matches: AdminMatch[];
+  fixtureStructure: AdminFixtureStructureState;
   viewers: StaffProfile[];
   rosterEntries: ReturnType<typeof formatMatchResultRosterEntry>[];
 }) {
   const generateFixtureAction = generateLeagueFixture.bind(null, tournament.id, selectedCategory?.id as string);
   const generateBracketAction = generateBracketFixture.bind(null, tournament.id, selectedCategory?.id as string);
   const generateGroupPlayoffAction = generateGroupPlayoffFixture.bind(null, tournament.id, selectedCategory?.id as string);
-  const canGenerateFixture = matches.length === 0;
+  const canGenerateFixture = !fixtureStructure.hasStructure;
+  const generatorDisabledReason = canGenerateFixture
+    ? undefined
+    : fixtureStructure.groupCount > 0 && fixtureStructure.matchCount === 0
+      ? "Esta categoría ya tiene zonas cargadas. Revisá la estructura antes de volver a generar."
+      : "Esta categoría ya tiene partidos cargados. Editá el fixture existente o eliminá la estructura antes de regenerar.";
 
   return (
     <section className="grid gap-5">
@@ -916,27 +925,28 @@ function MatchesTab({
           description={
             canGenerateFixture
               ? "Generá la estructura inicial según el formato del torneo."
-              : "El fixture se habilita cuando la categoría queda lista para competir."
+              : "Ya existe una estructura inicial para esta categoría."
           }
           action={
-            canGenerateFixture ? (
-              tournament.format === "league_playoff" ? (
-                <GroupPlayoffGeneratorDialog
-                  action={generateGroupPlayoffAction}
-                  teams={teams}
-                />
-              ) : tournament.format === "cup" ? (
-                <BracketGeneratorDialog
-                  action={generateBracketAction}
-                  teams={teams}
-                />
-              ) : (
-                <FixtureGeneratorDialog
-                  action={generateFixtureAction}
-                  teams={teams}
-                />
-              )
-            ) : null
+            tournament.format === "league_playoff" ? (
+              <GroupPlayoffGeneratorDialog
+                action={generateGroupPlayoffAction}
+                teams={teams}
+                disabledReason={generatorDisabledReason}
+              />
+            ) : tournament.format === "cup" ? (
+              <BracketGeneratorDialog
+                action={generateBracketAction}
+                teams={teams}
+                disabledReason={generatorDisabledReason}
+              />
+            ) : (
+              <FixtureGeneratorDialog
+                action={generateFixtureAction}
+                teams={teams}
+                disabledReason={generatorDisabledReason}
+              />
+            )
           }
         />
       )}
@@ -1053,9 +1063,12 @@ export default async function AdminTournamentWorkspacePage({
           />
         );
       }
-      const [teams, matches, viewers, rosterEntries] = await Promise.all([
+      const [teams, matches, fixtureStructure, viewers, rosterEntries] = await Promise.all([
         getAdminTeams(tournament.id, selectedCategory.id),
         getAdminMatches(tournament.id, selectedCategory.id),
+        getAdminFixtureStructureState(tournament.id, selectedCategory.id, {
+          includeGroups: tournament.format === "league_playoff",
+        }),
         getAdminViewers(),
         getAdminRosterEntries(tournament.id, selectedCategory.id),
       ]);
@@ -1065,6 +1078,7 @@ export default async function AdminTournamentWorkspacePage({
           tournament={tournament}
           teams={teams}
           matches={matches}
+          fixtureStructure={fixtureStructure}
           viewers={viewers}
           rosterEntries={rosterEntries.map(formatMatchResultRosterEntry)}
         />
