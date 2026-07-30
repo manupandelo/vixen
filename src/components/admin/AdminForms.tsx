@@ -1495,7 +1495,8 @@ export function TeamEditDialog({ action, team }: TeamEditDialogProps) {
 export function TeamRemoveDialog({
   action,
   teamName,
-}: TeamRemoveDialogProps) {
+  quiet = false,
+}: TeamRemoveDialogProps & { quiet?: boolean }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [confirmation, setConfirmation] = useState("");
   const [open, setOpen] = useState(false);
@@ -1511,7 +1512,14 @@ export function TeamRemoveDialog({
   return (
     <AlertDialog.Root open={open} onOpenChange={setOpen}>
       <AlertDialog.Trigger asChild>
-        <button type="button" className={dangerCompactButtonClass}>
+        <button
+          type="button"
+          className={
+            quiet
+              ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white/45 transition hover:text-[var(--color-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)]"
+              : dangerCompactButtonClass
+          }
+        >
           <Trash2 size={14} aria-hidden="true" />
           Quitar del torneo
         </button>
@@ -3345,6 +3353,54 @@ export function MatchResultForm({
         </button>
       )}
     </form>
+  );
+}
+
+export function MatchResultClearDialog({
+  action,
+  roundLabel,
+}: {
+  action: (prevState: ActionState) => Promise<ActionState>;
+  roundLabel: string;
+}) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  useActionToast(state);
+
+  return (
+    <AlertDialog.Root>
+      <AlertDialog.Trigger asChild>
+        <button type="button" className={dangerCompactButtonClass}>
+          <Trash2 size={16} aria-hidden="true" />
+          Borrar resultado
+        </button>
+      </AlertDialog.Trigger>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(28rem,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <AlertDialog.Title className="text-xl font-semibold text-white">
+            Borrar el resultado de {roundLabel}
+          </AlertDialog.Title>
+          <AlertDialog.Description className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
+            El partido vuelve a quedar pendiente y el ganador sale de la ronda
+            siguiente. Después vas a poder cargarlo de nuevo.
+          </AlertDialog.Description>
+          <form action={formAction} className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <AlertDialog.Cancel asChild>
+              <button type="button" className={compactButtonClass}>
+                Volver
+              </button>
+            </AlertDialog.Cancel>
+            <button
+              type="submit"
+              disabled={isPending}
+              className={dangerCompactButtonClass}
+            >
+              {isPending ? "Borrando..." : "Borrar resultado"}
+            </button>
+          </form>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
   );
 }
 

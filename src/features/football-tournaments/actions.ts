@@ -2286,6 +2286,56 @@ async function advanceWinnerToNextMatch(
   return { advancedTo: target.round_label };
 }
 
+/**
+ * Saca de la llave al equipo que este partido habia sembrado.
+ * Bloquea con el mismo criterio que el avance: si el siguiente ya tiene
+ * resultado, sacarle un equipo dejaria un marcador entre fantasmas.
+ */
+async function unseedWinnerFromNextMatch(
+  match: MatchResultMatchContext,
+): Promise<AdvancementOutcome> {
+  if (!match.next_match_id || !match.next_match_slot) {
+    return { advancedTo: null };
+  }
+
+  const slot = match.next_match_slot as MatchSlot;
+  const supabase = createSupabaseAdminClient();
+  const { data: nextMatch, error } = await supabase
+    .from("football_matches")
+    .select(
+      "id, round_label, home_team_id, away_team_id, home_score, away_score, status",
+    )
+    .eq("id", match.next_match_id)
+    .maybeSingle();
+
+  if (error || !nextMatch) {
+    return { blocked: "No pudimos encontrar el partido siguiente de la llave." };
+  }
+
+  const target = nextMatch as unknown as AdvancementTargetRow;
+
+  if (
+    target.status === "completed" &&
+    target.home_score !== null &&
+    target.away_score !== null
+  ) {
+    return {
+      blocked: `No se puede borrar este resultado: ${target.round_label} ya tiene resultado cargado. Borrá ese resultado primero.`,
+    };
+  }
+
+  const { error: clearError } = await supabase
+    .from("football_matches")
+    .update(slot === "home" ? { home_team_id: null } : { away_team_id: null })
+    .eq("id", target.id);
+
+  if (clearError) {
+    return { blocked: clearError.message };
+  }
+
+  return { advancedTo: target.round_label };
+}
+
 export async function updateMatchResult(
   tournamentId: string,
   matchId: string,
@@ -2409,6 +2459,74 @@ export async function updateMatchResult(
       ? `Resultado guardado. El ganador pasa a ${advancement.advancedTo}.`
       : "Resultado guardado.",
   };
+}
+
+/**
+ * Borra el resultado de un partido y deshace la siembra en la llave.
+ *
+ * Es la salida que nombra el mensaje de bloqueo: para corregir una ronda
+ * anterior hay que borrar antes el resultado de la siguiente.
+ */
+export async function clearMatchResult(
+  tournamentId: string,
+  matchId: string,
+): Promise<ActionState> {
+  const admin = await requireAdmin();
+  const supabase = await createSupabaseServerClient();
+
+  const { data: match, error: matchError } = await supabase
+    .from("football_matches")
+    .select(
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, result_locked_at, football_tournaments(format)",
+    )
+    .eq("id", matchId)
+    .eq("tournament_id", tournamentId)
+    .maybeSingle();
+
+  if (matchError || !match) {
+    return { ok: false, message: "No pudimos encontrar el partido." };
+  }
+
+  const matchContext = match as unknown as MatchResultMatchContext;
+  const unseeded = await unseedWinnerFromNextMatch(matchContext);
+
+  if (unseeded.blocked) {
+    return { ok: false, message: unseeded.blocked };
+  }
+
+  const { error } = await supabase
+    .from("football_matches")
+    .update({
+      home_score: null,
+      away_score: null,
+      home_penalty_score: null,
+      away_penalty_score: null,
+      status: "scheduled" as const,
+      result_locked_at: null,
+      result_submitted_by: null,
+    })
+    .eq("id", matchId)
+    .eq("tournament_id", tournamentId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  await recordAuditEvent(supabase, {
+    tournamentId,
+    actor: admin,
+    entityType: "match_result",
+    entityId: matchId,
+    action: "updated",
+    summary: "Borró el resultado de un partido",
+    metadata: {},
+  });
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath("/veedor");
+  revalidatePublicFootball();
+
+  return { ok: true, message: "Resultado borrado." };
 }
 
 export async function submitViewerMatchResult(

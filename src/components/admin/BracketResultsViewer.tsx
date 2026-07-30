@@ -8,7 +8,7 @@ import type {
   StaffProfile,
 } from "@/features/football-tournaments/data";
 import type { UIFootballMatch } from "@/features/football-tournaments/types";
-import { assignMatchViewer, updateMatch, updateMatchResult } from "@/features/football-tournaments/actions";
+import { assignMatchViewer, clearMatchResult, updateMatch, updateMatchResult } from "@/features/football-tournaments/actions";
 import { MatchSidePanel } from "./MatchSidePanel";
 import { TournamentBracket } from "@/components/football/shared/TournamentBracket";
 
@@ -64,6 +64,7 @@ export function BracketResultsViewer({
           updateResultAction={updateMatchResult.bind(null, tournamentId, selectedMatch.id)}
           assignViewerAction={assignMatchViewer.bind(null, tournamentId, selectedMatch.id)}
           updateMatchAction={updateMatch.bind(null, tournamentId, selectedMatch.id)}
+          clearResultAction={clearMatchResult.bind(null, tournamentId, selectedMatch.id)}
           onClose={() => setSelectedMatchId(null)}
         />
       ) : null}

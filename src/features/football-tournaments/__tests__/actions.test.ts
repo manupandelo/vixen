@@ -61,6 +61,7 @@ vi.mock("@/features/football-tournaments/data", () => ({
 
 import {
   assignMatchViewer,
+  clearMatchResult,
   createMatch,
   createRosterEntry,
   createTeam,
@@ -2184,6 +2185,100 @@ describe("football tournament admin actions", () => {
       ok: false,
       message: "Faltan definir los equipos de este partido.",
     });
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("borra el resultado y desiembra al ganador del partido siguiente", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-1",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: null,
+        next_match_id: "match-final",
+        next_match_slot: "home",
+        result_locked_at: null,
+        football_tournaments: { format: "cup" },
+      },
+      error: null,
+    });
+    // el partido siguiente, sin resultado: se le puede sacar el equipo
+    adminMaybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-final",
+        round_label: "Final",
+        home_team_id: "team-home",
+        away_team_id: null,
+        home_score: null,
+        away_score: null,
+        status: "scheduled",
+      },
+      error: null,
+    });
+
+    const state = await clearMatchResult("tournament-1", "match-1");
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Resultado borrado.",
+    });
+    expect(adminUpdateMock).toHaveBeenCalledWith({ home_team_id: null });
+    expect(updateMock).toHaveBeenCalledWith({
+      home_score: null,
+      away_score: null,
+      home_penalty_score: null,
+      away_penalty_score: null,
+      status: "scheduled",
+      result_locked_at: null,
+      result_submitted_by: null,
+    });
+  });
+
+  it("no borra el resultado si la ronda siguiente ya tiene resultado", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-1",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: null,
+        next_match_id: "match-final",
+        next_match_slot: "home",
+        result_locked_at: null,
+        football_tournaments: { format: "cup" },
+      },
+      error: null,
+    });
+    adminMaybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-final",
+        round_label: "Final",
+        home_team_id: "team-home",
+        away_team_id: "team-otro",
+        home_score: 2,
+        away_score: 0,
+        status: "completed",
+      },
+      error: null,
+    });
+
+    const state = await clearMatchResult("tournament-1", "match-1");
+
+    expect(state.ok).toBe(false);
+    expect(state.message).toContain("Final ya tiene resultado cargado");
     expect(updateMock).not.toHaveBeenCalled();
   });
 

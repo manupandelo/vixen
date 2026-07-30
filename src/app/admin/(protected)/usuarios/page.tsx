@@ -105,9 +105,11 @@ export default async function AdminUsersPage() {
                     <h2 className="text-base font-semibold text-white">
                       {profile.email}
                     </h2>
-                    <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-white/42">
-                      {isSelf ? "Tu cuenta" : profile.id}
-                    </p>
+                    {isSelf ? (
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-white/42">
+                        Tu cuenta
+                      </p>
+                    ) : null}
                     <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--color-muted)] lg:hidden">
                       {roleDescriptions[profile.role]}
                     </p>

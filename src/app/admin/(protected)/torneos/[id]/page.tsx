@@ -712,6 +712,7 @@ function TeamsTab({
                       team.id,
                     )}
                     teamName={team.name}
+                    quiet
                   />
                 }
                 rosterCreateSlot={
@@ -898,7 +899,40 @@ function MatchesTab({
   );
 }
 
-function ActivityTab({ events }: { events: AuditEvent[] }) {
+const auditEntityLabels: Record<string, string> = {
+  tournament: "Torneo",
+  team: "Equipo",
+  match: "Partido",
+  viewer_assignment: "Veedor",
+  match_result: "Resultado",
+};
+
+/** El marcador que quedó guardado, para no tener que abrir el partido. */
+function formatAuditScore(metadata: AuditEvent["metadata"]) {
+  const homeScore = metadata?.homeScore;
+  const awayScore = metadata?.awayScore;
+
+  if (typeof homeScore !== "number" || typeof awayScore !== "number") {
+    return null;
+  }
+
+  const homePenalties = metadata?.homePenaltyScore;
+  const awayPenalties = metadata?.awayPenaltyScore;
+  const penalties =
+    typeof homePenalties === "number" && typeof awayPenalties === "number"
+      ? ` (${homePenalties}-${awayPenalties} pen.)`
+      : "";
+
+  return `${homeScore} - ${awayScore}${penalties}`;
+}
+
+function ActivityTab({
+  events,
+  matchNames,
+}: {
+  events: AuditEvent[];
+  matchNames: Map<string, string>;
+}) {
   return (
     <section className="grid gap-5">
       <div>
@@ -924,13 +958,22 @@ function ActivityTab({ events }: { events: AuditEvent[] }) {
                       {event.summary}
                     </p>
                     <AdminStatusPill tone="muted">
-                      {event.entityType}
+                      {auditEntityLabels[event.entityType] ?? event.entityType}
                     </AdminStatusPill>
+                    {formatAuditScore(event.metadata) ? (
+                      <AdminStatusPill tone="accent">
+                        {formatAuditScore(event.metadata)}
+                      </AdminStatusPill>
+                    ) : null}
                   </div>
+                  {matchNames.get(event.entityId) ? (
+                    <p className="mt-1 truncate text-sm text-white/70">
+                      {matchNames.get(event.entityId)}
+                    </p>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-[var(--color-muted)]">
                     <span>{event.actorEmail}</span>
                     <span>{formatScheduledAt(event.createdAt)}</span>
-                    <span>ID {event.entityId.slice(0, 8)}</span>
                   </div>
                 </div>
               </article>
@@ -1030,8 +1073,24 @@ export default async function AdminTournamentWorkspacePage({
     }
 
     if (activeTab === "actividad") {
-      const events = await getTournamentAuditEvents(tournament.id);
-      return <ActivityTab events={events} />;
+      // Los eventos guardan solo el id de la entidad: resolvemos los partidos
+      // para poder nombrarlos en vez de mostrar un UUID cortado.
+      const [events, auditMatches, auditTeams] = await Promise.all([
+        getTournamentAuditEvents(tournament.id),
+        getAdminMatches(tournament.id),
+        getAdminTeams(tournament.id),
+      ]);
+      const teamNames = new Map(auditTeams.map((team) => [team.id, team.name]));
+      const matchNames = new Map(
+        auditMatches.map((match) => [
+          match.id,
+          `${match.roundLabel} · ${
+            teamNames.get(match.homeTeamId ?? "") ?? "Por definirse"
+          } vs ${teamNames.get(match.awayTeamId ?? "") ?? "Por definirse"}`,
+        ]),
+      );
+
+      return <ActivityTab events={events} matchNames={matchNames} />;
     }
 
     return await renderSummaryTab(tournament, selectedCategory, categories);

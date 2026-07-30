@@ -10,6 +10,7 @@ import { type ActionState } from "@/features/football-tournaments/actions";
 import { AdminSheet } from "./AdminSheet";
 import {
   MatchEditDialog,
+  MatchResultClearDialog,
   MatchResultForm,
   MatchViewerAssignmentForm,
 } from "./AdminForms";
@@ -28,6 +29,7 @@ interface MatchSidePanelProps {
   updateResultAction: MatchAction;
   assignViewerAction: MatchAction;
   updateMatchAction: MatchAction;
+  clearResultAction: (prevState: ActionState) => Promise<ActionState>;
   onClose: () => void;
   roundLabel?: string;
 }
@@ -41,9 +43,14 @@ export function MatchSidePanel({
   updateResultAction,
   assignViewerAction,
   updateMatchAction,
+  clearResultAction,
   onClose,
   roundLabel,
 }: MatchSidePanelProps) {
+  const hasResult =
+    match.status === "completed" &&
+    match.homeScore !== null &&
+    match.awayScore !== null;
   const getTeamName = (id: string | null) => {
     if (!id) return "Por definirse";
     return teams.find((t) => t.id === id)?.name || "Por definirse";
@@ -73,6 +80,7 @@ export function MatchSidePanel({
           Resultado
         </h4>
         <MatchResultForm
+          key={`${match.id}-${match.homeScore}-${match.awayScore}-${match.status}`}
           action={updateResultAction}
           homeScore={match.homeScore}
           awayScore={match.awayScore}
@@ -96,12 +104,18 @@ export function MatchSidePanel({
         />
       </div>
 
-      <div className="flex justify-center border-t border-white/5 p-5 pb-8">
+      <div className="grid gap-2 border-t border-white/5 p-5 pb-8">
         <MatchEditDialog
           action={updateMatchAction}
           match={match}
           teams={teams}
         />
+        {hasResult ? (
+          <MatchResultClearDialog
+            action={clearResultAction}
+            roundLabel={roundLabel ?? match.roundLabel}
+          />
+        ) : null}
       </div>
     </AdminSheet>
   );
