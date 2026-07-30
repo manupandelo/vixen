@@ -19,6 +19,11 @@ import {
   buildGroupPlayoffFixture as buildGroupPlayoffFixtureModel,
   buildLeagueFixture,
 } from "./fixture";
+import {
+  findAdvancementBlock,
+  resolveMatchWinner,
+  type MatchSlot,
+} from "./bracket-progression";
 import { teamPhotoMaxBytes, teamPhotoMaxLabel } from "./limits";
 import {
   fixtureGenerationSchema,
@@ -75,6 +80,7 @@ type MatchResultMatchContext = {
   away_team_id: string | null;
   group_id: string | null;
   next_match_id: string | null;
+  next_match_slot: string | null;
   result_locked_at?: string | null;
   football_tournaments:
     | {
@@ -2166,6 +2172,115 @@ export async function assignMatchViewer(
   };
 }
 
+function validateMatchTeams(match: MatchResultMatchContext): ActionState | null {
+  if (!match.home_team_id || !match.away_team_id) {
+    return {
+      ok: false,
+      message: "Faltan definir los equipos de este partido.",
+    };
+  }
+
+  return null;
+}
+
+type AdvancementOutcome =
+  | { blocked: string; advancedTo?: never }
+  | { blocked?: never; advancedTo: string | null };
+
+type AdvancementTargetRow = {
+  id: string;
+  round_label: string;
+  home_team_id: string | null;
+  away_team_id: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  status: string;
+};
+
+/**
+ * Siembra al ganador en el partido siguiente de la llave.
+ *
+ * El chequeo de bloqueo corre ANTES de guardar el resultado, para que nunca
+ * quede el resultado escrito y el avance a medias.
+ */
+async function advanceWinnerToNextMatch(
+  supabase: SupabaseServerClient,
+  match: MatchResultMatchContext,
+  result: {
+    home_score: number;
+    away_score: number;
+    home_penalty_score: number | null;
+    away_penalty_score: number | null;
+  },
+): Promise<AdvancementOutcome> {
+  if (!match.next_match_id || !match.next_match_slot) {
+    return { advancedTo: null };
+  }
+
+  const winnerTeamId = resolveMatchWinner({
+    homeTeamId: match.home_team_id,
+    awayTeamId: match.away_team_id,
+    homeScore: result.home_score,
+    awayScore: result.away_score,
+    homePenaltyScore: result.home_penalty_score,
+    awayPenaltyScore: result.away_penalty_score,
+  });
+
+  if (!winnerTeamId) return { advancedTo: null };
+
+  const slot = match.next_match_slot as MatchSlot;
+  const { data: nextMatch, error } = await supabase
+    .from("football_matches")
+    .select(
+      "id, round_label, home_team_id, away_team_id, home_score, away_score, status",
+    )
+    .eq("id", match.next_match_id)
+    .maybeSingle();
+
+  if (error || !nextMatch) {
+    return { blocked: "No pudimos encontrar el partido siguiente de la llave." };
+  }
+
+  const target = nextMatch as unknown as AdvancementTargetRow;
+
+  const block = findAdvancementBlock(
+    {
+      roundLabel: target.round_label,
+      homeTeamId: target.home_team_id,
+      awayTeamId: target.away_team_id,
+      homeScore: target.home_score,
+      awayScore: target.away_score,
+      status: target.status,
+    },
+    slot,
+    winnerTeamId,
+  );
+
+  if (block) return { blocked: block };
+
+  const currentTeamId =
+    slot === "home" ? target.home_team_id : target.away_team_id;
+
+  if (currentTeamId === winnerTeamId) {
+    return { advancedTo: target.round_label };
+  }
+
+  const { error: advanceError } = await supabase
+    .from("football_matches")
+    .update(
+      slot === "home"
+        ? { home_team_id: winnerTeamId }
+        : { away_team_id: winnerTeamId },
+    )
+    .eq("id", target.id);
+
+  if (advanceError) {
+    return { blocked: advanceError.message };
+  }
+
+  return { advancedTo: target.round_label };
+}
+
 export async function updateMatchResult(
   tournamentId: string,
   matchId: string,
@@ -2186,7 +2301,7 @@ export async function updateMatchResult(
   const { data: match, error: matchError } = await supabase
     .from("football_matches")
     .select(
-      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, result_locked_at, football_tournaments(format)",
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, result_locked_at, football_tournaments(format)",
     )
     .eq("id", matchId)
     .eq("tournament_id", tournamentId)
@@ -2200,6 +2315,10 @@ export async function updateMatchResult(
   }
 
   const matchContext = match as unknown as MatchResultMatchContext;
+  const teamsError = validateMatchTeams(matchContext);
+
+  if (teamsError) return teamsError;
+
   const penaltyError = validatePenaltyResult(payload, matchContext);
 
   if (penaltyError) return penaltyError;
@@ -2213,6 +2332,16 @@ export async function updateMatchResult(
     };
   }
   const validatedEventRows = eventRows.rows ?? [];
+
+  const advancement = await advanceWinnerToNextMatch(
+    supabase,
+    matchContext,
+    payload.result,
+  );
+
+  if (advancement.blocked) {
+    return { ok: false, message: advancement.blocked };
+  }
 
   const { data: updatedMatch, error } = await supabase
     .from("football_matches")
@@ -2272,7 +2401,9 @@ export async function updateMatchResult(
 
   return {
     ok: true,
-    message: "Resultado guardado.",
+    message: advancement.advancedTo
+      ? `Resultado guardado. El ganador pasa a ${advancement.advancedTo}.`
+      : "Resultado guardado.",
   };
 }
 
@@ -2295,7 +2426,7 @@ export async function submitViewerMatchResult(
   const { data: match, error: matchError } = await supabase
     .from("football_matches")
     .select(
-      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, result_locked_at, football_tournaments(format)",
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, result_locked_at, football_tournaments(format)",
     )
     .eq("id", matchId)
     .eq("assigned_viewer_id", viewer.id)
@@ -2317,6 +2448,10 @@ export async function submitViewerMatchResult(
   }
 
   const matchContext = match as unknown as MatchResultMatchContext;
+  const teamsError = validateMatchTeams(matchContext);
+
+  if (teamsError) return teamsError;
+
   const penaltyError = validatePenaltyResult(payload, matchContext);
 
   if (penaltyError) return penaltyError;
@@ -2330,6 +2465,16 @@ export async function submitViewerMatchResult(
     };
   }
   const validatedEventRows = eventRows.rows ?? [];
+
+  const advancement = await advanceWinnerToNextMatch(
+    supabase,
+    matchContext,
+    payload.result,
+  );
+
+  if (advancement.blocked) {
+    return { ok: false, message: advancement.blocked };
+  }
 
   const eventError = await replaceMatchEvents(
     supabase,
@@ -2384,6 +2529,8 @@ export async function submitViewerMatchResult(
 
   return {
     ok: true,
-    message: "Resultado final cargado.",
+    message: advancement.advancedTo
+      ? `Resultado final cargado. El ganador pasa a ${advancement.advancedTo}.`
+      : "Resultado final cargado.",
   };
 }
