@@ -697,7 +697,7 @@ function TeamsTab({
               <TeamCard
                 key={team.id}
                 team={team}
-                rosterEntries={teamRosterEntries}
+                playerCount={teamRosterEntries.length}
                 editSlot={
                   <TeamEditDialog
                     action={updateTeam.bind(null, tournament.id, team.id)}
@@ -726,7 +726,7 @@ function TeamsTab({
                     teamName={team.name}
                   />
                 }
-                renderRosterEntry={(entry) => (
+                rosterSlot={teamRosterEntries.map((entry) => (
                   <div
                     key={entry.id}
                     className="grid gap-2 rounded-[0.7rem] border border-white/8 bg-black/10 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
@@ -758,7 +758,7 @@ function TeamsTab({
                       />
                     </div>
                   </div>
-                )}
+                ))}
               />
             );
           })}

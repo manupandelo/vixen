@@ -4,31 +4,31 @@ import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import { Users } from "lucide-react";
 
-import type {
-  AdminRosterEntry,
-  AdminTeam,
-} from "@/features/football-tournaments/data";
+import type { AdminTeam } from "@/features/football-tournaments/data";
 import { AdminSheet } from "./AdminSheet";
 
 type TeamCardProps = {
   team: AdminTeam;
-  rosterEntries: AdminRosterEntry[];
+  /**
+   * El plantel llega ya renderizado desde el server component: no se pueden
+   * cruzar funciones a un client component.
+   */
+  playerCount: number;
+  rosterSlot: ReactNode;
   editSlot: ReactNode;
   removeSlot: ReactNode;
   rosterCreateSlot: ReactNode;
-  renderRosterEntry: (entry: AdminRosterEntry) => ReactNode;
 };
 
 export function TeamCard({
   team,
-  rosterEntries,
+  playerCount,
+  rosterSlot,
   editSlot,
   removeSlot,
   rosterCreateSlot,
-  renderRosterEntry,
 }: TeamCardProps) {
   const [rosterOpen, setRosterOpen] = useState(false);
-  const playerCount = rosterEntries.length;
   const playerLabel =
     playerCount === 1 ? "1 jugador" : `${playerCount} jugadores`;
 
@@ -96,9 +96,7 @@ export function TeamCard({
           {rosterCreateSlot}
 
           {playerCount > 0 ? (
-            <div className="grid gap-2">
-              {rosterEntries.map((entry) => renderRosterEntry(entry))}
-            </div>
+            <div className="grid gap-2">{rosterSlot}</div>
           ) : (
             <p className="text-sm text-[var(--color-muted)]">
               Sin jugadores cargados.
