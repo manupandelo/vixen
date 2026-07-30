@@ -668,6 +668,7 @@ describe("formatPublicTournament", () => {
         status: "completed",
         isKnockout: true,
         nextMatchId: null,
+        nextMatchSlot: null,
       },
     ]);
     expect(tournament.standings).toEqual([

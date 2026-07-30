@@ -1,3 +1,5 @@
+import type { MatchSlot } from "./bracket-progression";
+
 export const footballTournamentStatuses = [
   "draft",
   "published",
@@ -154,6 +156,7 @@ export type PublicFootballMatch = FootballMatchForStandings & {
   homeTeamShortName: string | null;
   awayTeamShortName: string | null;
   nextMatchId?: string | null;
+  nextMatchSlot?: MatchSlot | null;
   isKnockout: boolean;
 };
 
@@ -169,6 +172,7 @@ export type UIFootballMatch = {
   awayScore: number | null;
   status: FootballMatchStatus;
   nextMatchId?: string | null;
+  nextMatchSlot?: MatchSlot | null;
   isKnockout: boolean;
   assignedViewerId?: string | null;
   resultLockedAt?: string | null;

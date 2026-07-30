@@ -26,6 +26,7 @@ export function PublicBracketViewer({
     awayScore: match.awayScore,
     status: match.status,
     nextMatchId: match.nextMatchId,
+    nextMatchSlot: match.nextMatchSlot,
     isKnockout: match.isKnockout,
   }));
 

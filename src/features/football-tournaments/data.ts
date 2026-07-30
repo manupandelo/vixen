@@ -7,6 +7,7 @@ import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 
+import type { MatchSlot } from "./bracket-progression";
 import { calculateStandings } from "./standings";
 import type {
   FootballDocumentationStatus,
@@ -44,6 +45,7 @@ type MatchRow = {
   status: FootballMatchStatus;
   group_id?: string | null;
   next_match_id?: string | null;
+  next_match_slot?: string | null;
   [key: string]: unknown;
 };
 
@@ -133,7 +135,8 @@ const publicTournamentWithCategoriesSelect = `
       away_score,
       status,
       group_id,
-      next_match_id
+      next_match_id,
+      next_match_slot
     )
   )
 `;
@@ -171,7 +174,8 @@ const publicTournamentSummarySelect = `
       away_score,
       status,
       group_id,
-      next_match_id
+      next_match_id,
+      next_match_slot
     )
   )
 `;
@@ -276,6 +280,7 @@ type AdminMatchRow = {
   result_locked_at: string | null;
   result_submitted_by: string | null;
   next_match_id?: string | null;
+  next_match_slot?: string | null;
   group_id: string | null;
   football_match_events?: MatchEventRow[] | null;
 };
@@ -457,6 +462,7 @@ export type AdminMatch = {
   resultLockedAt: string | null;
   resultSubmittedBy: string | null;
   nextMatchId?: string | null;
+  nextMatchSlot?: MatchSlot | null;
   isKnockout: boolean;
   events: MatchResultEvent[];
 };
@@ -632,6 +638,7 @@ function formatPublicMatches(
         format === "cup" ||
         (format === "league_playoff" && match.group_id === null),
       nextMatchId: match.next_match_id ?? null,
+      nextMatchSlot: (match.next_match_slot as MatchSlot | null) ?? null,
     }))
     .sort((left, right) => {
       const dateOrder = compareNullableIsoDate(
@@ -1332,6 +1339,7 @@ export function formatAdminMatch(row: AdminMatchRow): AdminMatch {
     resultLockedAt: row.result_locked_at,
     resultSubmittedBy: row.result_submitted_by,
     nextMatchId: row.next_match_id ?? null,
+    nextMatchSlot: (row.next_match_slot as MatchSlot | null) ?? null,
     isKnockout: row.group_id === null,
     events: (row.football_match_events ?? []).map((event) => ({
       rosterEntryId: event.roster_entry_id,
@@ -1726,7 +1734,7 @@ export async function getAdminMatches(
   let query = supabase
     .from("football_matches")
     .select(
-      "id, category_id, round_label, scheduled_at, home_team_id, away_team_id, home_score, away_score, home_penalty_score, away_penalty_score, status, assigned_viewer_id, result_locked_at, result_submitted_by, next_match_id, group_id, football_match_events(roster_entry_id, player_id, team_id, event_type, quantity)",
+      "id, category_id, round_label, scheduled_at, home_team_id, away_team_id, home_score, away_score, home_penalty_score, away_penalty_score, status, assigned_viewer_id, result_locked_at, result_submitted_by, next_match_id, next_match_slot, group_id, football_match_events(roster_entry_id, player_id, team_id, event_type, quantity)",
     )
     .eq("tournament_id", tournamentId)
     .order("scheduled_at", { ascending: true });
