@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -23,6 +22,7 @@ import {
   GroupPlayoffGeneratorDialog,
 } from "@/components/admin/AdminForms";
 import { LeagueMatchesViewer } from "@/components/admin/LeagueMatchesViewer";
+import { TeamCard } from "@/components/admin/TeamCard";
 import { BracketResultsViewer } from "@/components/admin/BracketResultsViewer";
 import { CategoryDropdown } from "@/components/admin/CategoryDropdown";
 import {
@@ -687,150 +687,82 @@ function TeamsTab({
       </div>
 
       {teams.length > 0 ? (
-        <AdminPanel>
-          <AdminTableHeader className="grid-cols-[1.1fr_0.8fr_0.8fr_1fr]">
-            <span>Equipo</span>
-            <span>Capitán</span>
-            <span>Teléfono</span>
-            <span>Notas privadas</span>
-          </AdminTableHeader>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {teams.map((team) => {
+            const teamRosterEntries = rosterEntries.filter(
+              (entry) => entry.teamId === team.id,
+            );
 
-          <div className="divide-y divide-white/10">
-            {teams.map((team) => {
-              const teamRosterEntries = rosterEntries.filter(
-                (entry) => entry.teamId === team.id,
-              );
-              const updateTeamAction = updateTeam.bind(
-                null,
-                tournament.id,
-                team.id,
-              );
-              const removeTeamAction = removeTeamFromTournament.bind(
-                null,
-                tournament.id,
-                team.id,
-              );
-
-              return (
-                <article
-                  key={team.id}
-                  className="grid gap-4 px-5 py-5 lg:grid-cols-[1.1fr_0.8fr_0.8fr_1fr] lg:items-start"
-                >
-                  <AdminMobileField label="Equipo">
-                    <div className="flex min-w-0 items-center gap-4">
-                      {team.photoUrl ? (
-                        <Image
-                          src={team.photoUrl}
-                          alt=""
-                          width={56}
-                          height={56}
-                          unoptimized
-                          className="size-14 shrink-0 rounded-[0.8rem] object-cover"
-                        />
-                      ) : (
-                        <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-[0.8rem] border border-white/10 bg-white/[0.035] text-lg font-semibold text-white">
-                          {team.name.slice(0, 2).toUpperCase()}
-                        </span>
-                      )}
-                      <div className="min-w-0">
-                        <h3 className="truncate text-lg font-semibold text-white">
-                          {team.name}
-                        </h3>
-                        <p className="mt-1 text-sm text-[var(--color-muted)]">
-                          {team.shortName ?? "Sin nombre corto"}
-                        </p>
-                      </div>
-                    </div>
-                  </AdminMobileField>
-
-                  <AdminMobileField label="Capitán">
-                    <p className="text-sm text-white/76">
-                      {team.captainName ?? "Sin capitán"}
-                    </p>
-                  </AdminMobileField>
-
-                  <AdminMobileField label="Teléfono">
-                    <p className="text-sm text-white/76">
-                      {team.contactPhone ?? "Sin teléfono"}
-                    </p>
-                  </AdminMobileField>
-
-                  <AdminMobileField label="Notas privadas">
-                    <p className="text-sm leading-6 text-white/70">
-                      {team.notes ?? "Sin notas privadas"}
-                    </p>
-                    <div className="mt-3 grid gap-2">
-                      <TeamEditDialog action={updateTeamAction} team={team} />
-                      <TeamRemoveDialog
-                        action={removeTeamAction}
-                        teamName={team.name}
+            return (
+              <TeamCard
+                key={team.id}
+                team={team}
+                rosterEntries={teamRosterEntries}
+                editSlot={
+                  <TeamEditDialog
+                    action={updateTeam.bind(null, tournament.id, team.id)}
+                    team={team}
+                  />
+                }
+                removeSlot={
+                  <TeamRemoveDialog
+                    action={removeTeamFromTournament.bind(
+                      null,
+                      tournament.id,
+                      team.id,
+                    )}
+                    teamName={team.name}
+                  />
+                }
+                rosterCreateSlot={
+                  <RosterEntryCreateDialog
+                    action={createRosterEntry.bind(
+                      null,
+                      tournament.id,
+                      selectedCategory?.id as string,
+                      team.id,
+                    )}
+                    availablePlayers={availablePlayers}
+                    teamName={team.name}
+                  />
+                }
+                renderRosterEntry={(entry) => (
+                  <div
+                    key={entry.id}
+                    className="grid gap-2 rounded-[0.7rem] border border-white/8 bg-black/10 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+                  >
+                    <span className="text-sm font-semibold text-white/72">
+                      {entry.shirtNumber !== null
+                        ? `#${entry.shirtNumber}`
+                        : "S/N"}
+                    </span>
+                    <span className="min-w-0 truncate text-sm font-semibold text-white">
+                      {getRosterDisplayName(entry)}
+                    </span>
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                      <RosterEntryEditDialog
+                        action={updateRosterEntry.bind(
+                          null,
+                          tournament.id,
+                          entry.id,
+                        )}
+                        rosterEntry={entry}
+                      />
+                      <RosterEntryRemoveDialog
+                        action={deleteRosterEntry.bind(
+                          null,
+                          tournament.id,
+                          entry.id,
+                        )}
+                        playerName={getRosterDisplayName(entry)}
                       />
                     </div>
-                    <div className="mt-5 rounded-[0.8rem] border border-white/10 bg-white/[0.025] p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-                          Plantel
-                        </p>
-                        <RosterEntryCreateDialog
-                          action={createRosterEntry.bind(
-                            null,
-                            tournament.id,
-                            selectedCategory?.id as string,
-                            team.id,
-                          )}
-                          availablePlayers={availablePlayers}
-                          teamName={team.name}
-                        />
-                      </div>
-
-                      {teamRosterEntries.length > 0 ? (
-                        <div className="mt-3 grid gap-2">
-                          {teamRosterEntries.map((entry) => (
-                            <div
-                              key={entry.id}
-                              className="grid gap-2 rounded-[0.7rem] border border-white/8 bg-black/10 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
-                            >
-                              <span className="text-sm font-semibold text-white/72">
-                                {entry.shirtNumber !== null
-                                  ? `#${entry.shirtNumber}`
-                                  : "S/N"}
-                              </span>
-                              <span className="min-w-0 truncate text-sm font-semibold text-white">
-                                {getRosterDisplayName(entry)}
-                              </span>
-                              <div className="flex flex-wrap gap-2 sm:justify-end">
-                                <RosterEntryEditDialog
-                                  action={updateRosterEntry.bind(
-                                    null,
-                                    tournament.id,
-                                    entry.id,
-                                  )}
-                                  rosterEntry={entry}
-                                />
-                                <RosterEntryRemoveDialog
-                                  action={deleteRosterEntry.bind(
-                                    null,
-                                    tournament.id,
-                                    entry.id,
-                                  )}
-                                  playerName={getRosterDisplayName(entry)}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mt-3 text-sm text-[var(--color-muted)]">
-                          Sin jugadores cargados.
-                        </p>
-                      )}
-                    </div>
-                  </AdminMobileField>
-                </article>
-              );
-            })}
-          </div>
-        </AdminPanel>
+                  </div>
+                )}
+              />
+            );
+          })}
+        </div>
       ) : (
         <AdminEmptyState
           eyebrow="Sin equipos"
