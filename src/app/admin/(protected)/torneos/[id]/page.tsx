@@ -310,6 +310,18 @@ function CategoryMatchStatsPanel({
   const stats = buildCategoryMatchStats(matches, teams, rosterEntries);
   const hasEvents = stats.scorers.length > 0 || stats.discipline.length > 0;
 
+  // Sin eventos, las tres columnas eran tres cajas vacías ocupando media pantalla.
+  if (!hasEvents) {
+    return (
+      <AdminPanel className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+        <p className="text-sm text-[var(--color-muted)]">
+          Todavía no hay goles ni tarjetas cargados en esta categoría.
+        </p>
+        <AdminStatusPill tone="muted">Sin eventos</AdminStatusPill>
+      </AdminPanel>
+    );
+  }
+
   return (
     <AdminPanel className="p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">

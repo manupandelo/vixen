@@ -43,8 +43,8 @@ export function BracketResultsViewer({
   const selectedMatch = matches.find((m) => m.id === selectedMatchId);
 
   return (
-    <div className="flex gap-4">
-      <div className="flex-1 min-w-0">
+    <>
+      <div className="w-full">
         <TournamentBracket 
           matches={uiMatches} 
           onMatchClick={(m) => setSelectedMatchId(m.id)}
@@ -67,6 +67,6 @@ export function BracketResultsViewer({
           onClose={() => setSelectedMatchId(null)}
         />
       ) : null}
-    </div>
+    </>
   );
 }

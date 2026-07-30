@@ -2971,6 +2971,16 @@ export function MatchResultForm({
   );
   const hasEventOverflow =
     assignedHomeGoals > localHome || assignedAwayGoals > localAway;
+  const hasBothTeams = Boolean(homeTeamId && awayTeamId);
+  const loadedEventCount = useMemo(
+    () =>
+      Object.values(eventCounts).reduce(
+        (total, counts) =>
+          total + counts.goals + counts.yellowCards + counts.redCards,
+        0,
+      ),
+    [eventCounts],
+  );
 
   const updateScore = (team: "home" | "away", delta: number) => {
     if (team === "home") {
@@ -3061,55 +3071,44 @@ export function MatchResultForm({
       </div>
 
       {shouldShowPenalties ? (
-        <div className="grid gap-3 rounded-2xl border border-[var(--color-accent)]/25 bg-[var(--color-accent)]/5 p-4">
-          <div>
-            <p className={labelClass}>Definición por penales</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-              Necesario en copa o playoff cuando el partido termina empatado.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="grid gap-2">
-              <span className="text-xs font-semibold text-white/70">Local</span>
-              <input
-                type="number"
-                name="homePenaltyScore"
-                min={0}
-                value={localHomePenalties}
-                onChange={(event) =>
-                  setLocalHomePenalties(Math.max(0, Number(event.target.value)))
-                }
-                className={inputClass}
-              />
-            </label>
-            <label className="grid gap-2">
-              <span className="text-xs font-semibold text-white/70">
-                Visitante
-              </span>
-              <input
-                type="number"
-                name="awayPenaltyScore"
-                min={0}
-                value={localAwayPenalties}
-                onChange={(event) =>
-                  setLocalAwayPenalties(Math.max(0, Number(event.target.value)))
-                }
-                className={inputClass}
-              />
-            </label>
-          </div>
+        <div className="grid gap-2 rounded-xl border border-[var(--color-accent)]/25 bg-[var(--color-accent)]/5 p-3 sm:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] sm:items-center sm:gap-3">
+          <span className={labelClass}>Penales</span>
+          <input
+            type="number"
+            name="homePenaltyScore"
+            aria-label="Penales del local"
+            min={0}
+            value={localHomePenalties}
+            onChange={(event) =>
+              setLocalHomePenalties(Math.max(0, Number(event.target.value)))
+            }
+            className={inputClass}
+          />
+          <input
+            type="number"
+            name="awayPenaltyScore"
+            aria-label="Penales del visitante"
+            min={0}
+            value={localAwayPenalties}
+            onChange={(event) =>
+              setLocalAwayPenalties(Math.max(0, Number(event.target.value)))
+            }
+            className={inputClass}
+          />
         </div>
       ) : null}
 
       {hasRosterEntries ? (
-        <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-          <div>
-            <p className={labelClass}>Detalle opcional</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-              Podés asignar goles y tarjetas ahora, o guardar solo el resultado.
-            </p>
-          </div>
-
+        <details className="rounded-2xl border border-white/10 bg-white/[0.025]">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-semibold text-white marker:content-none">
+            <span>Detalle de goles y tarjetas</span>
+            <span className="text-xs font-semibold text-[var(--color-muted)]">
+              {loadedEventCount > 0
+                ? `${loadedEventCount} cargados`
+                : "Opcional"}
+            </span>
+          </summary>
+          <div className="grid gap-4 border-t border-white/8 p-4">
           <div className="grid gap-2 rounded-xl border border-white/8 bg-black/10 p-3 text-xs font-semibold text-white/70 sm:grid-cols-2">
             <p
               className={
@@ -3241,7 +3240,8 @@ export function MatchResultForm({
               </div>
             ) : null,
           )}
-        </div>
+          </div>
+        </details>
       ) : (
         <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-xs leading-5 text-[var(--color-muted)]">
           No hay jugadores cargados para estos equipos. Podés guardar el
@@ -3249,9 +3249,16 @@ export function MatchResultForm({
         </div>
       )}
 
+      {!hasBothTeams ? (
+        <p className="rounded-xl border border-[var(--color-warm)]/25 bg-[var(--color-warm)]/8 p-3 text-xs leading-5 text-white/80">
+          Faltan definir los equipos de este partido. Se van a completar cuando
+          se carguen los resultados de la ronda anterior.
+        </p>
+      ) : null}
+
       <button
         type="submit"
-        disabled={isPending || hasEventOverflow}
+        disabled={isPending || hasEventOverflow || !hasBothTeams}
         className={`${primaryButtonClass} w-full sm:w-full`}
       >
         {isPending ? "Guardando..." : submitLabel}

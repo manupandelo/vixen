@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useLayoutEffect } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import type { UIFootballMatch } from "@/features/football-tournaments/types";
 import { reconstructTreeFromMatches } from "@/lib/tree-reconstructor";
@@ -34,6 +34,20 @@ export function TournamentBracket({
   }, [matches]);
 
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [measuredWidth, setMeasuredWidth] = useState(900);
+
+  useLayoutEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      setMeasuredWidth(entry.contentRect.width);
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const highlightedNodes = useMemo(() => {
     const highlight = new Set<string>();
@@ -68,16 +82,25 @@ export function TournamentBracket({
   const rowHeight = 120;
   const innerHeight = baseSize * 2 * rowHeight + 96;
 
-  const availableWidth = 900;
-  const availableHeight = 600;
-  const fitScale = Math.min(1.1, Math.min(availableWidth / innerWidth, availableHeight / innerHeight));
-  const isSmall = innerWidth <= availableWidth && innerHeight <= availableHeight;
+  const availableWidth = measuredWidth || 900;
+  // La altura sigue al contenido en vez de quedar clavada en 600px:
+  // una llave de 3 partidos no necesita media pantalla en negro.
+  const viewportHeight = Math.min(680, Math.max(320, innerHeight));
+  const fitScale = Math.min(
+    1.1,
+    Math.min(availableWidth / innerWidth, viewportHeight / innerHeight),
+  );
+  const isSmall = innerWidth <= availableWidth && innerHeight <= viewportHeight;
   const minZoom = isSmall ? fitScale : fitScale * 0.5;
 
   return (
-    <div className="overflow-hidden h-[600px] w-full bg-[#111111] sm:rounded-xl sm:border border-white/5 relative isolate">
+    <div
+      ref={containerRef}
+      style={{ height: viewportHeight }}
+      className="relative isolate w-full overflow-hidden bg-[#111111] sm:rounded-xl sm:border border-white/5"
+    >
       <TransformWrapper
-        key={`bracket-${matches.length}`}
+        key={`bracket-${matches.length}-${Math.round(availableWidth)}`}
         initialScale={fitScale}
         minScale={minZoom}
         maxScale={2.5}
