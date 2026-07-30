@@ -72,9 +72,6 @@ export function MatchSidePanel({
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
           Resultado
         </h4>
-        <p className="mb-4 text-xs leading-5 text-[var(--color-muted)]">
-          {homeTeamName} vs {awayTeamName}
-        </p>
         <MatchResultForm
           action={updateResultAction}
           homeScore={match.homeScore}
@@ -83,6 +80,8 @@ export function MatchSidePanel({
           awayPenaltyScore={match.awayPenaltyScore}
           homeTeamId={match.homeTeamId}
           awayTeamId={match.awayTeamId}
+          homeTeamName={homeTeamName}
+          awayTeamName={awayTeamName}
           isKnockout={isKnockout}
           rosterEntries={rosterEntries}
           matchEvents={match.events}

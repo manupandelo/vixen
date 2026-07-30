@@ -78,7 +78,7 @@ export default async function ViewerDashboardPage() {
                 <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-white/44">
                   {dayLabel}
                 </h2>
-                <div className="grid gap-3 lg:grid-cols-2">
+                <div className="grid items-start gap-3 lg:grid-cols-2">
                   {dayMatches.map((match) => (
                     <ViewerMatchCard
                       key={match.id}

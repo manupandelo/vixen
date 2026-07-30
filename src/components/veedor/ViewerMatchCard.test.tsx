@@ -80,7 +80,13 @@ describe("ViewerMatchCard", () => {
 
     expect(screen.getByText("Por definirse")).toBeInTheDocument();
     expect(screen.queryByText("Equipo local")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cargar final" })).toBeDisabled();
+    // Sin los dos equipos no se muestra formulario: solo el estado de espera.
+    expect(
+      screen.queryByRole("button", { name: "Cargar final" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/se habilita cuando se cargue la ronda anterior/i),
+    ).toBeInTheDocument();
   });
 
   it("muestra el resultado bloqueado sin formulario", () => {
@@ -91,9 +97,28 @@ describe("ViewerMatchCard", () => {
       resultLockedAt: "2026-07-30T12:00:00-03:00",
     });
 
-    expect(screen.getByText("2 - 1")).toBeInTheDocument();
+    // El marcador cargado se lee como scoreboard: cada equipo con su número.
+    expect(screen.getByText("Roma")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("Boca Juniors")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Cargar final" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("marca al ganador en la fila del equipo", () => {
+    renderCard({
+      ...baseMatch,
+      homeScore: 2,
+      awayScore: 1,
+      resultLockedAt: "2026-07-30T12:00:00-03:00",
+    });
+
+    const winnerRow = screen.getByText("Roma").closest("div");
+    const loserRow = screen.getByText("Boca Juniors").closest("div");
+
+    expect(winnerRow?.className).toContain("bg-white/[0.03]");
+    expect(loserRow?.className).not.toContain("bg-white/[0.03]");
   });
 });

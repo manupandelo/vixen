@@ -245,6 +245,13 @@ type MatchResultFormProps = {
   matchEvents?: MatchResultEvent[];
   submitLabel?: string;
   /**
+   * Con los dos nombres, el marcador se dibuja como scoreboard: una fila por
+   * equipo con su propio stepper. Evita que quien carga tenga que mapear
+   * "Local/Visitante" a los equipos reales.
+   */
+  homeTeamName?: string | null;
+  awayTeamName?: string | null;
+  /**
    * Cuando está presente, guardar pide confirmación antes de mandar el form.
    * Se usa en el panel de veedor, donde cargar el resultado lo deja bloqueado.
    */
@@ -2932,6 +2939,8 @@ export function MatchResultForm({
   rosterEntries = [],
   matchEvents = EMPTY_MATCH_EVENTS,
   submitLabel = "Guardar resultado",
+  homeTeamName = null,
+  awayTeamName = null,
   confirmTitle,
 }: MatchResultFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -3023,88 +3032,108 @@ export function MatchResultForm({
 
   return (
     <form ref={formRef} action={formAction} className="grid gap-6">
-      <div className="grid grid-cols-2 gap-4">
-        {/* Local */}
-        <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-center">
-          <span className={labelClass}>Local</span>
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              aria-label="Restar gol local"
-              onClick={() => updateScore("home", -1)}
-              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
-            >
-              <Minus size={24} />
-            </button>
-            <span className="text-3xl font-bold text-white tabular-nums">
-              {localHome}
-            </span>
-            <button
-              type="button"
-              aria-label="Sumar gol local"
-              onClick={() => updateScore("home", 1)}
-              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
-            >
-              <Plus size={24} />
-            </button>
-          </div>
-          <input type="hidden" name="homeScore" value={localHome} />
-        </div>
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
+        {(
+          [
+            {
+              side: "home" as const,
+              name: homeTeamName,
+              score: localHome,
+              penalties: localHomePenalties,
+              setPenalties: setLocalHomePenalties,
+              scoreName: "homeScore",
+              penaltyName: "homePenaltyScore",
+              label: "local",
+              isWinner: localHome > localAway,
+            },
+            {
+              side: "away" as const,
+              name: awayTeamName,
+              score: localAway,
+              penalties: localAwayPenalties,
+              setPenalties: setLocalAwayPenalties,
+              scoreName: "awayScore",
+              penaltyName: "awayPenaltyScore",
+              label: "visitante",
+              isWinner: localAway > localHome,
+            },
+          ]
+        ).map((row, index) => (
+          <div
+            key={row.side}
+            className={`relative flex items-center gap-3 px-3 py-3 ${
+              index === 0 ? "border-b border-white/8" : ""
+            } ${row.isWinner ? "bg-white/[0.03]" : ""}`}
+          >
+            {row.isWinner ? (
+              <span
+                aria-hidden="true"
+                className="absolute inset-y-0 left-0 w-1 bg-[var(--color-accent)]"
+              />
+            ) : null}
 
-        {/* Visitante */}
-        <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-center">
-          <span className={labelClass}>Visitante</span>
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              aria-label="Restar gol visitante"
-              onClick={() => updateScore("away", -1)}
-              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
+            <span
+              className={`min-w-0 flex-1 truncate text-sm font-semibold ${
+                row.isWinner ? "text-white" : "text-white/70"
+              }`}
             >
-              <Minus size={24} />
-            </button>
-            <span className="text-3xl font-bold text-white tabular-nums">
-              {localAway}
+              {row.name ?? (row.side === "home" ? "Local" : "Visitante")}
             </span>
-            <button
-              type="button"
-              aria-label="Sumar gol visitante"
-              onClick={() => updateScore("away", 1)}
-              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
-            >
-              <Plus size={24} />
-            </button>
+
+            {shouldShowPenalties ? (
+              <label className="flex shrink-0 items-center gap-1">
+                <span className="text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-white/40">
+                  Pen
+                </span>
+                <input
+                  type="number"
+                  name={row.penaltyName}
+                  aria-label={`Penales del ${row.label}`}
+                  min={0}
+                  value={row.penalties}
+                  onChange={(event) =>
+                    row.setPenalties(Math.max(0, Number(event.target.value)))
+                  }
+                  className="w-14 rounded-lg border border-white/12 bg-black/20 px-2 py-1.5 text-center text-sm font-semibold text-white tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                />
+              </label>
+            ) : null}
+
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                aria-label={`Restar gol ${row.label}`}
+                onClick={() => updateScore(row.side, -1)}
+                className="inline-flex size-11 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
+              >
+                <Minus size={20} />
+              </button>
+              <span
+                className={`w-8 text-center text-2xl font-bold tabular-nums ${
+                  row.isWinner ? "text-[var(--color-accent)]" : "text-white"
+                }`}
+              >
+                {row.score}
+              </span>
+              <button
+                type="button"
+                aria-label={`Sumar gol ${row.label}`}
+                onClick={() => updateScore(row.side, 1)}
+                className="inline-flex size-11 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+
+            <input type="hidden" name={row.scoreName} value={row.score} />
           </div>
-          <input type="hidden" name="awayScore" value={localAway} />
-        </div>
+        ))}
       </div>
 
       {shouldShowPenalties ? (
-        <div className="grid gap-2 rounded-xl border border-[var(--color-accent)]/25 bg-[var(--color-accent)]/5 p-3 sm:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] sm:items-center sm:gap-3">
-          <span className={labelClass}>Penales</span>
-          <input
-            type="number"
-            name="homePenaltyScore"
-            aria-label="Penales del local"
-            min={0}
-            value={localHomePenalties}
-            onChange={(event) =>
-              setLocalHomePenalties(Math.max(0, Number(event.target.value)))
-            }
-            className={inputClass}
-          />
-          <input
-            type="number"
-            name="awayPenaltyScore"
-            aria-label="Penales del visitante"
-            min={0}
-            value={localAwayPenalties}
-            onChange={(event) =>
-              setLocalAwayPenalties(Math.max(0, Number(event.target.value)))
-            }
-            className={inputClass}
-          />
-        </div>
+        <p className="-mt-3 text-xs leading-5 text-[var(--color-muted)]">
+          Empate: cargá los penales para definir quién pasa.
+        </p>
       ) : null}
 
       {hasRosterEntries ? (
