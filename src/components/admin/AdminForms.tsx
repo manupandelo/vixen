@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import {
   useActionState,
+  useId,
   useMemo,
   useReducer,
   useState,
@@ -243,6 +244,11 @@ type MatchResultFormProps = {
   rosterEntries?: MatchResultRosterEntry[];
   matchEvents?: MatchResultEvent[];
   submitLabel?: string;
+  /**
+   * Cuando está presente, guardar pide confirmación antes de mandar el form.
+   * Se usa en el panel de veedor, donde cargar el resultado lo deja bloqueado.
+   */
+  confirmTitle?: string;
 };
 
 type MatchEventCountField = "goals" | "yellowCards" | "redCards";
@@ -2926,7 +2932,9 @@ export function MatchResultForm({
   rosterEntries = [],
   matchEvents = EMPTY_MATCH_EVENTS,
   submitLabel = "Guardar resultado",
+  confirmTitle,
 }: MatchResultFormProps) {
+  const formId = useId();
   const [state, formAction, isPending] = useActionState(action, initialState);
   useActionToast(state);
 
@@ -3013,7 +3021,7 @@ export function MatchResultForm({
   ) => eventCounts[rosterEntryId]?.[field] ?? 0;
 
   return (
-    <form action={formAction} className="grid gap-6">
+    <form id={formId} action={formAction} className="grid gap-6">
       <div className="grid grid-cols-2 gap-4">
         {/* Local */}
         <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-center">
@@ -3256,13 +3264,52 @@ export function MatchResultForm({
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending || hasEventOverflow || !hasBothTeams}
-        className={`${primaryButtonClass} w-full sm:w-full`}
-      >
-        {isPending ? "Guardando..." : submitLabel}
-      </button>
+      {confirmTitle ? (
+        <AlertDialog.Root>
+          <AlertDialog.Trigger asChild>
+            <button
+              type="button"
+              disabled={isPending || hasEventOverflow || !hasBothTeams}
+              className={`${primaryButtonClass} w-full sm:w-full`}
+            >
+              {isPending ? "Guardando..." : submitLabel}
+            </button>
+          </AlertDialog.Trigger>
+          <AlertDialog.Portal>
+            <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+            <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(28rem,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+              <AlertDialog.Title className="text-xl font-semibold text-white">
+                Confirmá el resultado final
+              </AlertDialog.Title>
+              <AlertDialog.Description className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
+                Vas a cargar {localHome} - {localAway} como resultado final de{" "}
+                {confirmTitle}. Después solo un administrador puede corregirlo.
+              </AlertDialog.Description>
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <AlertDialog.Cancel asChild>
+                  <button type="button" className={compactButtonClass}>
+                    Volver
+                  </button>
+                </AlertDialog.Cancel>
+                <AlertDialog.Action asChild>
+                  {/* form=... asocia el submit aunque el diálogo viva en un portal */}
+                  <button type="submit" form={formId} className={primaryButtonClass}>
+                    {submitLabel}
+                  </button>
+                </AlertDialog.Action>
+              </div>
+            </AlertDialog.Content>
+          </AlertDialog.Portal>
+        </AlertDialog.Root>
+      ) : (
+        <button
+          type="submit"
+          disabled={isPending || hasEventOverflow || !hasBothTeams}
+          className={`${primaryButtonClass} w-full sm:w-full`}
+        >
+          {isPending ? "Guardando..." : submitLabel}
+        </button>
+      )}
     </form>
   );
 }

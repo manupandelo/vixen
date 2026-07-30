@@ -1,34 +1,43 @@
 import type { Metadata } from "next";
 import { LogOut } from "lucide-react";
 
-import { MatchResultForm } from "@/components/admin/AdminForms";
+import { ViewerMatchCard } from "@/components/veedor/ViewerMatchCard";
 import {
   logoutAdmin,
   submitViewerMatchResult,
 } from "@/features/football-tournaments/actions";
-import { getViewerAssignedMatches } from "@/features/football-tournaments/data";
+import {
+  getViewerAssignedMatches,
+  type ViewerAssignedMatch,
+} from "@/features/football-tournaments/data";
 
 export const metadata: Metadata = {
   title: "Veedor — Vixen Club",
   description: "Carga privada de resultados asignados.",
 };
 
-const scheduledAtFormatter = new Intl.DateTimeFormat("es-AR", {
-  dateStyle: "short",
-  timeStyle: "short",
+const dayFormatter = new Intl.DateTimeFormat("es-AR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
   timeZone: "America/Argentina/Buenos_Aires",
 });
 
-function formatScheduledAt(value: string | null) {
-  if (!value) return "Sin fecha";
+function getDayLabel(value: string | null) {
+  if (!value) return "Sin fecha asignada";
 
-  return scheduledAtFormatter.format(new Date(value));
+  return dayFormatter.format(new Date(value));
 }
 
-function formatScore(homeScore: number | null, awayScore: number | null) {
-  if (homeScore === null || awayScore === null) return "Pendiente";
+function groupByDay(matches: ViewerAssignedMatch[]) {
+  const groups = new Map<string, ViewerAssignedMatch[]>();
 
-  return `${homeScore} - ${awayScore}`;
+  for (const match of matches) {
+    const label = getDayLabel(match.scheduledAt);
+    groups.set(label, [...(groups.get(label) ?? []), match]);
+  }
+
+  return groups;
 }
 
 export default async function ViewerDashboardPage() {
@@ -42,7 +51,9 @@ export default async function ViewerDashboardPage() {
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
               Veedor
             </p>
-            <h1 className="mt-4 text-display-sm">Mis partidos asignados</h1>
+            <h1 className="mt-4 text-2xl font-semibold text-white sm:text-3xl">
+              Mis partidos asignados
+            </h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
               Cargá solo resultados finales. Una vez guardado, el resultado
               queda bloqueado y cualquier corrección la hace un administrador.
@@ -61,69 +72,24 @@ export default async function ViewerDashboardPage() {
         </section>
 
         {matches.length > 0 ? (
-          <section className="grid gap-4">
-            {matches.map((match) => {
-              const submitResultAction = submitViewerMatchResult.bind(
-                null,
-                match.id,
-              );
-
-              return (
-                <article
-                  key={match.id}
-                  className="grid gap-5 border-t border-white/10 pt-5 first:border-t-0 first:pt-0 lg:grid-cols-[1fr_0.8fr_0.85fr]"
-                >
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-                      {match.tournamentName}
-                    </p>
-                    <h2 className="mt-2 text-xl font-semibold text-white">
-                      {match.roundLabel}
-                    </h2>
-                    <p className="mt-2 text-sm text-white/78">
-                      {match.homeTeamName} vs {match.awayTeamName}
-                    </p>
-                    <p className="mt-2 text-sm text-[var(--color-muted)]">
-                      {formatScheduledAt(match.scheduledAt)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/44">
-                      Resultado
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-white">
-                      {formatScore(match.homeScore, match.awayScore)}
-                    </p>
-                    <p className="mt-2 text-sm text-[var(--color-muted)]">
-                      {match.resultLockedAt
-                        ? "Resultado final cargado"
-                        : "Pendiente de carga"}
-                    </p>
-                  </div>
-
-                  {match.resultLockedAt ? (
-                    <div className="rounded-[0.8rem] border border-white/10 bg-white/[0.025] p-4 text-sm leading-6 text-[var(--color-muted)]">
-                      Para corregir este resultado, avisale a un administrador.
-                    </div>
-                  ) : (
-                    <MatchResultForm
-                      action={submitResultAction}
-                      homeScore={match.homeScore}
-                      awayScore={match.awayScore}
-                      homePenaltyScore={match.homePenaltyScore}
-                      awayPenaltyScore={match.awayPenaltyScore}
-                      homeTeamId={match.homeTeamId}
-                      awayTeamId={match.awayTeamId}
-                      isKnockout={match.isKnockout}
-                      rosterEntries={match.rosterEntries}
-                      submitLabel="Cargar final"
+          <div className="grid gap-8">
+            {[...groupByDay(matches).entries()].map(([dayLabel, dayMatches]) => (
+              <section key={dayLabel} className="grid gap-3">
+                <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-white/44">
+                  {dayLabel}
+                </h2>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {dayMatches.map((match) => (
+                    <ViewerMatchCard
+                      key={match.id}
+                      match={match}
+                      submitAction={submitViewerMatchResult.bind(null, match.id)}
                     />
-                  )}
-                </article>
-              );
-            })}
-          </section>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         ) : (
           <section className="rounded-[0.95rem] border border-white/10 bg-white/[0.025] p-6 sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">

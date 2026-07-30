@@ -42,8 +42,11 @@ describe("ViewerDashboardPage", () => {
     expect(
       screen.getByRole("heading", { name: "Mis partidos asignados" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Apertura Vixen")).toBeInTheDocument();
-    expect(screen.getByText("Norte vs Sur")).toBeInTheDocument();
+    expect(screen.getByText(/Apertura Vixen · Fecha 1/)).toBeInTheDocument();
+    // Cada equipo va en su propia línea, no en una sola frase.
+    expect(screen.getByText("Norte")).toBeInTheDocument();
+    expect(screen.getByText("Sur")).toBeInTheDocument();
+    expect(screen.getByText("Sin fecha asignada")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Cerrar sesión" }),
     ).toBeInTheDocument();

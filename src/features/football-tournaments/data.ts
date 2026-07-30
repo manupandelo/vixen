@@ -1847,6 +1847,81 @@ export async function getStaffAuditEvents(
   return ((data ?? []) as AuditEventRow[]).map(formatAuditEvent);
 }
 
+export type AdminPendingMatch = {
+  id: string;
+  tournamentId: string;
+  tournamentName: string;
+  categoryName: string | null;
+  roundLabel: string;
+  homeTeamName: string | null;
+  awayTeamName: string | null;
+  scheduledAt: string | null;
+  isOverdue: boolean;
+  href: string;
+};
+
+type PendingMatchRow = {
+  id: string;
+  tournament_id: string;
+  round_label: string;
+  scheduled_at: string | null;
+  football_tournaments: { name: string } | { name: string }[] | null;
+  football_tournament_categories: { name: string } | { name: string }[] | null;
+  home_team: { name: string } | { name: string }[] | null;
+  away_team: { name: string } | { name: string }[] | null;
+};
+
+/**
+ * Partidos que todavía esperan resultado, ordenados por urgencia:
+ * vencidos primero, después por fecha, y al final los que no tienen fecha.
+ */
+export async function getAdminPendingMatches(
+  limit = 8,
+): Promise<AdminPendingMatch[]> {
+  await requireAdmin();
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("football_matches")
+    .select(
+      `
+        id,
+        tournament_id,
+        round_label,
+        scheduled_at,
+        football_tournaments(name),
+        football_tournament_categories(name),
+        home_team:football_teams!football_matches_home_team_id_fkey(name),
+        away_team:football_teams!football_matches_away_team_id_fkey(name)
+      `,
+    )
+    .in("status", ["scheduled", "postponed"])
+    .order("scheduled_at", { ascending: true, nullsFirst: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const now = Date.now();
+
+  return ((data ?? []) as unknown as PendingMatchRow[]).map((row) => ({
+    id: row.id,
+    tournamentId: row.tournament_id,
+    tournamentName: firstRelatedRow(row.football_tournaments)?.name ?? "Torneo",
+    categoryName:
+      firstRelatedRow(row.football_tournament_categories)?.name ?? null,
+    roundLabel: row.round_label,
+    homeTeamName: firstRelatedRow(row.home_team)?.name ?? null,
+    awayTeamName: firstRelatedRow(row.away_team)?.name ?? null,
+    scheduledAt: row.scheduled_at,
+    isOverdue: row.scheduled_at
+      ? new Date(row.scheduled_at).getTime() < now
+      : false,
+    href: `/admin/torneos/${row.tournament_id}?tab=partidos`,
+  }));
+}
+
 export async function getAdminViewers(): Promise<StaffProfile[]> {
   await requireAdmin();
 
