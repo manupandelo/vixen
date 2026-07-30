@@ -1396,6 +1396,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: "team-1",
               awayTeamId: "team-2",
               nextMatchId: "match-3",
+              isHomeSlotInNextMatch: true,
             },
             {
               id: "match-2",
@@ -1404,6 +1405,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: "team-3",
               awayTeamId: "team-4",
               nextMatchId: "match-3",
+              isHomeSlotInNextMatch: false,
             },
             {
               id: "match-3",
@@ -1412,6 +1414,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: null,
               awayTeamId: null,
               nextMatchId: null,
+              isHomeSlotInNextMatch: true,
             },
           ],
         }),
@@ -1423,6 +1426,77 @@ describe("football tournament admin actions", () => {
       message:
         "Falta aplicar la migración de llaves de copa en Supabase. Ejecutá la migración 20260701020000_update_football_matches_for_brackets.sql y recargá el schema cache.",
     });
+  });
+
+  it("persiste el slot destino de cada cruce al generar la llave", async () => {
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValue({
+      matchCount: 0,
+      groupCount: 0,
+      hasStructure: false,
+    });
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock.mockResolvedValue({ data: null, error: null });
+
+    const state = await generateBracketFixture(
+      "tournament-1",
+      "category-1",
+      { ok: false, message: "" },
+      formData({
+        bracketData: JSON.stringify({
+          startsAt: "2026-08-01",
+          daysBetweenRounds: 7,
+          initialMatches: [
+            {
+              id: "semi-a",
+              depth: 1,
+              roundLabel: "Semifinal",
+              homeTeamId: "team-a",
+              awayTeamId: "team-b",
+              nextMatchId: "final",
+              isHomeSlotInNextMatch: true,
+            },
+            {
+              id: "semi-b",
+              depth: 1,
+              roundLabel: "Semifinal",
+              homeTeamId: "team-c",
+              awayTeamId: "team-d",
+              nextMatchId: "final",
+              isHomeSlotInNextMatch: false,
+            },
+            {
+              id: "final",
+              depth: 0,
+              roundLabel: "Final",
+              homeTeamId: null,
+              awayTeamId: null,
+              nextMatchId: null,
+              isHomeSlotInNextMatch: true,
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(state.ok).toBe(true);
+
+    const inserted = insertMock.mock.calls[0][0] as Array<{
+      round_label: string;
+      next_match_slot: string | null;
+    }>;
+    const slots = inserted
+      .filter((row) => row.round_label === "Semifinal")
+      .map((row) => row.next_match_slot)
+      .sort();
+
+    expect(slots).toEqual(["away", "home"]);
+    expect(
+      inserted.find((row) => row.round_label === "Final")?.next_match_slot,
+    ).toBeNull();
   });
 
   it("maps temporary bracket node ids to database UUIDs before inserting", async () => {
@@ -1453,6 +1527,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: "team-1",
               awayTeamId: "team-2",
               nextMatchId: "finaltemp",
+              isHomeSlotInNextMatch: true,
             },
             {
               id: "abc1234",
@@ -1461,6 +1536,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: "team-3",
               awayTeamId: "team-4",
               nextMatchId: "finaltemp",
+              isHomeSlotInNextMatch: false,
             },
             {
               id: "finaltemp",
@@ -1469,6 +1545,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: null,
               awayTeamId: null,
               nextMatchId: null,
+              isHomeSlotInNextMatch: true,
             },
           ],
         }),

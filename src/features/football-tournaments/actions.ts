@@ -51,6 +51,7 @@ type BracketFixtureNode = {
   homeTeamId: string | null;
   awayTeamId: string | null;
   nextMatchId: string | null;
+  isHomeSlotInNextMatch: boolean;
 };
 
 type BracketFixturePayload = {
@@ -164,7 +165,8 @@ function isBracketFixtureNode(value: unknown): value is BracketFixtureNode {
     typeof node.depth === "number" &&
     isNullableString(node.homeTeamId) &&
     isNullableString(node.awayTeamId) &&
-    isNullableString(node.nextMatchId)
+    isNullableString(node.nextMatchId) &&
+    typeof node.isHomeSlotInNextMatch === "boolean"
   );
 }
 
@@ -1819,6 +1821,11 @@ export async function generateBracketFixture(
         home_team_id: node.homeTeamId,
         away_team_id: node.awayTeamId,
         next_match_id: nextMatchId,
+        next_match_slot: nextMatchId
+          ? node.isHomeSlotInNextMatch
+            ? "home"
+            : "away"
+          : null,
         home_score: null,
         away_score: null,
         status: "scheduled" as const,
@@ -1946,6 +1953,7 @@ export async function generateGroupPlayoffFixture(
       away_team_id: match.awayTeamId,
       group_id: groupIds.get(match.groupId) ?? null,
       next_match_id: null,
+      next_match_slot: null,
       home_score: null,
       away_score: null,
       status: "scheduled" as const,
@@ -1961,6 +1969,7 @@ export async function generateGroupPlayoffFixture(
     away_team_id: match.awayTeamId,
     group_id: null,
     next_match_id: match.nextMatchId,
+    next_match_slot: match.nextMatchSlot,
     home_score: null,
     away_score: null,
     status: "scheduled" as const,
