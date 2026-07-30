@@ -211,6 +211,7 @@ create table public.football_matches (
   away_team_id uuid references public.football_teams(id) on delete restrict,
   group_id uuid,
   next_match_id uuid references public.football_matches(id) on delete set null,
+  next_match_slot text,
   home_score integer,
   away_score integer,
   status football_match_status not null default 'scheduled',
@@ -251,6 +252,10 @@ create table public.football_matches (
         and home_score = away_score
       )
     ),
+  constraint football_matches_next_match_slot_check
+    check (next_match_slot is null or next_match_slot in ('home', 'away')),
+  constraint football_matches_next_match_slot_pair_check
+    check ((next_match_id is null) = (next_match_slot is null)),
   constraint football_matches_status_check check (
     (
       status = 'completed'
@@ -265,6 +270,11 @@ create table public.football_matches (
     )
   )
 );
+
+-- Dos partidos no pueden alimentar el mismo lado del partido siguiente.
+create unique index football_matches_next_match_slot_key
+on public.football_matches (next_match_id, next_match_slot)
+where next_match_id is not null;
 
 create table public.football_match_events (
   id uuid primary key default gen_random_uuid(),

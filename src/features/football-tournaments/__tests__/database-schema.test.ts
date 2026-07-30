@@ -293,6 +293,16 @@ describe("Supabase schema", () => {
     );
   });
 
+  it("records which slot of the next match a winner advances into", () => {
+    expect(schemaSql).toContain("next_match_slot text");
+    expect(schemaSql).toContain(
+      "check ((next_match_id is null) = (next_match_slot is null))",
+    );
+    expect(schemaSql).toContain(
+      "on public.football_matches (next_match_id, next_match_slot)",
+    );
+  });
+
   it("ships the hardening changes as a deployable migration", () => {
     expect(hardeningMigrationSql).toContain(
       "create index if not exists football_matches_category_schedule_idx",
