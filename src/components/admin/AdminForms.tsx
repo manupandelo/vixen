@@ -19,9 +19,9 @@ import {
 } from "lucide-react";
 import {
   useActionState,
-  useId,
   useMemo,
   useReducer,
+  useRef,
   useState,
   type Dispatch,
   type ReactNode,
@@ -2934,7 +2934,8 @@ export function MatchResultForm({
   submitLabel = "Guardar resultado",
   confirmTitle,
 }: MatchResultFormProps) {
-  const formId = useId();
+  const formRef = useRef<HTMLFormElement>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(action, initialState);
   useActionToast(state);
 
@@ -3021,7 +3022,7 @@ export function MatchResultForm({
   ) => eventCounts[rosterEntryId]?.[field] ?? 0;
 
   return (
-    <form id={formId} action={formAction} className="grid gap-6">
+    <form ref={formRef} action={formAction} className="grid gap-6">
       <div className="grid grid-cols-2 gap-4">
         {/* Local */}
         <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-center">
@@ -3265,7 +3266,7 @@ export function MatchResultForm({
       ) : null}
 
       {confirmTitle ? (
-        <AlertDialog.Root>
+        <AlertDialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialog.Trigger asChild>
             <button
               type="button"
@@ -3291,12 +3292,16 @@ export function MatchResultForm({
                     Volver
                   </button>
                 </AlertDialog.Cancel>
-                <AlertDialog.Action asChild>
-                  {/* form=... asocia el submit aunque el diálogo viva en un portal */}
-                  <button type="submit" form={formId} className={primaryButtonClass}>
-                    {submitLabel}
-                  </button>
-                </AlertDialog.Action>
+                <button
+                  type="button"
+                  className={primaryButtonClass}
+                  onClick={() => {
+                    setConfirmOpen(false);
+                    formRef.current?.requestSubmit();
+                  }}
+                >
+                  Confirmar y cargar
+                </button>
               </div>
             </AlertDialog.Content>
           </AlertDialog.Portal>

@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import {
@@ -2204,7 +2205,6 @@ type AdvancementTargetRow = {
  * quede el resultado escrito y el avance a medias.
  */
 async function advanceWinnerToNextMatch(
-  supabase: SupabaseServerClient,
   match: MatchResultMatchContext,
   result: {
     home_score: number;
@@ -2229,6 +2229,11 @@ async function advanceWinnerToNextMatch(
   if (!winnerTeamId) return { advancedTo: null };
 
   const slot = match.next_match_slot as MatchSlot;
+  // Con service role: la policy "Viewers can submit assigned unlocked results"
+  // exige status='completed' y marcador cargado en la fila que se toca, y el
+  // partido siguiente todavía no los tiene. Con el cliente del usuario el
+  // WITH CHECK rechaza la siembra y el veedor no podría guardar nada.
+  const supabase = createSupabaseAdminClient();
   const { data: nextMatch, error } = await supabase
     .from("football_matches")
     .select(
@@ -2334,7 +2339,6 @@ export async function updateMatchResult(
   const validatedEventRows = eventRows.rows ?? [];
 
   const advancement = await advanceWinnerToNextMatch(
-    supabase,
     matchContext,
     payload.result,
   );
@@ -2467,7 +2471,6 @@ export async function submitViewerMatchResult(
   const validatedEventRows = eventRows.rows ?? [];
 
   const advancement = await advanceWinnerToNextMatch(
-    supabase,
     matchContext,
     payload.result,
   );

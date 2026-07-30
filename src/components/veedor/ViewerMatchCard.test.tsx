@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -44,6 +44,30 @@ describe("ViewerMatchCard", () => {
       await screen.findByText(/solo un administrador puede corregirlo/i),
     ).toBeInTheDocument();
     expect(submitAction).not.toHaveBeenCalled();
+  });
+
+  it("manda el resultado despues de confirmar", async () => {
+    const submitAction = vi.fn(async () => ({
+      ok: true,
+      message: "Resultado final cargado.",
+    }));
+    const user = userEvent.setup();
+
+    renderCard(baseMatch, submitAction);
+
+    await user.click(screen.getByRole("button", { name: "Cargar final" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Confirmar y cargar" }),
+    );
+
+    await waitFor(() => expect(submitAction).toHaveBeenCalledTimes(1));
+
+    const [, submitted] = submitAction.mock.calls[0] as unknown as [
+      unknown,
+      FormData,
+    ];
+    expect(submitted.get("homeScore")).toBe("0");
+    expect(submitted.get("awayScore")).toBe("0");
   });
 
   it("no deja cargar cuando falta definir un equipo", () => {

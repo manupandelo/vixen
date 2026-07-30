@@ -23,6 +23,12 @@ const storageFromMock = vi.hoisted(() => vi.fn());
 const uploadMock = vi.hoisted(() => vi.fn());
 const getPublicUrlMock = vi.hoisted(() => vi.fn());
 const createSupabaseServerClientMock = vi.hoisted(() => vi.fn());
+const adminUpdateMock = vi.hoisted(() => vi.fn());
+const adminEqMock = vi.hoisted(() => vi.fn());
+const adminMaybeSingleMock = vi.hoisted(() => vi.fn());
+const adminSelectMock = vi.hoisted(() => vi.fn());
+const adminFromMock = vi.hoisted(() => vi.fn());
+const createSupabaseAdminClientMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({
   redirect: redirectMock,
@@ -35,6 +41,10 @@ vi.mock("next/cache", () => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: createSupabaseServerClientMock,
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createSupabaseAdminClient: createSupabaseAdminClientMock,
 }));
 
 vi.mock("@/features/football-tournaments/data", () => ({
@@ -131,6 +141,22 @@ function createSupabaseMock() {
   });
 
   createSupabaseServerClientMock.mockResolvedValue(supabase);
+
+  // El avance en la llave corre con service role: la política RLS del veedor
+  // exige status='completed' en la fila que toca, y el partido siguiente
+  // todavía no lo está.
+  adminEqMock.mockReturnValue({ maybeSingle: adminMaybeSingleMock });
+  adminSelectMock.mockReturnValue({ eq: adminEqMock });
+  adminUpdateMock.mockReturnValue({ eq: adminEqMock });
+  adminFromMock.mockReturnValue({
+    select: adminSelectMock,
+    update: adminUpdateMock,
+  });
+  adminEqMock.mockReturnValue({
+    maybeSingle: adminMaybeSingleMock,
+    error: null,
+  });
+  createSupabaseAdminClientMock.mockReturnValue({ from: adminFromMock });
 
   return supabase;
 }
@@ -2038,8 +2064,8 @@ describe("football tournament admin actions", () => {
       },
       error: null,
     });
-    // 2. el partido siguiente (pre-flight del avance)
-    maybeSingleMock.mockResolvedValueOnce({
+    // 2. el partido siguiente lo lee el cliente con service role
+    adminMaybeSingleMock.mockResolvedValueOnce({
       data: {
         id: "match-final",
         round_label: "Final",
@@ -2051,6 +2077,7 @@ describe("football tournament admin actions", () => {
       },
       error: null,
     });
+    adminEqMock.mockReturnValueOnce({ maybeSingle: adminMaybeSingleMock });
     // 3. el update del resultado
     maybeSingleMock.mockResolvedValueOnce({
       data: { id: "match-1" },
@@ -2068,8 +2095,10 @@ describe("football tournament admin actions", () => {
       ok: true,
       message: "Resultado guardado. El ganador pasa a Final.",
     });
-    expect(updateMock).toHaveBeenCalledWith({ away_team_id: "team-away" });
-    expect(eqMock).toHaveBeenCalledWith("id", "match-final");
+    // La siembra va por service role, no por el cliente del usuario:
+    // la policy RLS del veedor rechaza tocar un partido sin resultado.
+    expect(adminUpdateMock).toHaveBeenCalledWith({ away_team_id: "team-away" });
+    expect(adminEqMock).toHaveBeenCalledWith("id", "match-final");
   });
 
   it("bloquea la correccion si la ronda siguiente ya tiene resultado", async () => {
@@ -2093,7 +2122,7 @@ describe("football tournament admin actions", () => {
       },
       error: null,
     });
-    maybeSingleMock.mockResolvedValueOnce({
+    adminMaybeSingleMock.mockResolvedValueOnce({
       data: {
         id: "match-final",
         round_label: "Final",
