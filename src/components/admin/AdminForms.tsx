@@ -1721,6 +1721,14 @@ function RosterEntryForm({
                 </label>
               </div>
 
+              <details className="rounded-xl border border-white/10 bg-white/[0.02]">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold text-white marker:content-none">
+                  <span>Datos adicionales</span>
+                  <span className="text-xs font-semibold text-[var(--color-muted)]">
+                    Opcional
+                  </span>
+                </summary>
+                <div className="grid gap-4 border-t border-white/8 p-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-2">
                   <FieldLabel
@@ -1800,6 +1808,8 @@ function RosterEntryForm({
                   placeholder="Opcional"
                 />
               </label>
+                </div>
+              </details>
             </div>
           )}
         </section>
@@ -1821,6 +1831,16 @@ function RosterEntryForm({
               placeholder="Sin número"
             />
           </label>
+        </div>
+
+        <details className="rounded-xl border border-white/10 bg-white/[0.02]">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold text-white marker:content-none">
+            <span>Inscripción</span>
+            <span className="text-xs font-semibold text-[var(--color-muted)]">
+              Estado y documentación
+            </span>
+          </summary>
+          <div className="grid gap-4 border-t border-white/8 p-4 sm:grid-cols-2">
           <label className="grid gap-2">
             <span className={labelClass}>Estado</span>
             <select
@@ -1838,9 +1858,6 @@ function RosterEntryForm({
               ))}
             </select>
           </label>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2">
             <span className={labelClass}>Apto médico</span>
             <select
@@ -1879,22 +1896,23 @@ function RosterEntryForm({
               ))}
             </select>
           </label>
-        </div>
 
-        <label className="grid gap-2">
-          <FieldLabel value={rosterNotes} max={footballFormLimits.rosterNotes}>
-            Notas de inscripción
-          </FieldLabel>
-          <textarea
-            name="rosterNotes"
-            aria-label="Notas de inscripción"
-            value={rosterNotes}
-            onChange={(event) => setRosterNotes(event.target.value)}
-            rows={3}
-            className={`${inputClass} resize-y py-3 leading-6`}
-            placeholder="Opcional"
-          />
-        </label>
+          <label className="grid gap-2 sm:col-span-2">
+            <FieldLabel value={rosterNotes} max={footballFormLimits.rosterNotes}>
+              Notas de inscripción
+            </FieldLabel>
+            <textarea
+              name="rosterNotes"
+              aria-label="Notas de inscripción"
+              value={rosterNotes}
+              onChange={(event) => setRosterNotes(event.target.value)}
+              rows={3}
+              className={`${inputClass} resize-y py-3 leading-6`}
+              placeholder="Opcional"
+            />
+          </label>
+          </div>
+        </details>
       </section>
 
       <button
@@ -3291,12 +3309,7 @@ export function MatchResultForm({
           )}
           </div>
         </details>
-      ) : (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-xs leading-5 text-[var(--color-muted)]">
-          No hay jugadores cargados para estos equipos. Podés guardar el
-          resultado igual.
-        </div>
-      )}
+      ) : null}
 
       {!hasBothTeams ? (
         <p className="rounded-xl border border-[var(--color-warm)]/25 bg-[var(--color-warm)]/8 p-3 text-xs leading-5 text-white/80">
