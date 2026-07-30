@@ -82,6 +82,9 @@ type MatchResultMatchContext = {
   group_id: string | null;
   next_match_id: string | null;
   next_match_slot: string | null;
+  status?: string;
+  home_score?: number | null;
+  away_score?: number | null;
   result_locked_at?: string | null;
   football_tournaments:
     | {
@@ -2356,7 +2359,7 @@ export async function updateMatchResult(
   const { data: match, error: matchError } = await supabase
     .from("football_matches")
     .select(
-      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, result_locked_at, football_tournaments(format)",
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, status, home_score, away_score, result_locked_at, football_tournaments(format)",
     )
     .eq("id", matchId)
     .eq("tournament_id", tournamentId)
@@ -2477,7 +2480,7 @@ export async function clearMatchResult(
   const { data: match, error: matchError } = await supabase
     .from("football_matches")
     .select(
-      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, result_locked_at, football_tournaments(format)",
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, status, home_score, away_score, result_locked_at, football_tournaments(format)",
     )
     .eq("id", matchId)
     .eq("tournament_id", tournamentId)
@@ -2548,7 +2551,7 @@ export async function submitViewerMatchResult(
   const { data: match, error: matchError } = await supabase
     .from("football_matches")
     .select(
-      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, result_locked_at, football_tournaments(format)",
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, status, home_score, away_score, result_locked_at, football_tournaments(format)",
     )
     .eq("id", matchId)
     .eq("assigned_viewer_id", viewer.id)
@@ -2561,11 +2564,18 @@ export async function submitViewerMatchResult(
     };
   }
 
-  if (match.result_locked_at) {
+  const alreadyHasResult =
+    match.status === "completed" &&
+    match.home_score !== null &&
+    match.home_score !== undefined &&
+    match.away_score !== null &&
+    match.away_score !== undefined;
+
+  if (match.result_locked_at || alreadyHasResult) {
     return {
       ok: false,
       message:
-        "Este resultado ya fue cargado. Pedile a un administrador que lo corrija.",
+        "Este partido ya tiene resultado cargado. Pedile a un administrador que lo corrija.",
     };
   }
 

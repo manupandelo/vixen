@@ -82,6 +82,7 @@ export function MatchSidePanel({
         <MatchResultForm
           key={`${match.id}-${match.homeScore}-${match.awayScore}-${match.status}`}
           action={updateResultAction}
+          onSaved={onClose}
           homeScore={match.homeScore}
           awayScore={match.awayScore}
           homePenaltyScore={match.homePenaltyScore}

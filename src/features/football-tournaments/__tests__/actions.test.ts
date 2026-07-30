@@ -2188,6 +2188,46 @@ describe("football tournament admin actions", () => {
     expect(updateMock).not.toHaveBeenCalled();
   });
 
+  it("no deja al veedor pisar un resultado que ya cargo un admin", async () => {
+    requireViewerMock.mockResolvedValue({
+      id: "viewer-1",
+      email: "veedor@vixen.test",
+      role: "viewer",
+    });
+    maybeSingleMock.mockResolvedValue({
+      data: {
+        id: "match-1",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: null,
+        next_match_id: null,
+        next_match_slot: null,
+        // el admin lo dejo completo pero sin bloquear
+        status: "completed",
+        home_score: 2,
+        away_score: 1,
+        result_locked_at: null,
+        football_tournaments: { format: "cup" },
+      },
+      error: null,
+    });
+
+    const state = await submitViewerMatchResult(
+      "match-1",
+      { ok: false, message: "" },
+      formData({ homeScore: "0", awayScore: "3" }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message:
+        "Este partido ya tiene resultado cargado. Pedile a un administrador que lo corrija.",
+    });
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
   it("borra el resultado y desiembra al ganador del partido siguiente", async () => {
     requireAdminMock.mockResolvedValue({
       id: "admin-1",
@@ -2351,7 +2391,7 @@ describe("football tournament admin actions", () => {
     });
     expect(requireViewerMock).toHaveBeenCalledTimes(1);
     expect(selectMock).toHaveBeenCalledWith(
-      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, result_locked_at, football_tournaments(format)",
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, status, home_score, away_score, result_locked_at, football_tournaments(format)",
     );
     expect(eqMock).toHaveBeenCalledWith("id", "match-1");
     expect(eqMock).toHaveBeenCalledWith("assigned_viewer_id", "viewer-1");
@@ -2394,7 +2434,7 @@ describe("football tournament admin actions", () => {
 
     expect(state).toEqual<ActionState>({
       ok: false,
-      message: "Este resultado ya fue cargado. Pedile a un administrador que lo corrija.",
+      message: "Este partido ya tiene resultado cargado. Pedile a un administrador que lo corrija.",
     });
     expect(updateMock).not.toHaveBeenCalled();
   });

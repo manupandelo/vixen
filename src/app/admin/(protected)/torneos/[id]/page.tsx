@@ -23,6 +23,7 @@ import {
 } from "@/components/admin/AdminForms";
 import { LeagueMatchesViewer } from "@/components/admin/LeagueMatchesViewer";
 import { TeamCard } from "@/components/admin/TeamCard";
+import { ChampionBanner } from "@/components/admin/ChampionBanner";
 import { BracketResultsViewer } from "@/components/admin/BracketResultsViewer";
 import { CategoryDropdown } from "@/components/admin/CategoryDropdown";
 import {
@@ -80,6 +81,9 @@ import {
   type AuditEvent,
   type StaffProfile,
 } from "@/features/football-tournaments/data";
+import type { StandingRow } from "@/features/football-tournaments/types";
+import { resolveChampionTeamId } from "@/features/football-tournaments/champion";
+import { calculateStandings } from "@/features/football-tournaments/standings";
 
 type TournamentWorkspacePageProps = {
   params: Promise<{
@@ -478,6 +482,37 @@ function TournamentTabs({
   );
 }
 
+function findChampionName(
+  tournament: AdminTournament,
+  teams: Pick<AdminTeam, "id" | "name">[],
+  matches: AdminMatch[],
+) {
+  let standings: StandingRow[] = [];
+
+  if (tournament.format === "league") {
+    try {
+      standings = calculateStandings(
+        teams.map((team) => ({ id: team.id, name: team.name, shortName: null })),
+        matches,
+      );
+    } catch {
+      // Si los datos no cierran (un partido apunta a un equipo que ya no está
+      // en la categoría), no mostramos campeón, pero no tiramos la pantalla.
+      return null;
+    }
+  }
+
+  const championId = resolveChampionTeamId({
+    format: tournament.format,
+    matches,
+    standings,
+  });
+
+  if (!championId) return null;
+
+  return teams.find((team) => team.id === championId)?.name ?? null;
+}
+
 async function renderSummaryTab(
   tournament: AdminTournament,
   selectedCategory: AdminTournamentCategory | null,
@@ -540,8 +575,19 @@ async function renderSummaryTab(
               },
             ];
 
+  const championName = findChampionName(tournament, teams, matches);
+
   return (
     <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      {championName ? (
+        <div className="lg:col-span-2">
+          <ChampionBanner
+            teamName={championName}
+            categoryName={selectedCategory?.name}
+          />
+        </div>
+      ) : null}
+
       <AdminPanel className="p-5 sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)] sm:text-sm">
           Estado del torneo
@@ -802,6 +848,7 @@ function MatchesTab({
   const generateBracketAction = generateBracketFixture.bind(null, tournament.id, selectedCategory?.id as string);
   const generateGroupPlayoffAction = generateGroupPlayoffFixture.bind(null, tournament.id, selectedCategory?.id as string);
   const canGenerateFixture = !fixtureStructure.hasStructure;
+  const championName = findChampionName(tournament, teams, matches);
   const generatorDisabledReason = canGenerateFixture
     ? undefined
     : fixtureStructure.groupCount > 0 && fixtureStructure.matchCount === 0
@@ -820,6 +867,13 @@ function MatchesTab({
           </h2>
         </div>
       </div>
+
+      {championName ? (
+        <ChampionBanner
+          teamName={championName}
+          categoryName={selectedCategory?.name}
+        />
+      ) : null}
 
       {matches.length > 0 ? (
         <>

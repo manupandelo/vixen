@@ -251,6 +251,8 @@ type MatchResultFormProps = {
    */
   homeTeamName?: string | null;
   awayTeamName?: string | null;
+  /** Se llama cuando el resultado se guardo bien: el drawer se cierra solo. */
+  onSaved?: () => void;
   /**
    * Cuando está presente, guardar pide confirmación antes de mandar el form.
    * Se usa en el panel de veedor, donde cargar el resultado lo deja bloqueado.
@@ -2949,12 +2951,13 @@ export function MatchResultForm({
   submitLabel = "Guardar resultado",
   homeTeamName = null,
   awayTeamName = null,
+  onSaved,
   confirmTitle,
 }: MatchResultFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(action, initialState);
-  useActionToast(state);
+  useActionToast(state, { onSuccess: onSaved });
 
   const [localHome, setLocalHome] = useState(homeScore ?? 0);
   const [localAway, setLocalAway] = useState(awayScore ?? 0);

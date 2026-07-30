@@ -92,7 +92,11 @@ export function ViewerMatchCard({ match, submitAction }: ViewerMatchCardProps) {
   const homeName = match.homeTeamId ? match.homeTeamName : "Por definirse";
   const awayName = match.awayTeamId ? match.awayTeamName : "Por definirse";
   const hasBothTeams = Boolean(match.homeTeamId && match.awayTeamId);
-  const isLocked = Boolean(match.resultLockedAt);
+  const hasResult =
+    match.status === "completed" &&
+    match.homeScore !== null &&
+    match.awayScore !== null;
+  const isLocked = Boolean(match.resultLockedAt) || hasResult;
 
   const homeWins =
     match.homeScore !== null &&
@@ -114,9 +118,11 @@ export function ViewerMatchCard({ match, submitAction }: ViewerMatchCardProps) {
           {match.tournamentName} · {match.roundLabel}
         </p>
         <p className="mt-1 text-xs text-[var(--color-muted)]">
-          {isLocked && match.resultLockedAt
+          {match.resultLockedAt
             ? formatLoadedAt(match.resultLockedAt)
-            : "Sin fecha"}
+            : isLocked
+              ? "Cargado por un administrador"
+              : "Sin fecha"}
         </p>
       </div>
 
