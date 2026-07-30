@@ -1890,7 +1890,7 @@ export async function getAdminPendingMatches(
         round_label,
         scheduled_at,
         football_tournaments(name),
-        football_tournament_categories(name),
+        football_tournament_categories!football_matches_category_id_fkey(name),
         home_team:football_teams!football_matches_home_team_id_fkey(name),
         away_team:football_teams!football_matches_away_team_id_fkey(name)
       `,
