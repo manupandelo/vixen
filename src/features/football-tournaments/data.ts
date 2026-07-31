@@ -661,6 +661,15 @@ function formatPublicMatches(
         (format === "league_playoff" && match.group_id === null),
       nextMatchId: match.next_match_id ?? null,
       nextMatchSlot: (match.next_match_slot as MatchSlot | null) ?? null,
+      events: (match.football_match_events ?? [])
+        .filter((event) => event.player_id)
+        .map((event) => ({
+          playerId: event.player_id as string,
+          teamId: event.team_id,
+          displayName: "",
+          eventType: event.event_type,
+          quantity: event.quantity,
+        })),
     }))
     .sort((left, right) => {
       const dateOrder = compareNullableIsoDate(
@@ -1174,9 +1183,12 @@ async function withPlayerNames(
 ): Promise<PublicFootballTournamentWithCategories> {
   const playerIds = [
     ...new Set(
-      tournament.categories.flatMap((category) =>
-        (category.playerStats ?? []).map((stat) => stat.playerId),
-      ),
+      tournament.categories.flatMap((category) => [
+        ...(category.playerStats ?? []).map((stat) => stat.playerId),
+        ...category.matches.flatMap((match) =>
+          (match.events ?? []).map((event) => event.playerId),
+        ),
+      ]),
     ),
   ];
 
@@ -1206,6 +1218,13 @@ async function withPlayerNames(
       playerStats: (category.playerStats ?? []).map((stat) => ({
         ...stat,
         displayName: names.get(stat.playerId) ?? "Jugador",
+      })),
+      matches: category.matches.map((match) => ({
+        ...match,
+        events: (match.events ?? []).map((event) => ({
+          ...event,
+          displayName: names.get(event.playerId) ?? "Jugador",
+        })),
       })),
     })),
   };

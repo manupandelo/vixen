@@ -158,6 +158,14 @@ export type PublicFootballTournament = {
   categoriesCount?: number;
 };
 
+export type PublicMatchEvent = {
+  playerId: string;
+  teamId: string;
+  displayName: string;
+  eventType: "goal" | "yellow_card" | "red_card";
+  quantity: number;
+};
+
 export type PublicFootballMatch = FootballMatchForStandings & {
   roundLabel: string;
   scheduledAt: string | null;
@@ -168,6 +176,7 @@ export type PublicFootballMatch = FootballMatchForStandings & {
   nextMatchId?: string | null;
   nextMatchSlot?: MatchSlot | null;
   isKnockout: boolean;
+  events?: PublicMatchEvent[];
 };
 
 export type UIFootballMatch = {

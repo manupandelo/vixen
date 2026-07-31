@@ -5,6 +5,8 @@ import { X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { PublicFootballMatch } from "@/features/football-tournaments/types";
 
+import { MatchEventSummary } from "./MatchEventSummary";
+
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   weekday: "long",
   year: "numeric",
@@ -171,6 +173,14 @@ export function PublicMatchDetailOverlay({
                       </div>
 
                     </div>
+
+                    <MatchEventSummary
+                      events={match.events ?? []}
+                      homeTeamId={match.homeTeamId}
+                      awayTeamId={match.awayTeamId}
+                      homeTeamName={match.homeTeamName || "Local"}
+                      awayTeamName={match.awayTeamName || "Visitante"}
+                    />
                   </div>
                 </div>
               </motion.div>
