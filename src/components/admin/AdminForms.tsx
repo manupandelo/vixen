@@ -3279,7 +3279,7 @@ export function MatchResultForm({
                         <p className="min-w-0 flex-1 truncate text-sm text-white/85">
                           {entry.shirtNumber !== null ? (
                             <span className="mr-1.5 text-white/45 tabular-nums">
-                              {entry.shirtNumber}
+                              #{entry.shirtNumber}
                             </span>
                           ) : null}
                           {entry.displayName}

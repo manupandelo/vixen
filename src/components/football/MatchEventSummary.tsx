@@ -59,11 +59,9 @@ function Marker({
       <span className="sr-only">
         {count} {label}
       </span>
-      {count > 1 ? (
-        <span aria-hidden="true" className="tabular-nums text-white/60">
-          {count}
-        </span>
-      ) : null}
+      <span aria-hidden="true" className="tabular-nums text-white/60">
+        x{count}
+      </span>
     </span>
   );
 }
@@ -92,7 +90,7 @@ function TeamColumn({
               <span className="min-w-0 truncate">
                 {line.shirtNumber !== null ? (
                   <span className="mr-1.5 tabular-nums text-white/45">
-                    {line.shirtNumber}
+                    #{line.shirtNumber}
                   </span>
                 ) : null}
                 {line.displayName}

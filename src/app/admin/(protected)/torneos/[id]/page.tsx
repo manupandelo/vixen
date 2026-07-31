@@ -778,9 +778,9 @@ function TeamsTab({
                     key={entry.id}
                     className="flex items-center gap-2 rounded-lg border border-white/8 bg-black/10 py-1.5 pl-3 pr-1.5"
                   >
-                    <span className="w-7 shrink-0 text-sm font-semibold tabular-nums text-white/45">
+                    <span className="w-8 shrink-0 text-sm font-semibold tabular-nums text-white/45">
                       {entry.shirtNumber !== null
-                        ? entry.shirtNumber
+                        ? `#${entry.shirtNumber}`
                         : "–"}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
