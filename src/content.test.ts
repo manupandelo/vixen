@@ -7,7 +7,9 @@ describe("content", () => {
     expect(content.site.phoneDisplay).toBe("(011) 15 3773 0713");
     expect(content.site.address).toContain("Pilar");
     expect(content.site.whatsappNumber).toBe("5491137730713");
-    expect(content.site.sponsors).toContain("PUMA");
+    expect(content.site.sponsors.map((sponsor) => sponsor.name)).toContain(
+      "PUMA",
+    );
   });
 
   it("has the five primary nav links", () => {
@@ -51,7 +53,12 @@ describe("content", () => {
   });
 
   it("keeps premium-home sponsor and hero fact data aligned with the green-led redesign", () => {
-    expect(content.site.sponsors).toEqual(["PUMA"]);
+    expect(content.site.sponsors.map((sponsor) => sponsor.name)).toEqual([
+      "PUMA",
+      "Heineken",
+      "Fernet Branca",
+      "Prestigio",
+    ]);
     expect(content.hero.proof).toEqual([
       "Pilar / Del Viso",
       "Pádel",

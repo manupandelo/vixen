@@ -15,6 +15,8 @@ export const metadata: Metadata = {
     "Torneos americanos, clases y alquiler de canchas de pádel en Pilar.",
 };
 
+const facilityImages = ["/padel1.jpg", "/padel2.jpg", "/padel4.jpg"] as const;
+
 export default function PadelPage() {
   const { padel } = content;
   return (
@@ -62,36 +64,76 @@ export default function PadelPage() {
         </div>
 
         <SectionShell className="border-t border-white/5 py-16 sm:py-24">
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="mb-9 grid gap-5 border-b border-white/8 pb-7 lg:grid-cols-[0.78fr_1.22fr] lg:items-end">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+                Dentro de la cancha
+              </p>
+              <h2 className="mt-3 text-display-sm text-4xl sm:text-5xl">
+                Todo listo para jugar
+              </h2>
+            </div>
+            <p className="max-w-2xl text-[1rem]/7 text-[var(--color-muted)] lg:justify-self-end">
+              Canchas, iluminación y un tercer tiempo que forman parte de la
+              misma experiencia.
+            </p>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.22fr)_minmax(18rem,0.78fr)] lg:grid-rows-2">
             {padel.facilities.map((p, i) => {
-              const images = ["/padel1.jpg", "/padel2.jpg", "/padel4.jpg"];
+              const isFeatured = i === 0;
+
               return (
-                <div
+                <article
                   key={p.title}
-                  className="group relative overflow-hidden rounded-3xl border border-white/10 p-8 min-h-[22rem] flex flex-col justify-end transition-colors duration-500 hover:border-white/20"
+                  className={`group relative flex min-h-[22rem] flex-col justify-end overflow-hidden border border-white/9 transition-colors duration-500 hover:border-white/22 ${
+                    isFeatured
+                      ? "rounded-[1.5rem] lg:row-span-2 lg:min-h-[43rem]"
+                      : "rounded-xl lg:min-h-0"
+                  }`}
                 >
                   <div className="absolute inset-0 z-0">
                     <VenueImage
-                      src={images[i]}
+                      src={facilityImages[i]}
                       alt={p.title}
-                      className="w-full h-full object-cover opacity-70 transition-all duration-700 group-hover:scale-[1.05] group-hover:opacity-100"
+                      className={`h-full w-full object-cover transition duration-700 group-hover:scale-[1.035] ${
+                        isFeatured
+                          ? "opacity-88"
+                          : "opacity-75 group-hover:opacity-90"
+                      }`}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#090b0a] via-[#090b0a]/40 to-transparent opacity-90 transition-opacity duration-500 group-hover:opacity-70" />
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_24%,rgb(9_11_10_/_0.2)_48%,rgb(9_11_10_/_0.95)_100%)]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgb(60_191_113_/_0.11),transparent_34%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                   </div>
-                  
-                  <div className="relative z-10 transition-transform duration-500 group-hover:-translate-y-1">
-                    <h3 className="text-display-sm text-2xl text-white">
+
+
+
+                  <div
+                    className={`relative z-10 p-7 transition-transform duration-500 group-hover:-translate-y-1 sm:p-9 ${
+                      isFeatured ? "lg:p-11" : ""
+                    }`}
+                  >
+                    <h3
+                      className={`text-display-sm text-white ${
+                        isFeatured ? "text-3xl sm:text-4xl" : "text-2xl"
+                      }`}
+                    >
                       {p.title}
                     </h3>
-                    <p className="mt-3 text-[1.05rem] leading-relaxed text-white/80">
+                    <p
+                      className={`mt-4 leading-relaxed text-white/72 ${
+                        isFeatured
+                          ? "max-w-lg text-[1.05rem]"
+                          : "max-w-md text-[0.95rem]"
+                      }`}
+                    >
                       {p.body}
                     </p>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
-
         </SectionShell>
       </main>
       <Sponsors />

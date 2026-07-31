@@ -20,6 +20,7 @@
 html {
   overflow-x: clip;
   background: var(--color-base);
+  scroll-behavior: smooth;
 }
 
 body {
@@ -28,6 +29,11 @@ body {
   font-family: var(--font-body-family);
   -webkit-font-smoothing: antialiased;
   overflow-x: clip;
+}
+
+::selection {
+  background: rgb(60 191 113 / 0.28);
+  color: var(--color-ink);
 }
 
 input:-webkit-autofill,

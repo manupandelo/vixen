@@ -144,6 +144,7 @@ export type PublicFootballTournament = {
   matches: PublicFootballMatch[];
   standings: StandingRow[];
   categoriesCount?: number;
+  categories?: { name: string; slug: string }[];
 };
 
 export type PublicFootballMatch = FootballMatchForStandings & {

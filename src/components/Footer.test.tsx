@@ -17,14 +17,10 @@ describe("Footer", () => {
 
     expect(screen.queryByRole("list", { name: /sponsors/i })).not.toBeInTheDocument();
 
+    const socials = screen.getByRole("navigation", { name: /redes sociales y contacto/i });
     expect(
-      screen.getByRole("link", { name: /\(011\) 15 3773 0713/i }),
-    ).toHaveAttribute("href", "tel:+5491137730713");
-    expect(
-      screen.getByRole("link", { name: /info@vixen\.com\.ar/i }),
+      within(socials).getByRole("link", { name: /email/i }),
     ).toHaveAttribute("href", "mailto:info@vixen.com.ar");
-
-    const socials = screen.getByRole("navigation", { name: /redes sociales/i });
     expect(
       within(socials).getByRole("link", { name: /instagram/i }),
     ).toHaveAttribute("href", expect.stringContaining("instagram.com"));

@@ -20,26 +20,26 @@ describe("WhatsAppButton", () => {
       )}`,
     );
     expect(link).toHaveClass(
-      "bottom-[calc(env(safe-area-inset-bottom)+0.85rem)]",
+      "bottom-[max(1rem,env(safe-area-inset-bottom)+0.85rem)]",
     );
     expect(link).toHaveClass(
-      "right-[calc(env(safe-area-inset-right)+0.85rem)]",
+      "right-[max(1rem,env(safe-area-inset-right)+0.85rem)]",
     );
     expect(link).toHaveClass(
-      "sm:bottom-[calc(env(safe-area-inset-bottom)+1.25rem)]",
+      "lg:bottom-[max(1.5rem,env(safe-area-inset-bottom)+1.25rem)]",
     );
     expect(link).toHaveClass(
-      "sm:right-[calc(env(safe-area-inset-right)+1.25rem)]",
+      "lg:right-[max(1.5rem,env(safe-area-inset-right)+1.25rem)]",
     );
     expect(labelGroup).not.toBeNull();
     expect(labelGroup).toHaveClass("hidden");
-    expect(labelGroup).toHaveClass("sm:flex");
+    expect(labelGroup).toHaveClass("lg:flex");
     expect(actionLabel).not.toHaveClass("hidden");
     expect(within(link).getByText(/respuesta por whatsapp/i)).toHaveClass(
       "hidden",
     );
     expect(within(link).getByText(/respuesta por whatsapp/i)).toHaveClass(
-      "sm:block",
+      "lg:block",
     );
     expect(
       within(link).getByRole("img", { name: /whatsapp/i }),

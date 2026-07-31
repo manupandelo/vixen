@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { Fragment } from "react";
 
 import {
   footballTournamentFormatLabels,
@@ -25,17 +25,13 @@ function getNextMatch(tournament: PublicFootballTournament) {
 }
 
 function formatDate(date: string | null) {
-  if (!date) return "A confirmar";
+  if (!date) return "Fecha a confirmar";
   return dateFormatter.format(new Date(date)).replace(".", "");
 }
 
-function getInitials(name: string) {
-  if (!name || name === "Por definirse") return "?";
-  const words = name.split(" ");
-  if (words.length >= 2) {
-    return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
-  }
-  return name.substring(0, 2).toUpperCase();
+function getProgressLabel(completed: number, total: number) {
+  if (total === 0) return "Sin partidos";
+  return `${completed} / ${total} partidos`;
 }
 
 export function TournamentSummaryCard({
@@ -48,111 +44,133 @@ export function TournamentSummaryCard({
   const completedMatches = tournament.matches.filter(
     (match) => match.status === "completed",
   ).length;
-  const progressPercent = totalMatches > 0 ? Math.round((completedMatches / totalMatches) * 100) : 0;
-  const isCup = tournament.format === "cup";
-  const accentColor = isCup ? "text-orange-400" : "text-[var(--color-accent)]";
-  const accentBg = isCup ? "bg-orange-500" : "bg-[var(--color-accent)]";
-  const href = tournament.categorySlug
-    ? `/futbol/torneos/${tournament.slug}/${tournament.categorySlug}`
-    : `/futbol/torneos/${tournament.slug}`;
+
+  const isCompleted = tournament.status === "completed";
+  const mainHref = `/futbol/torneos/${tournament.slug}`;
+  
+  // Render categories
+  const categoryRender = () => {
+    if (!tournament.categories || tournament.categories.length === 0) {
+      return (
+        <span className="text-white/60 font-medium">
+          {tournament.category} <span className="mx-1.5 opacity-40">·</span> {tournament.teams.length} equipos
+        </span>
+      );
+    }
+
+    const cats = tournament.categories;
+    const catLinks = cats.map((cat, index) => (
+      <Fragment key={cat.slug}>
+        <Link
+          href={`${mainHref}/${cat.slug}`}
+          className="relative z-10 text-white/80 hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] rounded-sm transition-colors"
+        >
+          {cat.name}
+        </Link>
+        {index < cats.length - 1 && <span className="mx-1.5 text-white/30">·</span>}
+      </Fragment>
+    ));
+
+    return (
+      <span className="text-white/60 font-medium leading-relaxed">
+        {catLinks}
+        {cats.length === 1 && (
+          <>
+            <span className="mx-1.5 text-white/30">—</span> {tournament.teams.length} equipos
+          </>
+        )}
+      </span>
+    );
+  };
 
   return (
-    <Link
-      href={href}
-      className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] relative isolate"
-    >
-      <article className="relative z-10 grid h-full gap-5 rounded-xl border border-white/10 bg-[#111612]/90 backdrop-blur-sm p-6 transition duration-300 group-hover:-translate-y-1 group-hover:border-white/20 group-hover:bg-[#151a16] overflow-hidden">
-        
-        {/* Header Tags */}
-        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/60">
-          <span className={`px-2 py-1 rounded-md bg-white/5 border border-white/10 ${accentColor}`}>{statusLabels[tournament.status]}</span>
-          <span className="text-white/30">/</span>
-          <span>{footballTournamentFormatLabels[tournament.format]}</span>
-          <span className="text-white/30">/</span>
-          <span>{tournament.season}</span>
-        </div>
-
-        {/* Title */}
-        <div>
-          <h3 className="text-display-sm text-2xl group-hover:text-white transition-colors">{tournament.name}</h3>
-          <p className="mt-2 text-sm text-[var(--color-muted)]">
-            {tournament.categoriesCount && tournament.categoriesCount > 1
-              ? `${tournament.categoriesCount} categorías`
-              : tournament.category}{" "}
-            • {tournament.teams.length} equipos
-          </p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="flex flex-col gap-2 mt-2">
-          <div className="flex justify-between text-xs font-semibold text-white/50">
-            <span>Progreso</span>
-            <span>{progressPercent}%</span>
-          </div>
-          <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${accentBg} rounded-full transition-all duration-1000 ease-out`} 
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Next Match Card */}
-        <div className="mt-4 border border-white/10 bg-black/40 rounded-lg p-4 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          
-          {nextMatch ? (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[10px] font-bold text-white/40 bg-white/5 px-2 py-1 rounded">
-                  Próximo partido
-                </span>
-                <span className="text-xs font-semibold text-white/60 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                  {formatDate(nextMatch.scheduledAt)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-white/70 shadow-inner">
-                    {getInitials(nextMatch.homeTeamName || "")}
-                  </div>
-                  <span className="text-sm font-semibold text-white truncate w-full text-center">
-                    {nextMatch.homeTeamName || "Por definirse"}
-                  </span>
-                </div>
-                
-                <div className="text-xs font-black italic text-white/20 uppercase">VS</div>
-                
-                <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-white/70 shadow-inner">
-                    {getInitials(nextMatch.awayTeamName || "")}
-                  </div>
-                  <span className="text-sm font-semibold text-white truncate w-full text-center">
-                    {nextMatch.awayTeamName || "Por definirse"}
-                  </span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-4 text-center">
-              <p className="text-sm font-semibold text-white">Historial disponible</p>
-              <p className="mt-1 text-xs text-[var(--color-muted)]">
-                Resultados y posiciones en el detalle.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer Action */}
-        <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/10">
-          <span className={`text-sm font-bold uppercase tracking-[0.14em] ${accentColor} transition-colors`}>
-            Ver torneo completo
+    <article className="group h-full editorial-panel relative flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-[var(--color-accent)]/30 hover:bg-[linear-gradient(180deg,rgb(60_191_113_/_0.04),transparent)]">
+      
+      {/* Header */}
+      <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-white/5">
+        <div className="flex items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className={`h-1.5 w-1.5 rounded-full ${
+              isCompleted ? "bg-white/20" : "bg-[var(--color-accent)]"
+            }`}
+          />
+          <span className={`text-[0.65rem] font-bold uppercase tracking-[0.18em] ${isCompleted ? 'text-white/40' : 'text-white/70'}`}>
+            {statusLabels[tournament.status]}
           </span>
-          <ArrowRight className={`w-5 h-5 ${accentColor} opacity-50 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0`} />
         </div>
-      </article>
-    </Link>
+
+        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-white/30">
+          {footballTournamentFormatLabels[tournament.format]} · {tournament.season}
+        </p>
+      </header>
+
+      {/* Body */}
+      <div className="px-5 py-5 pb-6">
+        <h3 className="text-[clamp(1.25rem,3vw,1.5rem)] leading-tight font-bold text-[var(--color-ink)] line-clamp-2">
+          <Link
+            href={mainHref}
+            className="before:absolute before:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] rounded-sm"
+          >
+            {tournament.name}
+          </Link>
+        </h3>
+        <div className="mt-3 text-[0.85rem]">
+          {categoryRender()}
+        </div>
+      </div>
+
+      {/* Next Match or Status */}
+      <div className="px-5 pb-5">
+        {nextMatch ? (
+          <div className="border-t border-white/5 pt-5">
+            <div className="flex flex-col gap-1 mb-2">
+              <span className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[var(--color-accent)]">
+                Próximo partido <span className="text-white/30 font-normal">·</span> <span className="text-white/60">{nextMatch.roundLabel}</span>
+              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-3 text-[0.95rem] font-medium text-white/90">
+                <span className="truncate">
+                  {nextMatch.homeTeamName || "Por definir"}
+                </span>
+                <span className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-white/20 shrink-0">
+                  vs
+                </span>
+                <span className="truncate">
+                  {nextMatch.awayTeamName || "Por definir"}
+                </span>
+              </div>
+              <span className="text-xs text-white/40 shrink-0">
+                {formatDate(nextMatch.scheduledAt)}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="border-t border-white/5 pt-5 flex items-center justify-between">
+            <span className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/30">
+              Resultados
+            </span>
+            <span className="text-xs text-white/40 font-medium">Resultados disponibles</span>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="mt-auto border-t border-white/5 px-5 py-4 flex flex-wrap items-center justify-between gap-4">
+        <span className="text-[0.75rem] font-medium tracking-wide text-white/40">
+          {getProgressLabel(completedMatches, totalMatches)}
+        </span>
+        <span className="inline-flex items-center gap-1.5 text-[0.75rem] font-bold uppercase tracking-[0.12em] text-[var(--color-accent)] transition-colors group-hover:brightness-110">
+          Ver torneo
+          <span
+            aria-hidden="true"
+            className="transition-transform duration-300 group-hover:translate-x-1"
+          >
+            →
+          </span>
+        </span>
+      </footer>
+    </article>
   );
 }

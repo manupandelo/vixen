@@ -45,7 +45,7 @@ describe("FutbolPage", () => {
     ).toBeTruthy();
     expect(screen.getByText("Apertura Vixen")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Ver todos los torneos" }),
+      screen.getAllByRole("link", { name: "Ver todos los torneos" })[0],
     ).toHaveAttribute("href", "/futbol/torneos");
     expect(screen.queryByText("Fixture y posiciones")).not.toBeInTheDocument();
   });

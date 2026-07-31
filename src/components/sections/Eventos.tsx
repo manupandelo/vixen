@@ -44,7 +44,7 @@ export function Eventos() {
               </div>
             ))}
             
-            <div className="flex flex-col sm:col-span-2 mt-4 pt-8 border-t border-white/10">
+            <div className="mt-4 flex flex-col border-t border-white/10 pt-8 sm:col-span-2">
               <h3 className="text-xl font-bold text-white mb-3">
                 Bar y quincho con vista a cancha
               </h3>
@@ -52,13 +52,37 @@ export function Eventos() {
                 Formatos privados dentro del mismo recorrido del club, sin sentirse como un bloque aparte.
               </p>
 
-              <div className="rounded-xl bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 p-5 flex items-start gap-4">
-                <span className="text-[var(--color-accent)] text-2xl" aria-hidden="true">🍻</span>
-                <div>
-                  <p className="font-bold text-white text-[1.05rem]">Promo Tercer Tiempo</p>
-                  <p className="text-white/70 text-sm mt-1">2x1 en Fernet Branca y picadas todos los jueves reservando tu cancha. ¡Exclusivo para jugadores!</p>
+              <aside
+                aria-label="Promoción del tercer tiempo"
+                className="relative mt-2 grid overflow-hidden border-y border-white/12 bg-white/[0.018] sm:grid-cols-[minmax(0,1fr)_9rem]"
+              >
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-y-0 left-0 w-1 bg-[var(--color-accent)]"
+                />
+
+                <div className="px-6 py-6 sm:px-7">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+                    Jueves en Vixen
+                  </p>
+                  <h4 className="mt-2 text-xl font-semibold tracking-[-0.025em] text-white">
+                    El tercer tiempo también se juega
+                  </h4>
+                  <p className="mt-3 max-w-xl text-[0.95rem]/6 text-white/66">
+                    2x1 en Fernet Branca y picadas reservando tu cancha.
+                    Disponible para quienes vienen a jugar.
+                  </p>
                 </div>
-              </div>
+
+                <div className="flex items-center justify-between border-t border-white/10 px-6 py-5 sm:flex-col sm:justify-center sm:border-l sm:border-t-0 sm:px-5">
+                  <span className="font-[family-name:var(--font-display-family)] text-4xl font-black tracking-[-0.05em] text-white">
+                    2×1
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45 sm:mt-2">
+                    Con reserva
+                  </span>
+                </div>
+              </aside>
             </div>
           </div>
         </div>

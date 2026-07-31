@@ -29,7 +29,36 @@ export const content = {
     padelReservationUrl,
     instagram: "https://instagram.com/vixen.club",
     facebook: "https://facebook.com/vixen.club",
-    sponsors: ["PUMA"],
+    sponsors: [
+      {
+        name: "PUMA",
+        logo: "/puma.png",
+        width: 2249,
+        height: 2099,
+        invert: true,
+      },
+      {
+        name: "Heineken",
+        logo: "/heineken.png",
+        width: 800,
+        height: 400,
+        invert: false,
+      },
+      {
+        name: "Fernet Branca",
+        logo: "/branca.png",
+        width: 373,
+        height: 457,
+        invert: false,
+      },
+      {
+        name: "Prestigio",
+        logo: "/prestigio.png",
+        width: 290,
+        height: 66,
+        invert: false,
+      },
+    ],
   },
   nav: [
     { label: "Fútbol", href: "/futbol" },
@@ -181,6 +210,7 @@ export const content = {
   },
   sede: {
     title: "La Sede",
+    body: "Canchas, quincho y espacios para quedarse después del partido, en un mismo predio de Pilar.",
     addressLabel: "Las Azucenas 3941, Alberti, Pilar",
     mapQuery: "Las Azucenas 3941, Alberti, Pilar, Buenos Aires",
     amenities: [
@@ -189,5 +219,18 @@ export const content = {
       "Estacionamiento",
       "Ayuda médica",
     ],
+  },
+  contact: {
+    kicker: "Contacto",
+    title: "Coordiná tu próxima fecha",
+    body: "Consultanos por fútbol, eventos o información general del club.",
+    primaryCta: {
+      label: "Escribir por WhatsApp",
+      href: whatsappUrl,
+    },
+    secondaryCta: {
+      label: "Enviar un email",
+      href: `mailto:info@vixen.com.ar`,
+    },
   },
 } as const;

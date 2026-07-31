@@ -40,7 +40,7 @@ describe("TournamentsPage", () => {
       screen.getByRole("heading", { name: "Torneos de fútbol" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("En juego").length).toBeGreaterThan(0);
-    expect(screen.getByText("Historial")).toBeInTheDocument();
+    expect(screen.getAllByText("Historial").length).toBeGreaterThan(0);
     expect(screen.getByText("Apertura Activo")).toBeInTheDocument();
     expect(screen.getByText("Clausura Finalizado")).toBeInTheDocument();
     expect(screen.queryByText(/archivad/i)).not.toBeInTheDocument();

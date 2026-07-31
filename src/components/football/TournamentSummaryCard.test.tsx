@@ -55,9 +55,15 @@ describe("TournamentSummaryCard", () => {
     );
     expect(screen.getByText("En juego")).toBeInTheDocument();
     expect(
-      screen.getByText((_, node) => node?.textContent === "Primera • 2 equipos"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Progreso")).toBeInTheDocument();
+      screen.queryByText(
+        (_, node) => node?.textContent === "Primera • 2 equipos",
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getAllByText((_, node) => node?.textContent === "Primera · 2 equipos").length
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText("Progreso")).not.toBeInTheDocument();
+    expect(screen.getByText("0 / 1 partidos")).toBeInTheDocument();
     expect(screen.getByText("Vixen Blanco")).toBeInTheDocument();
     expect(screen.getByText("La Banda")).toBeInTheDocument();
   });
@@ -70,6 +76,89 @@ describe("TournamentSummaryCard", () => {
     );
 
     expect(screen.getByText("Finalizado")).toBeInTheDocument();
-    expect(screen.getByText("Historial disponible")).toBeInTheDocument();
+    expect(screen.getByText("Resultados")).toBeInTheDocument();
+    expect(screen.getByText("Sin partidos")).toBeInTheDocument();
+  });
+
+  it("handles missing date and missing team names gracefully", () => {
+    render(
+      <TournamentSummaryCard
+        tournament={tournament({
+          matches: [
+            {
+              id: "match-1",
+              roundLabel: "Fecha 1",
+              scheduledAt: null,
+              homeTeamId: null,
+              awayTeamId: null,
+              homeTeamName: null,
+              awayTeamName: null,
+              homeTeamShortName: null,
+              awayTeamShortName: null,
+              homeScore: null,
+              awayScore: null,
+              status: "scheduled",
+              isKnockout: false,
+              nextMatchId: null,
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getAllByText((_, node) => node?.textContent?.includes("Próximo partido · Fecha 1") ?? false).length).toBeGreaterThan(0);
+    expect(screen.getByText("Fecha a confirmar")).toBeInTheDocument();
+    expect(screen.getAllByText("Por definir")).toHaveLength(2);
+  });
+
+  it("renders a single category as an explicit link", () => {
+    render(
+      <TournamentSummaryCard
+        tournament={tournament({
+          categories: [{ name: "Primera", slug: "primera" }],
+        })}
+      />
+    );
+
+    const link = screen.getByRole("link", { name: "Primera" });
+    expect(link).toHaveAttribute("href", "/futbol/torneos/apertura-vixen/primera");
+  });
+
+  it("renders multiple categories as separate links if under the limit", () => {
+    render(
+      <TournamentSummaryCard
+        tournament={tournament({
+          categories: [
+            { name: "Primera", slug: "primera" },
+            { name: "Segunda", slug: "segunda" },
+          ],
+        })}
+      />
+    );
+
+    const link1 = screen.getByRole("link", { name: "Primera" });
+    const link2 = screen.getByRole("link", { name: "Segunda" });
+    expect(link1).toHaveAttribute("href", "/futbol/torneos/apertura-vixen/primera");
+    expect(link2).toHaveAttribute("href", "/futbol/torneos/apertura-vixen/segunda");
+  });
+
+  it("renders a single fallback link if there are many categories", () => {
+    render(
+      <TournamentSummaryCard
+        tournament={tournament({
+          categories: [
+            { name: "Cat 1", slug: "cat-1" },
+            { name: "Cat 2", slug: "cat-2" },
+            { name: "Cat 3", slug: "cat-3" },
+            { name: "Cat 4", slug: "cat-4" },
+          ],
+        })}
+      />
+    );
+
+    const link1 = screen.getByRole("link", { name: "Cat 1" });
+    const link4 = screen.getByRole("link", { name: "Cat 4" });
+    expect(link1).toHaveAttribute("href", "/futbol/torneos/apertura-vixen/cat-1");
+    expect(link4).toHaveAttribute("href", "/futbol/torneos/apertura-vixen/cat-4");
   });
 });

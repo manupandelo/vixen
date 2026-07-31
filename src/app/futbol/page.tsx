@@ -89,11 +89,16 @@ export default async function FutbolPage() {
               kicker="Competencia"
               title="Torneos activos"
             />
-            <p className="max-w-2xl text-[var(--color-muted)] lg:justify-self-end">
-              Un resumen rápido de los torneos que están publicados o en juego.
-              El fixture completo, posiciones e historial viven en la sección de
-              torneos.
-            </p>
+            <div className="flex flex-col lg:items-end gap-4 lg:justify-self-end">
+              <p className="max-w-2xl text-[var(--color-muted)] lg:text-right">
+                Un resumen rápido de los torneos que están publicados o en juego.
+                El fixture completo, posiciones e historial viven en la sección de
+                torneos.
+              </p>
+              <Button href="/futbol/torneos" variant="secondary" className="hidden lg:inline-flex mt-2">
+                Ver todos los torneos
+              </Button>
+            </div>
           </div>
 
           {tournaments.length === 0 ? (
@@ -116,9 +121,11 @@ export default async function FutbolPage() {
               ))}
             </div>
           )}
-          <Button href="/futbol/torneos" variant="secondary" className="mt-8">
-            Ver todos los torneos
-          </Button>
+          <div className="mt-8 flex lg:hidden">
+            <Button href="/futbol/torneos" variant="secondary" className="w-full sm:w-auto">
+              Ver todos los torneos
+            </Button>
+          </div>
         </SectionShell>
 
         <SectionShell className="border-t border-white/5 bg-[var(--color-surface)] py-10 sm:py-12 lg:py-14">

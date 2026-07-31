@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { content } from "@/content";
 
@@ -104,6 +105,24 @@ export function Header() {
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const pathname = usePathname() || "";
+  const [hash, setHash] = useState("");
+
+  useEffect(() => {
+    const handleHashChange = () => setHash(window.location.hash);
+    handleHashChange();
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  const isLinkActive = (href: string) => {
+    if (href.startsWith("/#")) {
+      const targetHash = href.substring(1);
+      return pathname === "/" && hash === targetHash;
+    }
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
+  };
 
   const closeMobileMenu = (restoreFocus = true) => {
     setIsMobileMenuOpen(false);
@@ -191,15 +210,30 @@ export function Header() {
             aria-label="Principal"
             className="hidden flex-1 items-center justify-center gap-6 rounded-full border border-white/10 bg-white/[0.025] px-7 py-3 lg:flex lg:gap-9"
           >
-            {content.nav.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                className="rounded-sm text-sm font-medium tracking-[0.08em] text-[var(--color-ink)]/80 transition hover:text-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
-              >
-                {n.label}
-              </Link>
-            ))}
+            {content.nav.map((n) => {
+              const active = isLinkActive(n.href);
+              return (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  onClick={() => {
+                    if (n.href.startsWith("/#")) {
+                      setHash(n.href.substring(1));
+                    } else if (n.href === "/") {
+                      setHash("");
+                    }
+                  }}
+                  aria-current={active ? "page" : undefined}
+                  className={`rounded-sm text-sm font-medium tracking-[0.08em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)] ${
+                    active
+                      ? "text-white border-b-2 border-[var(--color-accent)] pb-0.5 -mb-0.5"
+                      : "text-[var(--color-ink)]/80 hover:text-[var(--color-accent)]"
+                  }`}
+                >
+                  {n.label}
+                </Link>
+              );
+            })}
           </nav>
 
           <nav
@@ -274,17 +308,32 @@ export function Header() {
               </div>
 
               <nav aria-label="Menú móvil" className="mt-4 flex flex-col">
-                {content.nav.map((n) => (
-                  <Link
-                    key={n.href}
-                    href={n.href}
-                    data-mobile-menu-link="true"
-                    onClick={() => closeMobileMenu(false)}
-                    className="border-b border-white/8 py-4 text-display-sm text-[clamp(1.7rem,7vw,2.6rem)] leading-[0.94]"
-                  >
-                    {n.label}
-                  </Link>
-                ))}
+                {content.nav.map((n) => {
+                  const active = isLinkActive(n.href);
+                  return (
+                    <Link
+                      key={n.href}
+                      href={n.href}
+                      data-mobile-menu-link="true"
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => {
+                        if (n.href.startsWith("/#")) {
+                          setHash(n.href.substring(1));
+                        } else if (n.href === "/") {
+                          setHash("");
+                        }
+                        closeMobileMenu(false);
+                      }}
+                      className={`border-b border-white/8 py-4 text-display-sm text-[clamp(1.7rem,7vw,2.6rem)] leading-[0.94] transition-colors ${
+                        active ? "text-white" : "text-[var(--color-ink)]/80 hover:text-[var(--color-accent)]"
+                      }`}
+                    >
+                      <span className={active ? "border-b-4 border-[var(--color-accent)] pb-1" : ""}>
+                        {n.label}
+                      </span>
+                    </Link>
+                  );
+                })}
               </nav>
 
               <div className="mt-auto pt-10">

@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import TournamentDetailPage from "./page";
 import type { PublicFootballTournamentWithCategories } from "@/features/football-tournaments/data";
@@ -47,6 +47,10 @@ const tournament: PublicFootballTournamentWithCategories = {
 };
 
 describe("TournamentDetailPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("redirects to the first category", async () => {
     getPublicFootballTournamentWithCategoriesBySlugMock.mockResolvedValue(tournament);
 
@@ -68,5 +72,21 @@ describe("TournamentDetailPage", () => {
       }),
     ).rejects.toThrow("NEXT_NOT_FOUND");
     expect(notFound).toHaveBeenCalled();
+  });
+
+  it("lets unexpected loading errors reach the route error boundary", async () => {
+    const loadingError = new Error("Database unavailable");
+    getPublicFootballTournamentWithCategoriesBySlugMock.mockRejectedValue(
+      loadingError,
+    );
+
+    await expect(
+      TournamentDetailPage({
+        params: Promise.resolve({ slug: "apertura-vixen" }),
+      }),
+    ).rejects.toBe(loadingError);
+
+    expect(notFound).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
   });
 });
