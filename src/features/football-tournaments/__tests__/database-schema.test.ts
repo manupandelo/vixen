@@ -7,13 +7,6 @@ const schemaSql = readFileSync(
   join(process.cwd(), "supabase/schema.sql"),
   "utf8",
 );
-const hardeningMigrationSql = readFileSync(
-  join(
-    process.cwd(),
-    "supabase/migrations/20260704000000_harden_football_data_integrity.sql",
-  ),
-  "utf8",
-);
 
 function extractCreateTableBlock(tableName: string) {
   const start = schemaSql.indexOf(`create table ${tableName}`);
@@ -319,18 +312,16 @@ describe("Supabase schema", () => {
     );
   });
 
-  it("ships the hardening changes as a deployable migration", () => {
-    expect(hardeningMigrationSql).toContain(
-      "create index if not exists football_matches_category_schedule_idx",
+  it("keeps the data integrity hardening in the consolidated schema", () => {
+    expect(schemaSql).toContain("football_matches_category_schedule_idx");
+    expect(schemaSql).toContain(
+      "function public.elimination_matches_require_winner()",
     );
-    expect(hardeningMigrationSql).toContain(
-      "create or replace function public.elimination_matches_require_winner()",
+    expect(schemaSql).toContain(
+      "function public.match_events_belong_to_match()",
     );
-    expect(hardeningMigrationSql).toContain(
-      "create or replace function public.match_events_belong_to_match()",
-    );
-    expect(hardeningMigrationSql).toContain(
-      "create unique index if not exists football_match_events_player_yellow_card_key",
+    expect(schemaSql).toContain(
+      "football_match_events_player_yellow_card_key",
     );
   });
 });

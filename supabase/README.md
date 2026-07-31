@@ -2,8 +2,8 @@
 
 Este directorio tiene dos tipos de archivos:
 
-- `migrations/`: historial ejecutable. No conviene reescribirlo si ya fue aplicado en Supabase.
-- `schema.sql`: foto consolidada del esquema actual, pensada para leer rapido como esta armada la base.
+- `schema.sql`: fuente de verdad del esquema. Refleja el estado final de la base.
+- Las migraciones ya aplicadas se borran del repo y quedan registradas mas abajo en "Migraciones aplicadas". El historial completo vive en git.
 
 ## Modelo principal
 
@@ -83,7 +83,9 @@ RLS esta activado en todas las tablas publicas del dominio de futbol.
 - Staff activo puede leer su propio `admin_profiles`; esto permite que admins y veedores resuelvan su rol durante login.
 - Veedores activos solo pueden leer sus partidos asignados y cargar una vez el resultado de partidos desbloqueados.
 - Datos privados de equipos viven en `football_team_admin_details` y no se exponen en la pagina publica.
-- Datos personales de jugadores viven en `football_players` y datos operativos del plantel en `football_roster_entries`; no se exponen en paginas publicas crudas.
+- Datos personales de jugadores viven en `football_players` y datos operativos del plantel en `football_roster_entries`; ninguna de las dos tablas tiene lectura publica.
+- Para mostrar goleadores y tarjetas, la web publica lee dos vistas acotadas: `football_public_player_names` (id y nombre para mostrar) y `football_public_roster_numbers` (categoria, jugador y numero de camiseta). RLS filtra filas y no columnas, asi que abrir las tablas expondria DNI, telefono, fecha de nacimiento y estado documental.
+- `football_match_events` tiene lectura publica limitada a torneos y categorias visibles; no guarda datos personales, solo ids.
 - Auditoria puede ser leida por admins. Admins y veedores activos pueden insertar eventos de auditoria propios.
 
 Las acciones de gestion de usuarios usan service role desde `staff-admin.server.ts`; por eso no dependen de politicas publicas de escritura sobre `admin_profiles`.
@@ -124,11 +126,14 @@ Politicas:
 - `20260702010000_add_football_tournament_categories.sql`: categorias competitivas por torneo y migracion de equipos, zonas, planteles y partidos a `category_id`.
 - `20260702020000_prevent_team_multiple_tournament_categories.sql`: evita que un equipo quede anotado en mas de una categoria del mismo torneo.
 - `20260704000000_harden_football_data_integrity.sql`: agrega indices para lecturas frecuentes y refuerza integridad de penales, goles y tarjetas.
+- `20260730000000_add_next_match_slot.sql`: agrega `next_match_slot` para saber a que lado del partido siguiente avanza el ganador de un cruce.
+- `20260731000000_public_player_names_and_events.sql`: expone goles y tarjetas en la web publica, con vistas acotadas para nombre y numero de jugador.
 
 ## Como mantener esto
 
 Cuando agregues una migracion nueva:
 
-1. Deja la migracion en `supabase/migrations`.
+1. Escribi la migracion en `supabase/migrations` y aplicala en Supabase.
 2. Actualiza `schema.sql` para reflejar el estado final.
 3. Actualiza este README si cambia el modelo, las relaciones o las politicas.
+4. Una vez aplicada, borra el archivo y anotala en "Migraciones aplicadas".

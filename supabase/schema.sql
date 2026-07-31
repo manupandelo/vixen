@@ -1,6 +1,6 @@
--- Consolidated reference schema for the current Vixen football admin database.
--- Keep migrations as the deployable source of truth. Use this file to understand
--- the final shape after all migrations in supabase/migrations have run.
+-- Esquema de referencia de la base de Vixen. Es la fuente de verdad: las
+-- migraciones ya aplicadas se borran del repo y quedan listadas en README.md.
+-- El historial completo de migraciones vive en git.
 
 create extension if not exists "pgcrypto";
 
