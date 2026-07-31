@@ -34,3 +34,15 @@ using (
       and tournament.status in ('published', 'active', 'completed')
   )
 );
+
+-- El numero de camiseta vive en la inscripcion, que tampoco es publica: la
+-- tabla ademas guarda estado medico, seguro y notas internas. Misma solucion,
+-- una vista con lo minimo para mostrar el numero junto al nombre.
+create or replace view public.football_public_roster_numbers as
+select
+  entry.category_id,
+  entry.player_id,
+  entry.shirt_number
+from public.football_roster_entries entry;
+
+grant select on public.football_public_roster_numbers to anon, authenticated;

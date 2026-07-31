@@ -670,6 +670,8 @@ describe("formatPublicTournament", () => {
         nextMatchId: null,
         nextMatchSlot: null,
         events: [],
+        homePenaltyScore: null,
+        awayPenaltyScore: null,
       },
     ]);
     expect(tournament.standings).toEqual([

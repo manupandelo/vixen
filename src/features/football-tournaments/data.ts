@@ -142,6 +142,8 @@ const publicTournamentWithCategoriesSelect = `
       away_team_id,
       home_score,
       away_score,
+      home_penalty_score,
+      away_penalty_score,
       status,
       group_id,
       next_match_id,
@@ -187,6 +189,8 @@ const publicTournamentSummarySelect = `
       away_team_id,
       home_score,
       away_score,
+      home_penalty_score,
+      away_penalty_score,
       status,
       group_id,
       next_match_id,
@@ -643,6 +647,8 @@ function formatPublicMatches(
       awayTeamId: match.away_team_id,
       homeScore: match.home_score,
       awayScore: match.away_score,
+      homePenaltyScore: match.home_penalty_score ?? null,
+      awayPenaltyScore: match.away_penalty_score ?? null,
       status: match.status,
       homeTeamName:
         (match.home_team_id ? teamNames.get(match.home_team_id) : null) ??
@@ -1194,21 +1200,41 @@ async function withPlayerNames(
 
   if (playerIds.length === 0) return tournament;
 
-  const { data, error } = await supabase
-    .from("football_public_player_names")
-    .select("id, display_name")
-    .in("id", playerIds);
+  const [namesResult, numbersResult] = await Promise.all([
+    supabase
+      .from("football_public_player_names")
+      .select("id, display_name")
+      .in("id", playerIds),
+    supabase
+      .from("football_public_roster_numbers")
+      .select("category_id, player_id, shirt_number")
+      .in("player_id", playerIds),
+  ]);
 
-  if (error) {
+  if (namesResult.error) {
     // Sin nombres mostramos el resto del torneo igual.
-    console.error("Failed to load public player names.", error);
+    console.error("Failed to load public player names.", namesResult.error);
     return tournament;
   }
 
   const names = new Map(
-    ((data ?? []) as Array<{ id: string; display_name: string | null }>).map(
-      (row) => [row.id, row.display_name ?? "Jugador"],
-    ),
+    (
+      (namesResult.data ?? []) as Array<{
+        id: string;
+        display_name: string | null;
+      }>
+    ).map((row) => [row.id, row.display_name ?? "Jugador"]),
+  );
+
+  // El numero depende de la categoria: un jugador puede usar otro en cada una.
+  const numbers = new Map(
+    (
+      (numbersResult.data ?? []) as Array<{
+        category_id: string;
+        player_id: string;
+        shirt_number: number | null;
+      }>
+    ).map((row) => [`${row.category_id}:${row.player_id}`, row.shirt_number]),
   );
 
   return {
@@ -1224,6 +1250,7 @@ async function withPlayerNames(
         events: (match.events ?? []).map((event) => ({
           ...event,
           displayName: names.get(event.playerId) ?? "Jugador",
+          shirtNumber: numbers.get(`${category.id}:${event.playerId}`) ?? null,
         })),
       })),
     })),

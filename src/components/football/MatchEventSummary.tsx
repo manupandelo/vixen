@@ -3,6 +3,7 @@ import type { PublicMatchEvent } from "@/features/football-tournaments/types";
 type PlayerLine = {
   playerId: string;
   displayName: string;
+  shirtNumber: number | null;
   goals: number;
   yellowCards: number;
   redCards: number;
@@ -16,6 +17,7 @@ function groupByPlayer(events: PublicMatchEvent[]): PlayerLine[] {
     const current = byPlayer.get(event.playerId) ?? {
       playerId: event.playerId,
       displayName: event.displayName,
+      shirtNumber: event.shirtNumber ?? null,
       goals: 0,
       yellowCards: 0,
       redCards: 0,
@@ -67,11 +69,9 @@ function Marker({
 }
 
 function TeamColumn({
-  teamName,
   events,
   align,
 }: {
-  teamName: string;
   events: PublicMatchEvent[];
   align: "left" | "right";
 }) {
@@ -80,19 +80,23 @@ function TeamColumn({
 
   return (
     <div className={`min-w-0 ${isRight ? "sm:text-right" : ""}`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-        {teamName}
-      </p>
       {lines.length > 0 ? (
-        <ul className="mt-3 grid gap-1.5">
+        <ul className="grid gap-1.5">
           {lines.map((line) => (
             <li
               key={line.playerId}
-              className={`flex items-center gap-2 text-sm text-white/85 ${
+              className={`flex min-w-0 items-center gap-2 text-sm text-white/85 ${
                 isRight ? "sm:flex-row-reverse" : ""
               }`}
             >
-              <span className="min-w-0 truncate">{line.displayName}</span>
+              <span className="min-w-0 truncate">
+                {line.shirtNumber !== null ? (
+                  <span className="mr-1.5 tabular-nums text-white/45">
+                    {line.shirtNumber}
+                  </span>
+                ) : null}
+                {line.displayName}
+              </span>
               <span
                 className={`flex shrink-0 items-center gap-1.5 ${
                   isRight ? "flex-row-reverse" : ""
@@ -110,7 +114,7 @@ function TeamColumn({
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-[var(--color-muted)]">Sin registros.</p>
+        <p className="text-sm text-[var(--color-muted)]">Sin registros.</p>
       )}
     </div>
   );
@@ -121,14 +125,10 @@ export function MatchEventSummary({
   events,
   homeTeamId,
   awayTeamId,
-  homeTeamName,
-  awayTeamName,
 }: {
   events: PublicMatchEvent[];
   homeTeamId: string | null;
   awayTeamId: string | null;
-  homeTeamName: string;
-  awayTeamName: string;
 }) {
   if (events.length === 0) return null;
 
@@ -136,12 +136,10 @@ export function MatchEventSummary({
     <div className="mt-8 border-t border-white/10 pt-6">
       <div className="grid gap-6 sm:grid-cols-2">
         <TeamColumn
-          teamName={homeTeamName}
           events={events.filter((event) => event.teamId === homeTeamId)}
           align="left"
         />
         <TeamColumn
-          teamName={awayTeamName}
           events={events.filter((event) => event.teamId === awayTeamId)}
           align="right"
         />

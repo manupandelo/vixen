@@ -162,12 +162,15 @@ export type PublicMatchEvent = {
   playerId: string;
   teamId: string;
   displayName: string;
+  shirtNumber?: number | null;
   eventType: "goal" | "yellow_card" | "red_card";
   quantity: number;
 };
 
 export type PublicFootballMatch = FootballMatchForStandings & {
   roundLabel: string;
+  homePenaltyScore?: number | null;
+  awayPenaltyScore?: number | null;
   scheduledAt: string | null;
   homeTeamName: string | null;
   awayTeamName: string | null;
@@ -189,6 +192,8 @@ export type UIFootballMatch = {
   awayTeamName: string | null;
   homeScore: number | null;
   awayScore: number | null;
+  homePenaltyScore?: number | null;
+  awayPenaltyScore?: number | null;
   status: FootballMatchStatus;
   nextMatchId?: string | null;
   nextMatchSlot?: MatchSlot | null;

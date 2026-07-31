@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useLayoutEffect } from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import type { UIFootballMatch } from "@/features/football-tournaments/types";
 import { reconstructTreeFromMatches } from "@/lib/tree-reconstructor";
+import { wasDecidedOnPenalties } from "@/features/football-tournaments/penalties";
 
 function getInitials(name: string) {
   if (!name || name === "Por definirse") return "?";
@@ -179,8 +180,21 @@ export function TournamentBracket({
                           const match = matches.find((m) => m.id === node.id);
                           if (!match) return null;
                           
-                          const homeWon = match.homeScore !== null && match.awayScore !== null && match.homeScore > match.awayScore;
-                          const awayWon = match.homeScore !== null && match.awayScore !== null && match.awayScore > match.homeScore;
+                          const onPenalties = wasDecidedOnPenalties(match);
+                          const homeWon =
+                            match.homeScore !== null &&
+                            match.awayScore !== null &&
+                            (match.homeScore > match.awayScore ||
+                              (onPenalties &&
+                                (match.homePenaltyScore ?? 0) >
+                                  (match.awayPenaltyScore ?? 0)));
+                          const awayWon =
+                            match.homeScore !== null &&
+                            match.awayScore !== null &&
+                            (match.awayScore > match.homeScore ||
+                              (onPenalties &&
+                                (match.awayPenaltyScore ?? 0) >
+                                  (match.homePenaltyScore ?? 0)));
                           
                           const isHighlighted = highlightedNodes.has(node.id) || selectedMatchId === node.id;
 
@@ -206,6 +220,9 @@ export function TournamentBracket({
                                 <span className={`text-sm font-bold w-6 text-center ${homeWon ? "text-[var(--color-accent)] drop-shadow-md" : "text-white/40"}`}>
                                   {match.homeScore ?? "-"}
                                 </span>
+                                <span className="w-4 text-center text-[10px] font-bold tabular-nums text-white/45">
+                                  {onPenalties ? `(${match.homePenaltyScore})` : ""}
+                                </span>
                               </div>
                               <div className={`flex-1 flex items-center py-2 px-3 relative ${awayWon ? 'bg-white/[0.03]' : ''}`}>
                                 {awayWon && <div className="absolute left-0 inset-y-0 w-1 bg-[var(--color-accent)]" />}
@@ -217,6 +234,9 @@ export function TournamentBracket({
                                 </span>
                                 <span className={`text-sm font-bold w-6 text-center ${awayWon ? "text-[var(--color-accent)] drop-shadow-md" : "text-white/40"}`}>
                                   {match.awayScore ?? "-"}
+                                </span>
+                                <span className="w-4 text-center text-[10px] font-bold tabular-nums text-white/45">
+                                  {onPenalties ? `(${match.awayPenaltyScore})` : ""}
                                 </span>
                               </div>
                             </button>

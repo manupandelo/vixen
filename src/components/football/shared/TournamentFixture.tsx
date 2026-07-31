@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { FootballMatchStatus } from "@/features/football-tournaments/types";
 import type { UIFootballMatch } from "@/features/football-tournaments/types";
+import { wasDecidedOnPenalties } from "@/features/football-tournaments/penalties";
 
 const statusLabels: Record<FootballMatchStatus, string> = {
   scheduled: "Prog",
@@ -134,6 +135,15 @@ export function TournamentFixture({
         <ul className="divide-y divide-white/5">
           {currentGroup.matches.map((match) => {
             const isCompleted = match.status === "completed";
+            const onPenalties = wasDecidedOnPenalties(match);
+            const homeWon =
+              (match.homeScore ?? 0) > (match.awayScore ?? 0) ||
+              (onPenalties &&
+                (match.homePenaltyScore ?? 0) > (match.awayPenaltyScore ?? 0));
+            const awayWon =
+              (match.awayScore ?? 0) > (match.homeScore ?? 0) ||
+              (onPenalties &&
+                (match.awayPenaltyScore ?? 0) > (match.homePenaltyScore ?? 0));
             const isSelected = selectedMatchId === match.id;
             
             return (
@@ -148,7 +158,7 @@ export function TournamentFixture({
                 >
                   {/* Home Team */}
                   <div className="flex items-center gap-2 justify-end min-w-0">
-                    <span className={`text-xs sm:text-sm font-semibold truncate text-right ${isCompleted && (match.homeScore ?? 0) > (match.awayScore ?? 0) ? "text-white" : "text-white/70"}`}>
+                    <span className={`text-xs sm:text-sm font-semibold truncate text-right ${isCompleted && homeWon ? "text-white" : "text-white/70"}`}>
                       {match.homeTeamName || "Por definirse"}
                     </span>
                     <div className="w-6 h-6 flex-shrink-0 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/70">
@@ -170,7 +180,11 @@ export function TournamentFixture({
                       </div>
                     )}
                     <span className="text-[9px] mt-1 text-white/40 font-medium whitespace-nowrap">
-                      {formatMatchDate(match.scheduledAt)}
+                      {onPenalties
+                        ? `${match.homePenaltyScore}-${match.awayPenaltyScore} pen.`
+                        : isCompleted && !match.scheduledAt
+                          ? "Finalizado"
+                          : formatMatchDate(match.scheduledAt)}
                     </span>
                   </div>
 
@@ -179,7 +193,7 @@ export function TournamentFixture({
                     <div className="w-6 h-6 flex-shrink-0 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/70">
                       {getInitials(match.awayTeamName || "")}
                     </div>
-                    <span className={`text-xs sm:text-sm font-semibold truncate text-left ${isCompleted && (match.awayScore ?? 0) > (match.homeScore ?? 0) ? "text-white" : "text-white/70"}`}>
+                    <span className={`text-xs sm:text-sm font-semibold truncate text-left ${isCompleted && awayWon ? "text-white" : "text-white/70"}`}>
                       {match.awayTeamName || "Por definirse"}
                     </span>
                   </div>

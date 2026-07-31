@@ -793,6 +793,17 @@ from public.football_players player;
 
 grant select on public.football_public_player_names to anon, authenticated;
 
+-- El numero de camiseta vive en la inscripcion, que guarda ademas estado
+-- medico, seguro y notas internas.
+create or replace view public.football_public_roster_numbers as
+select
+  entry.category_id,
+  entry.player_id,
+  entry.shirt_number
+from public.football_roster_entries entry;
+
+grant select on public.football_public_roster_numbers to anon, authenticated;
+
 create policy "Viewers can manage assigned match events"
 on public.football_match_events for all
 using (
