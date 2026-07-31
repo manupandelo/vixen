@@ -401,7 +401,7 @@ export type PublicFootballTournamentCategory = AdminTournamentCategory & {
 
 export type PublicFootballTournamentWithCategories = Omit<
   PublicFootballTournament,
-  "category" | "teams" | "matches" | "standings"
+  "category" | "teams" | "matches" | "standings" | "categories"
 > & {
   categories: PublicFootballTournamentCategory[];
 };
@@ -962,6 +962,10 @@ export function flattenTournamentCategory(
     matches: category.matches,
     standings: category.standings,
     categoriesCount: tournament.categories.length,
+    categories: tournament.categories.map((c) => ({
+      name: c.name,
+      slug: c.slug,
+    })),
   };
 }
 

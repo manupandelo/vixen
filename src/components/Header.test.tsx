@@ -1,8 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { content } from "@/content";
 import { Header } from "./Header";
+
+vi.mock("next/navigation", () => ({
+  usePathname: vi.fn(() => "/"),
+}));
 
 describe("Header", () => {
   it("shows Instagram and Facebook as the header quick actions", () => {
