@@ -303,6 +303,22 @@ describe("Supabase schema", () => {
     );
   });
 
+  it("expone nombres de jugadores sin filtrar datos personales", () => {
+    expect(schemaSql).toContain(
+      "create or replace view public.football_public_player_names",
+    );
+    expect(schemaSql).toContain(
+      "grant select on public.football_public_player_names to anon, authenticated",
+    );
+    // La tabla con DNI y telefono nunca se abre a lectura publica.
+    expect(schemaSql).not.toContain(
+      "on public.football_players for select\nusing (true)",
+    );
+    expect(schemaSql).toContain(
+      'create policy "Public can read events from visible tournaments"',
+    );
+  });
+
   it("ships the hardening changes as a deployable migration", () => {
     expect(hardeningMigrationSql).toContain(
       "create index if not exists football_matches_category_schedule_idx",

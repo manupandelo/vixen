@@ -765,6 +765,34 @@ on public.football_match_events for all
 using (public.is_admin())
 with check (public.is_admin());
 
+create policy "Public can read events from visible tournaments"
+on public.football_match_events for select
+using (
+  exists (
+    select 1
+    from public.football_tournament_categories category
+    join public.football_tournaments tournament
+      on tournament.id = category.tournament_id
+    where category.id = football_match_events.category_id
+      and tournament.id = football_match_events.tournament_id
+      and category.status in ('published', 'active', 'completed')
+      and tournament.status in ('published', 'active', 'completed')
+  )
+);
+
+-- Solo id y nombre para mostrar: football_players tiene DNI, telefono y fecha
+-- de nacimiento en la misma fila, y RLS es por fila, no por columna.
+create or replace view public.football_public_player_names as
+select
+  player.id,
+  coalesce(
+    nullif(btrim(player.public_name), ''),
+    btrim(player.first_name || ' ' || player.last_name)
+  ) as display_name
+from public.football_players player;
+
+grant select on public.football_public_player_names to anon, authenticated;
+
 create policy "Viewers can manage assigned match events"
 on public.football_match_events for all
 using (

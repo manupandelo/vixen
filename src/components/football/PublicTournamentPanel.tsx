@@ -10,6 +10,7 @@ import { resolveChampionTeamId } from "@/features/football-tournaments/champion"
 
 import { StandingsTable } from "./StandingsTable";
 import { PublicChampionBanner } from "./PublicChampionBanner";
+import { PublicPlayerStats } from "./PublicPlayerStats";
 import { PublicBracketViewer } from "./PublicBracketViewer";
 import { CompactFixture } from "./CompactFixture";
 import { PublicMatchDetailOverlay } from "./PublicMatchDetailOverlay";
@@ -63,6 +64,13 @@ export function PublicTournamentPanel({
     <PublicChampionBanner teamName={championName} />
   ) : null;
 
+  const playerStats = (
+    <PublicPlayerStats
+      playerStats={tournament.playerStats ?? []}
+      teams={tournament.teams}
+    />
+  );
+
   const cupLayout = (
     <div className="mt-8 grid gap-8 lg:grid-cols-3 items-start">
       <div className="lg:col-span-2 min-w-0">
@@ -87,6 +95,7 @@ export function PublicTournamentPanel({
         {showHeader ? header : null}
         {champion}
         {cupLayout}
+        {playerStats}
 
         <PublicMatchDetailOverlay
           match={selectedMatch}
@@ -151,6 +160,8 @@ export function PublicTournamentPanel({
           </div>
         </div>
       )}
+
+      {playerStats}
 
       <PublicMatchDetailOverlay
         match={selectedMatch}

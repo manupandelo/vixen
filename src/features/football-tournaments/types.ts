@@ -130,6 +130,15 @@ export type StandingRow = {
   points: number;
 };
 
+export type PublicPlayerStat = {
+  playerId: string;
+  teamId: string;
+  displayName: string;
+  goals: number;
+  yellowCards: number;
+  redCards: number;
+};
+
 export type PublicFootballTournament = {
   id: string;
   name: string;
@@ -145,6 +154,7 @@ export type PublicFootballTournament = {
   teams: FootballTeam[];
   matches: PublicFootballMatch[];
   standings: StandingRow[];
+  playerStats?: PublicPlayerStat[];
   categoriesCount?: number;
 };
 

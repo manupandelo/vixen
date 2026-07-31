@@ -19,6 +19,7 @@ import type {
   FootballTournamentStatus,
   PublicFootballMatch,
   PublicFootballTournament,
+  PublicPlayerStat,
   StandingRow,
   StaffRole,
   StaffStatus,
@@ -46,7 +47,15 @@ type MatchRow = {
   group_id?: string | null;
   next_match_id?: string | null;
   next_match_slot?: string | null;
+  football_match_events?: PublicMatchEventRow[] | null;
   [key: string]: unknown;
+};
+
+type PublicMatchEventRow = {
+  team_id: string;
+  player_id: string | null;
+  event_type: "goal" | "yellow_card" | "red_card";
+  quantity: number;
 };
 
 type TournamentTeamRow = {
@@ -136,7 +145,13 @@ const publicTournamentWithCategoriesSelect = `
       status,
       group_id,
       next_match_id,
-      next_match_slot
+      next_match_slot,
+      football_match_events(
+        team_id,
+        player_id,
+        event_type,
+        quantity
+      )
     )
   )
 `;
@@ -175,7 +190,13 @@ const publicTournamentSummarySelect = `
       status,
       group_id,
       next_match_id,
-      next_match_slot
+      next_match_slot,
+      football_match_events(
+        team_id,
+        player_id,
+        event_type,
+        quantity
+      )
     )
   )
 `;
@@ -402,6 +423,7 @@ export type PublicFootballTournamentCategory = AdminTournamentCategory & {
   teams: FootballTeam[];
   matches: PublicFootballMatch[];
   standings: StandingRow[];
+  playerStats?: PublicPlayerStat[];
 };
 
 export type PublicFootballTournamentWithCategories = Omit<
@@ -812,6 +834,39 @@ export function formatAdminDashboardSummary(
   };
 }
 
+/**
+ * Junta los eventos de todos los partidos por jugador. El nombre se resuelve
+ * después contra la vista pública, que solo expone id y nombre para mostrar.
+ */
+function aggregatePlayerStats(matches: MatchRow[]): PublicPlayerStat[] {
+  const byPlayer = new Map<string, PublicPlayerStat>();
+
+  for (const match of matches ?? []) {
+    for (const event of match.football_match_events ?? []) {
+      if (!event.player_id) continue;
+
+      const current = byPlayer.get(event.player_id) ?? {
+        playerId: event.player_id,
+        teamId: event.team_id,
+        displayName: "",
+        goals: 0,
+        yellowCards: 0,
+        redCards: 0,
+      };
+
+      if (event.event_type === "goal") current.goals += event.quantity;
+      if (event.event_type === "yellow_card") {
+        current.yellowCards += event.quantity;
+      }
+      if (event.event_type === "red_card") current.redCards += event.quantity;
+
+      byPlayer.set(event.player_id, current);
+    }
+  }
+
+  return [...byPlayer.values()];
+}
+
 export function formatPublicTournament(
   row: TournamentRow,
 ): PublicFootballTournament {
@@ -832,6 +887,7 @@ export function formatPublicTournament(
     teams,
     matches,
     standings: calculateStandings(teams, matches),
+    playerStats: aggregatePlayerStats(row.football_matches ?? []),
   };
 }
 
@@ -877,6 +933,7 @@ export function formatPublicTournamentWithCategories(
         teams: formatted.teams,
         matches: formatted.matches,
         standings: formatted.standings,
+        playerStats: formatted.playerStats,
       };
     })
     .sort((left, right) => left.position - right.position);
@@ -968,6 +1025,7 @@ export function flattenTournamentCategory(
     teams: category.teams,
     matches: category.matches,
     standings: category.standings,
+    playerStats: category.playerStats,
     categoriesCount: tournament.categories.length,
   };
 }
@@ -1106,6 +1164,53 @@ export const getPublicFootballTournamentBySlug = unstable_cache(
   publicFootballCacheOptions,
 );
 
+/**
+ * Completa los nombres de los jugadores desde la vista pública, que expone id y
+ * nombre y nada más: la tabla football_players tiene DNI y teléfono.
+ */
+async function withPlayerNames(
+  supabase: ReturnType<typeof createSupabasePublicClient>,
+  tournament: PublicFootballTournamentWithCategories,
+): Promise<PublicFootballTournamentWithCategories> {
+  const playerIds = [
+    ...new Set(
+      tournament.categories.flatMap((category) =>
+        (category.playerStats ?? []).map((stat) => stat.playerId),
+      ),
+    ),
+  ];
+
+  if (playerIds.length === 0) return tournament;
+
+  const { data, error } = await supabase
+    .from("football_public_player_names")
+    .select("id, display_name")
+    .in("id", playerIds);
+
+  if (error) {
+    // Sin nombres mostramos el resto del torneo igual.
+    console.error("Failed to load public player names.", error);
+    return tournament;
+  }
+
+  const names = new Map(
+    ((data ?? []) as Array<{ id: string; display_name: string | null }>).map(
+      (row) => [row.id, row.display_name ?? "Jugador"],
+    ),
+  );
+
+  return {
+    ...tournament,
+    categories: tournament.categories.map((category) => ({
+      ...category,
+      playerStats: (category.playerStats ?? []).map((stat) => ({
+        ...stat,
+        displayName: names.get(stat.playerId) ?? "Jugador",
+      })),
+    })),
+  };
+}
+
 async function getPublicFootballTournamentWithCategoriesBySlugUncached(
   slug: string,
 ) {
@@ -1125,9 +1230,11 @@ async function getPublicFootballTournamentWithCategoriesBySlugUncached(
 
   if (!data) return null;
 
-  return formatPublicTournamentWithCategories(
+  const tournament = formatPublicTournamentWithCategories(
     data as unknown as PublicTournamentWithCategoriesRow,
   );
+
+  return withPlayerNames(supabase, tournament);
 }
 
 export const getPublicFootballTournamentWithCategoriesBySlug = unstable_cache(
