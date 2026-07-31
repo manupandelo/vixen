@@ -101,7 +101,7 @@ export function Sede() {
           {/* Left Column: Photo */}
           <div className="relative w-full aspect-[4/3] lg:aspect-[5/4] overflow-hidden rounded-[1.25rem] border border-white/10 group order-2 lg:order-1 flex flex-col justify-end">
             <Image
-              src="/canchas1.jpg"
+              src="/canchas3.jpg"
               alt="Sector de canchas de fútbol en Vixen Club"
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"
