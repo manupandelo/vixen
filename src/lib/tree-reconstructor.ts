@@ -1,8 +1,11 @@
+import type { MatchSlot } from "@/features/football-tournaments/bracket-progression";
+
 import type { MatchNode } from "./tree-generator";
 
 export type TreeReconstructableMatch = {
   id: string;
   nextMatchId?: string | null;
+  nextMatchSlot?: MatchSlot | null;
   homeTeamId?: string | null;
   awayTeamId?: string | null;
   roundLabel?: string;
@@ -49,11 +52,18 @@ export function reconstructTreeFromMatches(matches: TreeReconstructableMatch[]):
   ) {
     const children = childrenMap.get(match.id) ?? [];
     
-    // Sort children to ensure deterministic visual order. 
-    // Ideally we would know which one is home/away, but since we don't, 
-    // we just pick one for top (home) and one for bottom (away).
-    // Sorting by ID is stable.
-    children.sort((a, b) => a.id.localeCompare(b.id));
+    // Si conocemos el slot destino, lo usamos: el alimentador del lado "home"
+    // se dibuja arriba. Si falta el dato (llaves previas a la migración),
+    // caemos al orden por id, que es estable.
+    const hasSlots = children.some((child) => Boolean(child.nextMatchSlot));
+
+    if (hasSlots) {
+      const rank = (slot: MatchSlot | null | undefined) =>
+        slot === "home" ? 0 : 1;
+      children.sort((a, b) => rank(a.nextMatchSlot) - rank(b.nextMatchSlot));
+    } else {
+      children.sort((a, b) => a.id.localeCompare(b.id));
+    }
 
     let homeSourceType: "INITIAL" | "MATCH" = "INITIAL";
     let awaySourceType: "INITIAL" | "MATCH" = "INITIAL";

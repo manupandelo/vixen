@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import {
@@ -19,6 +20,11 @@ import {
   buildGroupPlayoffFixture as buildGroupPlayoffFixtureModel,
   buildLeagueFixture,
 } from "./fixture";
+import {
+  findAdvancementBlock,
+  resolveMatchWinner,
+  type MatchSlot,
+} from "./bracket-progression";
 import { teamPhotoMaxBytes, teamPhotoMaxLabel } from "./limits";
 import {
   fixtureGenerationSchema,
@@ -51,6 +57,7 @@ type BracketFixtureNode = {
   homeTeamId: string | null;
   awayTeamId: string | null;
   nextMatchId: string | null;
+  isHomeSlotInNextMatch: boolean;
 };
 
 type BracketFixturePayload = {
@@ -74,6 +81,10 @@ type MatchResultMatchContext = {
   away_team_id: string | null;
   group_id: string | null;
   next_match_id: string | null;
+  next_match_slot: string | null;
+  status?: string;
+  home_score?: number | null;
+  away_score?: number | null;
   result_locked_at?: string | null;
   football_tournaments:
     | {
@@ -164,7 +175,8 @@ function isBracketFixtureNode(value: unknown): value is BracketFixtureNode {
     typeof node.depth === "number" &&
     isNullableString(node.homeTeamId) &&
     isNullableString(node.awayTeamId) &&
-    isNullableString(node.nextMatchId)
+    isNullableString(node.nextMatchId) &&
+    typeof node.isHomeSlotInNextMatch === "boolean"
   );
 }
 
@@ -1819,6 +1831,11 @@ export async function generateBracketFixture(
         home_team_id: node.homeTeamId,
         away_team_id: node.awayTeamId,
         next_match_id: nextMatchId,
+        next_match_slot: nextMatchId
+          ? node.isHomeSlotInNextMatch
+            ? "home"
+            : "away"
+          : null,
         home_score: null,
         away_score: null,
         status: "scheduled" as const,
@@ -1946,6 +1963,7 @@ export async function generateGroupPlayoffFixture(
       away_team_id: match.awayTeamId,
       group_id: groupIds.get(match.groupId) ?? null,
       next_match_id: null,
+      next_match_slot: null,
       home_score: null,
       away_score: null,
       status: "scheduled" as const,
@@ -1961,6 +1979,7 @@ export async function generateGroupPlayoffFixture(
     away_team_id: match.awayTeamId,
     group_id: null,
     next_match_id: match.nextMatchId,
+    next_match_slot: match.nextMatchSlot,
     home_score: null,
     away_score: null,
     status: "scheduled" as const,
@@ -2157,6 +2176,169 @@ export async function assignMatchViewer(
   };
 }
 
+function validateMatchTeams(match: MatchResultMatchContext): ActionState | null {
+  if (!match.home_team_id || !match.away_team_id) {
+    return {
+      ok: false,
+      message: "Faltan definir los equipos de este partido.",
+    };
+  }
+
+  return null;
+}
+
+type AdvancementOutcome =
+  | { blocked: string; advancedTo?: never }
+  | { blocked?: never; advancedTo: string | null };
+
+type AdvancementTargetRow = {
+  id: string;
+  round_label: string;
+  home_team_id: string | null;
+  away_team_id: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  status: string;
+};
+
+/**
+ * Siembra al ganador en el partido siguiente de la llave.
+ *
+ * El chequeo de bloqueo corre ANTES de guardar el resultado, para que nunca
+ * quede el resultado escrito y el avance a medias.
+ */
+async function advanceWinnerToNextMatch(
+  match: MatchResultMatchContext,
+  result: {
+    home_score: number;
+    away_score: number;
+    home_penalty_score: number | null;
+    away_penalty_score: number | null;
+  },
+): Promise<AdvancementOutcome> {
+  if (!match.next_match_id || !match.next_match_slot) {
+    return { advancedTo: null };
+  }
+
+  const winnerTeamId = resolveMatchWinner({
+    homeTeamId: match.home_team_id,
+    awayTeamId: match.away_team_id,
+    homeScore: result.home_score,
+    awayScore: result.away_score,
+    homePenaltyScore: result.home_penalty_score,
+    awayPenaltyScore: result.away_penalty_score,
+  });
+
+  if (!winnerTeamId) return { advancedTo: null };
+
+  const slot = match.next_match_slot as MatchSlot;
+  // Con service role: la policy "Viewers can submit assigned unlocked results"
+  // exige status='completed' y marcador cargado en la fila que se toca, y el
+  // partido siguiente todavía no los tiene. Con el cliente del usuario el
+  // WITH CHECK rechaza la siembra y el veedor no podría guardar nada.
+  const supabase = createSupabaseAdminClient();
+  const { data: nextMatch, error } = await supabase
+    .from("football_matches")
+    .select(
+      "id, round_label, home_team_id, away_team_id, home_score, away_score, status",
+    )
+    .eq("id", match.next_match_id)
+    .maybeSingle();
+
+  if (error || !nextMatch) {
+    return { blocked: "No pudimos encontrar el partido siguiente de la llave." };
+  }
+
+  const target = nextMatch as unknown as AdvancementTargetRow;
+
+  const block = findAdvancementBlock(
+    {
+      roundLabel: target.round_label,
+      homeTeamId: target.home_team_id,
+      awayTeamId: target.away_team_id,
+      homeScore: target.home_score,
+      awayScore: target.away_score,
+      status: target.status,
+    },
+    slot,
+    winnerTeamId,
+  );
+
+  if (block) return { blocked: block };
+
+  const currentTeamId =
+    slot === "home" ? target.home_team_id : target.away_team_id;
+
+  if (currentTeamId === winnerTeamId) {
+    return { advancedTo: target.round_label };
+  }
+
+  const { error: advanceError } = await supabase
+    .from("football_matches")
+    .update(
+      slot === "home"
+        ? { home_team_id: winnerTeamId }
+        : { away_team_id: winnerTeamId },
+    )
+    .eq("id", target.id);
+
+  if (advanceError) {
+    return { blocked: advanceError.message };
+  }
+
+  return { advancedTo: target.round_label };
+}
+
+/**
+ * Saca de la llave al equipo que este partido habia sembrado.
+ * Bloquea con el mismo criterio que el avance: si el siguiente ya tiene
+ * resultado, sacarle un equipo dejaria un marcador entre fantasmas.
+ */
+async function unseedWinnerFromNextMatch(
+  match: MatchResultMatchContext,
+): Promise<AdvancementOutcome> {
+  if (!match.next_match_id || !match.next_match_slot) {
+    return { advancedTo: null };
+  }
+
+  const slot = match.next_match_slot as MatchSlot;
+  const supabase = createSupabaseAdminClient();
+  const { data: nextMatch, error } = await supabase
+    .from("football_matches")
+    .select(
+      "id, round_label, home_team_id, away_team_id, home_score, away_score, status",
+    )
+    .eq("id", match.next_match_id)
+    .maybeSingle();
+
+  if (error || !nextMatch) {
+    return { blocked: "No pudimos encontrar el partido siguiente de la llave." };
+  }
+
+  const target = nextMatch as unknown as AdvancementTargetRow;
+
+  if (
+    target.status === "completed" &&
+    target.home_score !== null &&
+    target.away_score !== null
+  ) {
+    return {
+      blocked: `No se puede borrar este resultado: ${target.round_label} ya tiene resultado cargado. Borrá ese resultado primero.`,
+    };
+  }
+
+  const { error: clearError } = await supabase
+    .from("football_matches")
+    .update(slot === "home" ? { home_team_id: null } : { away_team_id: null })
+    .eq("id", target.id);
+
+  if (clearError) {
+    return { blocked: clearError.message };
+  }
+
+  return { advancedTo: target.round_label };
+}
+
 export async function updateMatchResult(
   tournamentId: string,
   matchId: string,
@@ -2177,7 +2359,7 @@ export async function updateMatchResult(
   const { data: match, error: matchError } = await supabase
     .from("football_matches")
     .select(
-      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, result_locked_at, football_tournaments(format)",
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, status, home_score, away_score, result_locked_at, football_tournaments(format)",
     )
     .eq("id", matchId)
     .eq("tournament_id", tournamentId)
@@ -2191,6 +2373,10 @@ export async function updateMatchResult(
   }
 
   const matchContext = match as unknown as MatchResultMatchContext;
+  const teamsError = validateMatchTeams(matchContext);
+
+  if (teamsError) return teamsError;
+
   const penaltyError = validatePenaltyResult(payload, matchContext);
 
   if (penaltyError) return penaltyError;
@@ -2204,6 +2390,15 @@ export async function updateMatchResult(
     };
   }
   const validatedEventRows = eventRows.rows ?? [];
+
+  const advancement = await advanceWinnerToNextMatch(
+    matchContext,
+    payload.result,
+  );
+
+  if (advancement.blocked) {
+    return { ok: false, message: advancement.blocked };
+  }
 
   const { data: updatedMatch, error } = await supabase
     .from("football_matches")
@@ -2263,8 +2458,78 @@ export async function updateMatchResult(
 
   return {
     ok: true,
-    message: "Resultado guardado.",
+    message: advancement.advancedTo
+      ? `Resultado guardado. El ganador pasa a ${advancement.advancedTo}.`
+      : "Resultado guardado.",
   };
+}
+
+/**
+ * Borra el resultado de un partido y deshace la siembra en la llave.
+ *
+ * Es la salida que nombra el mensaje de bloqueo: para corregir una ronda
+ * anterior hay que borrar antes el resultado de la siguiente.
+ */
+export async function clearMatchResult(
+  tournamentId: string,
+  matchId: string,
+): Promise<ActionState> {
+  const admin = await requireAdmin();
+  const supabase = await createSupabaseServerClient();
+
+  const { data: match, error: matchError } = await supabase
+    .from("football_matches")
+    .select(
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, status, home_score, away_score, result_locked_at, football_tournaments(format)",
+    )
+    .eq("id", matchId)
+    .eq("tournament_id", tournamentId)
+    .maybeSingle();
+
+  if (matchError || !match) {
+    return { ok: false, message: "No pudimos encontrar el partido." };
+  }
+
+  const matchContext = match as unknown as MatchResultMatchContext;
+  const unseeded = await unseedWinnerFromNextMatch(matchContext);
+
+  if (unseeded.blocked) {
+    return { ok: false, message: unseeded.blocked };
+  }
+
+  const { error } = await supabase
+    .from("football_matches")
+    .update({
+      home_score: null,
+      away_score: null,
+      home_penalty_score: null,
+      away_penalty_score: null,
+      status: "scheduled" as const,
+      result_locked_at: null,
+      result_submitted_by: null,
+    })
+    .eq("id", matchId)
+    .eq("tournament_id", tournamentId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  await recordAuditEvent(supabase, {
+    tournamentId,
+    actor: admin,
+    entityType: "match_result",
+    entityId: matchId,
+    action: "updated",
+    summary: "Borró el resultado de un partido",
+    metadata: {},
+  });
+
+  revalidatePath(`/admin/torneos/${tournamentId}`);
+  revalidatePath("/veedor");
+  revalidatePublicFootball();
+
+  return { ok: true, message: "Resultado borrado." };
 }
 
 export async function submitViewerMatchResult(
@@ -2286,7 +2551,7 @@ export async function submitViewerMatchResult(
   const { data: match, error: matchError } = await supabase
     .from("football_matches")
     .select(
-      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, result_locked_at, football_tournaments(format)",
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, status, home_score, away_score, result_locked_at, football_tournaments(format)",
     )
     .eq("id", matchId)
     .eq("assigned_viewer_id", viewer.id)
@@ -2299,15 +2564,26 @@ export async function submitViewerMatchResult(
     };
   }
 
-  if (match.result_locked_at) {
+  const alreadyHasResult =
+    match.status === "completed" &&
+    match.home_score !== null &&
+    match.home_score !== undefined &&
+    match.away_score !== null &&
+    match.away_score !== undefined;
+
+  if (match.result_locked_at || alreadyHasResult) {
     return {
       ok: false,
       message:
-        "Este resultado ya fue cargado. Pedile a un administrador que lo corrija.",
+        "Este partido ya tiene resultado cargado. Pedile a un administrador que lo corrija.",
     };
   }
 
   const matchContext = match as unknown as MatchResultMatchContext;
+  const teamsError = validateMatchTeams(matchContext);
+
+  if (teamsError) return teamsError;
+
   const penaltyError = validatePenaltyResult(payload, matchContext);
 
   if (penaltyError) return penaltyError;
@@ -2321,6 +2597,15 @@ export async function submitViewerMatchResult(
     };
   }
   const validatedEventRows = eventRows.rows ?? [];
+
+  const advancement = await advanceWinnerToNextMatch(
+    matchContext,
+    payload.result,
+  );
+
+  if (advancement.blocked) {
+    return { ok: false, message: advancement.blocked };
+  }
 
   const eventError = await replaceMatchEvents(
     supabase,
@@ -2375,6 +2660,8 @@ export async function submitViewerMatchResult(
 
   return {
     ok: true,
-    message: "Resultado final cargado.",
+    message: advancement.advancedTo
+      ? `Resultado final cargado. El ganador pasa a ${advancement.advancedTo}.`
+      : "Resultado final cargado.",
   };
 }

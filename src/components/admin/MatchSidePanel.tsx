@@ -1,6 +1,5 @@
 "use client";
 
-import { X } from "lucide-react";
 import type {
   AdminMatch,
   AdminTeam,
@@ -8,8 +7,10 @@ import type {
   StaffProfile,
 } from "@/features/football-tournaments/data";
 import { type ActionState } from "@/features/football-tournaments/actions";
+import { AdminSheet } from "./AdminSheet";
 import {
   MatchEditDialog,
+  MatchResultClearDialog,
   MatchResultForm,
   MatchViewerAssignmentForm,
 } from "./AdminForms";
@@ -28,6 +29,7 @@ interface MatchSidePanelProps {
   updateResultAction: MatchAction;
   assignViewerAction: MatchAction;
   updateMatchAction: MatchAction;
+  clearResultAction: (prevState: ActionState) => Promise<ActionState>;
   onClose: () => void;
   roundLabel?: string;
 }
@@ -41,9 +43,14 @@ export function MatchSidePanel({
   updateResultAction,
   assignViewerAction,
   updateMatchAction,
+  clearResultAction,
   onClose,
   roundLabel,
 }: MatchSidePanelProps) {
+  const hasResult =
+    match.status === "completed" &&
+    match.homeScore !== null &&
+    match.awayScore !== null;
   const getTeamName = (id: string | null) => {
     if (!id) return "Por definirse";
     return teams.find((t) => t.id === id)?.name || "Por definirse";
@@ -53,66 +60,64 @@ export function MatchSidePanel({
   const awayTeamName = getTeamName(match.awayTeamId);
 
   return (
-    <div className="w-full h-[600px] md:w-[360px] shrink-0 bg-[#0F1411] border border-white/10 rounded-xl flex flex-col overflow-hidden shadow-2xl relative z-20">
-      <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-        <div>
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">{roundLabel ?? match.roundLabel}</h3>
-          <p className="text-xs text-white/50 mt-1">
-            {match.scheduledAt 
-              ? new Date(match.scheduledAt).toLocaleString("es-AR", { dateStyle: "medium", timeStyle: "short" })
-              : "Sin fecha asignada"}
-          </p>
-        </div>
-        <button 
-          onClick={onClose}
-          className="text-white/50 hover:text-white transition-colors p-2 -mr-2 bg-white/5 rounded-full"
-        >
-          <X size={16} />
-        </button>
+    <AdminSheet
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title={roundLabel ?? match.roundLabel}
+      description={
+        match.scheduledAt
+          ? new Date(match.scheduledAt).toLocaleString("es-AR", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })
+          : "Sin fecha asignada"
+      }
+    >
+      <div className="p-5">
+        <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+          Resultado
+        </h4>
+        <MatchResultForm
+          key={`${match.id}-${match.homeScore}-${match.awayScore}-${match.status}`}
+          action={updateResultAction}
+          onSaved={onClose}
+          homeScore={match.homeScore}
+          awayScore={match.awayScore}
+          homePenaltyScore={match.homePenaltyScore}
+          awayPenaltyScore={match.awayPenaltyScore}
+          homeTeamId={match.homeTeamId}
+          awayTeamId={match.awayTeamId}
+          homeTeamName={homeTeamName}
+          awayTeamName={awayTeamName}
+          isKnockout={isKnockout}
+          rosterEntries={rosterEntries}
+          matchEvents={match.events}
+        />
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="p-5">
-          <div className="mb-4">
-            <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)] mb-3">Resultado</h4>
-            <p className="mb-4 text-xs leading-5 text-[var(--color-muted)]">
-              {homeTeamName} vs {awayTeamName}
-            </p>
-          </div>
-          <MatchResultForm
-            action={updateResultAction}
-            homeScore={match.homeScore}
-            awayScore={match.awayScore}
-            homePenaltyScore={match.homePenaltyScore}
-            awayPenaltyScore={match.awayPenaltyScore}
-            homeTeamId={match.homeTeamId}
-            awayTeamId={match.awayTeamId}
-            isKnockout={isKnockout}
-            rosterEntries={rosterEntries}
-            matchEvents={match.events}
-          />
-        </div>
-
-        <hr className="border-white/5 mx-5" />
-
-        <div className="p-5">
-          <MatchViewerAssignmentForm 
-            action={assignViewerAction}
-            viewers={viewers}
-            assignedViewerId={match.assignedViewerId}
-          />
-        </div>
-
-        <hr className="border-white/5 mx-5" />
-        
-        <div className="p-5 flex justify-center pb-8">
-          <MatchEditDialog
-            action={updateMatchAction}
-            match={match}
-            teams={teams}
-          />
-        </div>
+      <div className="border-t border-white/5 p-5">
+        <MatchViewerAssignmentForm
+          action={assignViewerAction}
+          viewers={viewers}
+          assignedViewerId={match.assignedViewerId}
+        />
       </div>
-    </div>
+
+      <div className="grid gap-2 border-t border-white/5 p-5 pb-8">
+        <MatchEditDialog
+          action={updateMatchAction}
+          match={match}
+          teams={teams}
+        />
+        {hasResult ? (
+          <MatchResultClearDialog
+            action={clearResultAction}
+            roundLabel={roundLabel ?? match.roundLabel}
+          />
+        ) : null}
+      </div>
+    </AdminSheet>
   );
 }

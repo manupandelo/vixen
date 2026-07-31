@@ -14,6 +14,7 @@ import {
   Plus,
   Minus,
   Trash2,
+  ChevronDown,
   Trophy,
   Settings,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import {
   useActionState,
   useMemo,
   useReducer,
+  useRef,
   useState,
   type Dispatch,
   type ReactNode,
@@ -243,6 +245,20 @@ type MatchResultFormProps = {
   rosterEntries?: MatchResultRosterEntry[];
   matchEvents?: MatchResultEvent[];
   submitLabel?: string;
+  /**
+   * Con los dos nombres, el marcador se dibuja como scoreboard: una fila por
+   * equipo con su propio stepper. Evita que quien carga tenga que mapear
+   * "Local/Visitante" a los equipos reales.
+   */
+  homeTeamName?: string | null;
+  awayTeamName?: string | null;
+  /** Se llama cuando el resultado se guardo bien: el drawer se cierra solo. */
+  onSaved?: () => void;
+  /**
+   * Cuando está presente, guardar pide confirmación antes de mandar el form.
+   * Se usa en el panel de veedor, donde cargar el resultado lo deja bloqueado.
+   */
+  confirmTitle?: string;
 };
 
 type MatchEventCountField = "goals" | "yellowCards" | "redCards";
@@ -360,6 +376,18 @@ const compactButtonClass =
 
 const dangerCompactButtonClass =
   "inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-warm)]/40 bg-[var(--color-warm)]/15 px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:bg-[var(--color-warm)]/25 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
+
+const iconButtonClass =
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-white/[0.03] text-white/70 transition hover:border-white/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]";
+
+const dangerIconButtonClass =
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-transparent text-white/40 transition hover:border-[var(--color-warm)]/40 hover:text-[var(--color-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)]";
+
+const disclosureSummaryClass =
+  "flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-xl px-4 text-sm font-semibold text-white transition marker:content-none hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]";
+
+const compactEventInputClass =
+  "w-11 shrink-0 rounded-md border border-white/12 bg-black/25 px-1 py-1.5 text-center text-sm font-semibold tabular-nums text-white placeholder:text-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]";
 
 const primaryButtonClass =
   "inline-flex min-h-[44px] w-full sm:w-fit items-center justify-center gap-2 rounded-lg border border-[var(--color-accent-strong)] bg-[var(--color-accent)] px-5 py-2.5 text-sm font-bold text-[#07110a] transition-all duration-200 hover:bg-[var(--color-accent-strong)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
@@ -1482,7 +1510,8 @@ export function TeamEditDialog({ action, team }: TeamEditDialogProps) {
 export function TeamRemoveDialog({
   action,
   teamName,
-}: TeamRemoveDialogProps) {
+  quiet = false,
+}: TeamRemoveDialogProps & { quiet?: boolean }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [confirmation, setConfirmation] = useState("");
   const [open, setOpen] = useState(false);
@@ -1498,7 +1527,14 @@ export function TeamRemoveDialog({
   return (
     <AlertDialog.Root open={open} onOpenChange={setOpen}>
       <AlertDialog.Trigger asChild>
-        <button type="button" className={dangerCompactButtonClass}>
+        <button
+          type="button"
+          className={
+            quiet
+              ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white/45 transition hover:text-[var(--color-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)]"
+              : dangerCompactButtonClass
+          }
+        >
           <Trash2 size={14} aria-hidden="true" />
           Quitar del torneo
         </button>
@@ -1698,6 +1734,19 @@ function RosterEntryForm({
                 </label>
               </div>
 
+              <details className="group rounded-xl border border-white/10 bg-white/[0.02]">
+                <summary className={disclosureSummaryClass}>
+                  <ChevronDown
+                    size={16}
+                    aria-hidden="true"
+                    className="shrink-0 text-[var(--color-accent)] transition-transform group-open:rotate-180"
+                  />
+                  <span className="min-w-0 flex-1">Datos adicionales</span>
+                  <span className="shrink-0 text-xs font-semibold text-[var(--color-muted)]">
+                    Opcional
+                  </span>
+                </summary>
+                <div className="grid gap-4 border-t border-white/8 p-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-2">
                   <FieldLabel
@@ -1777,6 +1826,8 @@ function RosterEntryForm({
                   placeholder="Opcional"
                 />
               </label>
+                </div>
+              </details>
             </div>
           )}
         </section>
@@ -1798,6 +1849,21 @@ function RosterEntryForm({
               placeholder="Sin número"
             />
           </label>
+        </div>
+
+        <details className="group rounded-xl border border-white/10 bg-white/[0.02]">
+          <summary className={disclosureSummaryClass}>
+            <ChevronDown
+              size={16}
+              aria-hidden="true"
+              className="shrink-0 text-[var(--color-accent)] transition-transform group-open:rotate-180"
+            />
+            <span className="min-w-0 flex-1">Inscripción</span>
+            <span className="shrink-0 text-xs font-semibold text-[var(--color-muted)]">
+              Estado y documentación
+            </span>
+          </summary>
+          <div className="grid gap-4 border-t border-white/8 p-4 sm:grid-cols-2">
           <label className="grid gap-2">
             <span className={labelClass}>Estado</span>
             <select
@@ -1815,9 +1881,6 @@ function RosterEntryForm({
               ))}
             </select>
           </label>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2">
             <span className={labelClass}>Apto médico</span>
             <select
@@ -1856,22 +1919,23 @@ function RosterEntryForm({
               ))}
             </select>
           </label>
-        </div>
 
-        <label className="grid gap-2">
-          <FieldLabel value={rosterNotes} max={footballFormLimits.rosterNotes}>
-            Notas de inscripción
-          </FieldLabel>
-          <textarea
-            name="rosterNotes"
-            aria-label="Notas de inscripción"
-            value={rosterNotes}
-            onChange={(event) => setRosterNotes(event.target.value)}
-            rows={3}
-            className={`${inputClass} resize-y py-3 leading-6`}
-            placeholder="Opcional"
-          />
-        </label>
+          <label className="grid gap-2 sm:col-span-2">
+            <FieldLabel value={rosterNotes} max={footballFormLimits.rosterNotes}>
+              Notas de inscripción
+            </FieldLabel>
+            <textarea
+              name="rosterNotes"
+              aria-label="Notas de inscripción"
+              value={rosterNotes}
+              onChange={(event) => setRosterNotes(event.target.value)}
+              rows={3}
+              className={`${inputClass} resize-y py-3 leading-6`}
+              placeholder="Opcional"
+            />
+          </label>
+          </div>
+        </details>
       </section>
 
       <button
@@ -1897,7 +1961,7 @@ export function RosterEntryCreateDialog({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button type="button" className={`${secondaryButtonClass} gap-2`}>
+        <button type="button" className={`${primaryButtonClass} w-full gap-2`}>
           <Plus size={15} aria-hidden="true" />
           Agregar jugador
         </button>
@@ -1933,9 +1997,13 @@ export function RosterEntryEditDialog({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button type="button" className={compactButtonClass}>
-          <Pencil size={14} aria-hidden="true" />
-          Editar jugador
+        <button
+          type="button"
+          aria-label="Editar jugador"
+          title="Editar jugador"
+          className={iconButtonClass}
+        >
+          <Pencil size={15} aria-hidden="true" />
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -1976,9 +2044,13 @@ export function RosterEntryRemoveDialog({
   return (
     <AlertDialog.Root open={open} onOpenChange={setOpen}>
       <AlertDialog.Trigger asChild>
-        <button type="button" className={dangerCompactButtonClass}>
-          <Trash2 size={14} aria-hidden="true" />
-          Quitar jugador
+        <button
+          type="button"
+          aria-label="Quitar jugador"
+          title="Quitar jugador"
+          className={dangerIconButtonClass}
+        >
+          <Trash2 size={15} aria-hidden="true" />
         </button>
       </AlertDialog.Trigger>
       <AlertDialog.Portal>
@@ -2926,9 +2998,15 @@ export function MatchResultForm({
   rosterEntries = [],
   matchEvents = EMPTY_MATCH_EVENTS,
   submitLabel = "Guardar resultado",
+  homeTeamName = null,
+  awayTeamName = null,
+  onSaved,
+  confirmTitle,
 }: MatchResultFormProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(action, initialState);
-  useActionToast(state);
+  useActionToast(state, { onSuccess: onSaved });
 
   const [localHome, setLocalHome] = useState(homeScore ?? 0);
   const [localAway, setLocalAway] = useState(awayScore ?? 0);
@@ -2971,6 +3049,16 @@ export function MatchResultForm({
   );
   const hasEventOverflow =
     assignedHomeGoals > localHome || assignedAwayGoals > localAway;
+  const hasBothTeams = Boolean(homeTeamId && awayTeamId);
+  const loadedEventCount = useMemo(
+    () =>
+      Object.values(eventCounts).reduce(
+        (total, counts) =>
+          total + counts.goals + counts.yellowCards + counts.redCards,
+        0,
+      ),
+    [eventCounts],
+  );
 
   const updateScore = (team: "home" | "away", delta: number) => {
     if (team === "home") {
@@ -3003,113 +3091,127 @@ export function MatchResultForm({
   ) => eventCounts[rosterEntryId]?.[field] ?? 0;
 
   return (
-    <form action={formAction} className="grid gap-6">
-      <div className="grid grid-cols-2 gap-4">
-        {/* Local */}
-        <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-center">
-          <span className={labelClass}>Local</span>
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              aria-label="Restar gol local"
-              onClick={() => updateScore("home", -1)}
-              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
-            >
-              <Minus size={24} />
-            </button>
-            <span className="text-3xl font-bold text-white tabular-nums">
-              {localHome}
-            </span>
-            <button
-              type="button"
-              aria-label="Sumar gol local"
-              onClick={() => updateScore("home", 1)}
-              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
-            >
-              <Plus size={24} />
-            </button>
-          </div>
-          <input type="hidden" name="homeScore" value={localHome} />
-        </div>
+    <form ref={formRef} action={formAction} className="grid gap-6">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
+        {(
+          [
+            {
+              side: "home" as const,
+              name: homeTeamName,
+              score: localHome,
+              penalties: localHomePenalties,
+              setPenalties: setLocalHomePenalties,
+              scoreName: "homeScore",
+              penaltyName: "homePenaltyScore",
+              label: "local",
+              isWinner: localHome > localAway,
+            },
+            {
+              side: "away" as const,
+              name: awayTeamName,
+              score: localAway,
+              penalties: localAwayPenalties,
+              setPenalties: setLocalAwayPenalties,
+              scoreName: "awayScore",
+              penaltyName: "awayPenaltyScore",
+              label: "visitante",
+              isWinner: localAway > localHome,
+            },
+          ]
+        ).map((row, index) => (
+          <div
+            key={row.side}
+            className={`relative flex items-center gap-3 px-3 py-3 ${
+              index === 0 ? "border-b border-white/8" : ""
+            } ${row.isWinner ? "bg-white/[0.03]" : ""}`}
+          >
+            {row.isWinner ? (
+              <span
+                aria-hidden="true"
+                className="absolute inset-y-0 left-0 w-1 bg-[var(--color-accent)]"
+              />
+            ) : null}
 
-        {/* Visitante */}
-        <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-center">
-          <span className={labelClass}>Visitante</span>
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              aria-label="Restar gol visitante"
-              onClick={() => updateScore("away", -1)}
-              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
+            <span
+              className={`min-w-0 flex-1 truncate text-sm font-semibold ${
+                row.isWinner ? "text-white" : "text-white/70"
+              }`}
             >
-              <Minus size={24} />
-            </button>
-            <span className="text-3xl font-bold text-white tabular-nums">
-              {localAway}
+              {row.name ?? (row.side === "home" ? "Local" : "Visitante")}
             </span>
-            <button
-              type="button"
-              aria-label="Sumar gol visitante"
-              onClick={() => updateScore("away", 1)}
-              className="inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
-            >
-              <Plus size={24} />
-            </button>
+
+            {shouldShowPenalties ? (
+              <label className="flex shrink-0 items-center gap-1">
+                <span className="text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-white/40">
+                  Pen
+                </span>
+                <input
+                  type="number"
+                  name={row.penaltyName}
+                  aria-label={`Penales del ${row.label}`}
+                  min={0}
+                  value={row.penalties}
+                  onChange={(event) =>
+                    row.setPenalties(Math.max(0, Number(event.target.value)))
+                  }
+                  className="w-14 rounded-lg border border-white/12 bg-black/20 px-2 py-1.5 text-center text-sm font-semibold text-white tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                />
+              </label>
+            ) : null}
+
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                aria-label={`Restar gol ${row.label}`}
+                onClick={() => updateScore(row.side, -1)}
+                className="inline-flex size-11 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
+              >
+                <Minus size={20} />
+              </button>
+              <span
+                className={`w-8 text-center text-2xl font-bold tabular-nums ${
+                  row.isWinner ? "text-[var(--color-accent)]" : "text-white"
+                }`}
+              >
+                {row.score}
+              </span>
+              <button
+                type="button"
+                aria-label={`Sumar gol ${row.label}`}
+                onClick={() => updateScore(row.side, 1)}
+                className="inline-flex size-11 items-center justify-center rounded-xl bg-white/[0.05] text-white transition hover:bg-white/10 active:scale-95"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+
+            <input type="hidden" name={row.scoreName} value={row.score} />
           </div>
-          <input type="hidden" name="awayScore" value={localAway} />
-        </div>
+        ))}
       </div>
 
       {shouldShowPenalties ? (
-        <div className="grid gap-3 rounded-2xl border border-[var(--color-accent)]/25 bg-[var(--color-accent)]/5 p-4">
-          <div>
-            <p className={labelClass}>Definición por penales</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-              Necesario en copa o playoff cuando el partido termina empatado.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="grid gap-2">
-              <span className="text-xs font-semibold text-white/70">Local</span>
-              <input
-                type="number"
-                name="homePenaltyScore"
-                min={0}
-                value={localHomePenalties}
-                onChange={(event) =>
-                  setLocalHomePenalties(Math.max(0, Number(event.target.value)))
-                }
-                className={inputClass}
-              />
-            </label>
-            <label className="grid gap-2">
-              <span className="text-xs font-semibold text-white/70">
-                Visitante
-              </span>
-              <input
-                type="number"
-                name="awayPenaltyScore"
-                min={0}
-                value={localAwayPenalties}
-                onChange={(event) =>
-                  setLocalAwayPenalties(Math.max(0, Number(event.target.value)))
-                }
-                className={inputClass}
-              />
-            </label>
-          </div>
-        </div>
+        <p className="-mt-3 text-xs leading-5 text-[var(--color-muted)]">
+          Empate: cargá los penales para definir quién pasa.
+        </p>
       ) : null}
 
       {hasRosterEntries ? (
-        <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-          <div>
-            <p className={labelClass}>Detalle opcional</p>
-            <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-              Podés asignar goles y tarjetas ahora, o guardar solo el resultado.
-            </p>
-          </div>
-
+        <details className="group rounded-2xl border border-white/10 bg-white/[0.025]">
+          <summary className={disclosureSummaryClass}>
+            <ChevronDown
+              size={16}
+              aria-hidden="true"
+              className="shrink-0 text-[var(--color-accent)] transition-transform group-open:rotate-180"
+            />
+            <span className="min-w-0 flex-1">Detalle de goles y tarjetas</span>
+            <span className="shrink-0 text-xs font-semibold text-[var(--color-muted)]">
+              {loadedEventCount > 0
+                ? `${loadedEventCount} cargados`
+                : "Opcional"}
+            </span>
+          </summary>
+          <div className="grid gap-4 border-t border-white/8 p-4">
           <div className="grid gap-2 rounded-xl border border-white/8 bg-black/10 p-3 text-xs font-semibold text-white/70 sm:grid-cols-2">
             <p
               className={
@@ -3142,28 +3244,46 @@ export function MatchResultForm({
             ["Visitante", awayRosterEntries],
           ] as const).map(([title, entries]) =>
             entries.length > 0 ? (
-              <div key={title} className="grid gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/50">
-                  {title}
-                </p>
-                <div className="grid gap-2">
-                  {entries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="grid gap-2 rounded-xl border border-white/8 bg-black/10 p-3 sm:grid-cols-[minmax(0,1fr)_4rem_4rem_4rem] sm:items-center"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white">
-                          {entry.shirtNumber !== null
-                            ? `#${entry.shirtNumber} `
-                            : ""}
+              <div key={title} className="grid gap-1">
+                {/* Las etiquetas van una vez por equipo, no repetidas por jugador. */}
+                <div className="flex items-center gap-2 pb-1">
+                  <p className="min-w-0 flex-1 text-xs font-semibold uppercase tracking-[0.14em] text-white/50">
+                    {title}
+                  </p>
+                  <span className="w-11 text-center text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-white/40">
+                    Gol
+                  </span>
+                  <span className="w-11 text-center text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-[#e3c34a]/70">
+                    Ama
+                  </span>
+                  <span className="w-11 text-center text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-[var(--color-warm)]/70">
+                    Roj
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  {entries.map((entry) => {
+                    const rowGoals = getEventCount(entry.id, "goals");
+                    const rowYellow = getEventCount(entry.id, "yellowCards");
+                    const rowRed = getEventCount(entry.id, "redCards");
+                    const hasAny = rowGoals + rowYellow + rowRed > 0;
+
+                    return (
+                      <div
+                        key={entry.id}
+                        className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
+                          hasAny
+                            ? "border-[var(--color-accent)]/25 bg-[var(--color-accent)]/5"
+                            : "border-white/8 bg-black/10"
+                        }`}
+                      >
+                        <p className="min-w-0 flex-1 truncate text-sm text-white/85">
+                          {entry.shirtNumber !== null ? (
+                            <span className="mr-1.5 text-white/45 tabular-nums">
+                              #{entry.shirtNumber}
+                            </span>
+                          ) : null}
                           {entry.displayName}
                         </p>
-                      </div>
-                      <label className="grid gap-1">
-                        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white/42">
-                          Goles
-                        </span>
                         <input
                           type="number"
                           name={`goals:${entry.id}`}
@@ -3171,9 +3291,7 @@ export function MatchResultForm({
                           min={0}
                           max={50}
                           placeholder="0"
-                          value={getMatchEventInputValue(
-                            getEventCount(entry.id, "goals"),
-                          )}
+                          value={getMatchEventInputValue(rowGoals)}
                           onChange={(event) =>
                             updateEventCount(
                               entry.id,
@@ -3182,13 +3300,8 @@ export function MatchResultForm({
                               50,
                             )
                           }
-                          className={inputClass}
+                          className={compactEventInputClass}
                         />
-                      </label>
-                      <label className="grid gap-1">
-                        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white/42">
-                          Amar.
-                        </span>
                         <input
                           type="number"
                           name={`yellowCards:${entry.id}`}
@@ -3196,9 +3309,7 @@ export function MatchResultForm({
                           min={0}
                           max={2}
                           placeholder="0"
-                          value={getMatchEventInputValue(
-                            getEventCount(entry.id, "yellowCards"),
-                          )}
+                          value={getMatchEventInputValue(rowYellow)}
                           onChange={(event) =>
                             updateEventCount(
                               entry.id,
@@ -3207,13 +3318,8 @@ export function MatchResultForm({
                               2,
                             )
                           }
-                          className={inputClass}
+                          className={compactEventInputClass}
                         />
-                      </label>
-                      <label className="grid gap-1">
-                        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white/42">
-                          Roja
-                        </span>
                         <input
                           type="number"
                           name={`redCards:${entry.id}`}
@@ -3221,9 +3327,7 @@ export function MatchResultForm({
                           min={0}
                           max={1}
                           placeholder="0"
-                          value={getMatchEventInputValue(
-                            getEventCount(entry.id, "redCards"),
-                          )}
+                          value={getMatchEventInputValue(rowRed)}
                           onChange={(event) =>
                             updateEventCount(
                               entry.id,
@@ -3232,31 +3336,127 @@ export function MatchResultForm({
                               1,
                             )
                           }
-                          className={inputClass}
+                          className={compactEventInputClass}
                         />
-                      </label>
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : null,
           )}
-        </div>
+          </div>
+        </details>
+      ) : null}
+
+      {!hasBothTeams ? (
+        <p className="rounded-xl border border-[var(--color-warm)]/25 bg-[var(--color-warm)]/8 p-3 text-xs leading-5 text-white/80">
+          Faltan definir los equipos de este partido. Se van a completar cuando
+          se carguen los resultados de la ronda anterior.
+        </p>
+      ) : null}
+
+      {confirmTitle ? (
+        <AlertDialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialog.Trigger asChild>
+            <button
+              type="button"
+              disabled={isPending || hasEventOverflow || !hasBothTeams}
+              className={`${primaryButtonClass} w-full sm:w-full`}
+            >
+              {isPending ? "Guardando..." : submitLabel}
+            </button>
+          </AlertDialog.Trigger>
+          <AlertDialog.Portal>
+            <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+            <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(28rem,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+              <AlertDialog.Title className="text-xl font-semibold text-white">
+                Confirmá el resultado final
+              </AlertDialog.Title>
+              <AlertDialog.Description className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
+                Vas a cargar {localHome} - {localAway} como resultado final de{" "}
+                {confirmTitle}. Después solo un administrador puede corregirlo.
+              </AlertDialog.Description>
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <AlertDialog.Cancel asChild>
+                  <button type="button" className={compactButtonClass}>
+                    Volver
+                  </button>
+                </AlertDialog.Cancel>
+                <button
+                  type="button"
+                  className={primaryButtonClass}
+                  onClick={() => {
+                    setConfirmOpen(false);
+                    formRef.current?.requestSubmit();
+                  }}
+                >
+                  Confirmar y cargar
+                </button>
+              </div>
+            </AlertDialog.Content>
+          </AlertDialog.Portal>
+        </AlertDialog.Root>
       ) : (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-xs leading-5 text-[var(--color-muted)]">
-          No hay jugadores cargados para estos equipos. Podés guardar el
-          resultado igual.
+        <div className="sticky bottom-0 -mx-1 bg-[#0F1411]/95 px-1 pb-1 pt-3 backdrop-blur">
+          <button
+            type="submit"
+            disabled={isPending || hasEventOverflow || !hasBothTeams}
+            className={`${primaryButtonClass} w-full sm:w-full`}
+          >
+            {isPending ? "Guardando..." : submitLabel}
+          </button>
         </div>
       )}
-
-      <button
-        type="submit"
-        disabled={isPending || hasEventOverflow}
-        className={`${primaryButtonClass} w-full sm:w-full`}
-      >
-        {isPending ? "Guardando..." : submitLabel}
-      </button>
     </form>
+  );
+}
+
+export function MatchResultClearDialog({
+  action,
+  roundLabel,
+}: {
+  action: (prevState: ActionState) => Promise<ActionState>;
+  roundLabel: string;
+}) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  useActionToast(state);
+
+  return (
+    <AlertDialog.Root>
+      <AlertDialog.Trigger asChild>
+        <button type="button" className={dangerCompactButtonClass}>
+          <Trash2 size={16} aria-hidden="true" />
+          Borrar resultado
+        </button>
+      </AlertDialog.Trigger>
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(28rem,92vw)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/10 bg-[#111612] p-6 shadow-[0_24px_90px_rgb(0_0_0_/_0.42)]">
+          <AlertDialog.Title className="text-xl font-semibold text-white">
+            Borrar el resultado de {roundLabel}
+          </AlertDialog.Title>
+          <AlertDialog.Description className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
+            El partido vuelve a quedar pendiente y el ganador sale de la ronda
+            siguiente. Después vas a poder cargarlo de nuevo.
+          </AlertDialog.Description>
+          <form action={formAction} className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <AlertDialog.Cancel asChild>
+              <button type="button" className={compactButtonClass}>
+                Volver
+              </button>
+            </AlertDialog.Cancel>
+            <button
+              type="submit"
+              disabled={isPending}
+              className={dangerCompactButtonClass}
+            >
+              {isPending ? "Borrando..." : "Borrar resultado"}
+            </button>
+          </form>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
   );
 }
 

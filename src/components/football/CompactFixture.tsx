@@ -26,8 +26,11 @@ export function CompactFixture({
     awayTeamName: match.awayTeamName || match.awayTeamShortName,
     homeScore: match.homeScore,
     awayScore: match.awayScore,
+    homePenaltyScore: match.homePenaltyScore,
+    awayPenaltyScore: match.awayPenaltyScore,
     status: match.status,
     nextMatchId: match.nextMatchId,
+    nextMatchSlot: match.nextMatchSlot,
     isKnockout: match.isKnockout,
   }));
 

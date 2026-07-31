@@ -31,7 +31,9 @@ export default async function AdminLoginPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
             Panel privado
           </p>
-          <h1 className="mt-4 text-display-sm">Administración</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            Administración
+          </h1>
           <p className="mt-4 text-sm leading-6 text-[var(--color-muted)]">
             Ingresá con una cuenta habilitada para gestionar los torneos de
             fútbol.

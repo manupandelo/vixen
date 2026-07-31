@@ -6,7 +6,11 @@ import {
   type PublicFootballTournament,
 } from "@/features/football-tournaments/types";
 
+import { resolveChampionTeamId } from "@/features/football-tournaments/champion";
+
 import { StandingsTable } from "./StandingsTable";
+import { PublicChampionBanner } from "./PublicChampionBanner";
+import { PublicPlayerStats } from "./PublicPlayerStats";
 import { PublicBracketViewer } from "./PublicBracketViewer";
 import { CompactFixture } from "./CompactFixture";
 import { PublicMatchDetailOverlay } from "./PublicMatchDetailOverlay";
@@ -28,6 +32,16 @@ export function PublicTournamentPanel({
   const activeMatches = tournament.matches.filter((match) => !match.isKnockout);
   const knockoutMatches = tournament.matches.filter((match) => match.isKnockout);
 
+  const championTeamId = resolveChampionTeamId({
+    format: tournament.format,
+    matches: tournament.matches,
+    standings: tournament.standings,
+  });
+  const championName = championTeamId
+    ? (tournament.teams.find((team) => team.id === championTeamId)?.name ??
+      null)
+    : null;
+
   const header = (
     <div className="min-w-0">
       <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
@@ -44,6 +58,17 @@ export function PublicTournamentPanel({
         </p>
       )}
     </div>
+  );
+
+  const champion = championName ? (
+    <PublicChampionBanner teamName={championName} />
+  ) : null;
+
+  const playerStats = (
+    <PublicPlayerStats
+      playerStats={tournament.playerStats ?? []}
+      teams={tournament.teams}
+    />
   );
 
   const cupLayout = (
@@ -68,7 +93,9 @@ export function PublicTournamentPanel({
     return (
       <article className="border-t border-white/10 pt-8 first:border-t-0 first:pt-0">
         {showHeader ? header : null}
+        {champion}
         {cupLayout}
+        {playerStats}
 
         <PublicMatchDetailOverlay
           match={selectedMatch}
@@ -112,6 +139,8 @@ export function PublicTournamentPanel({
         </div>
       ) : null}
 
+      {champion}
+
       {isLeaguePlayoff && activeTab === "playoffs" ? (
         cupLayout
       ) : (
@@ -131,6 +160,8 @@ export function PublicTournamentPanel({
           </div>
         </div>
       )}
+
+      {playerStats}
 
       <PublicMatchDetailOverlay
         match={selectedMatch}

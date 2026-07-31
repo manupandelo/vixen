@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -23,6 +22,8 @@ import {
   GroupPlayoffGeneratorDialog,
 } from "@/components/admin/AdminForms";
 import { LeagueMatchesViewer } from "@/components/admin/LeagueMatchesViewer";
+import { TeamCard } from "@/components/admin/TeamCard";
+import { ChampionBanner } from "@/components/admin/ChampionBanner";
 import { BracketResultsViewer } from "@/components/admin/BracketResultsViewer";
 import { CategoryDropdown } from "@/components/admin/CategoryDropdown";
 import {
@@ -80,6 +81,9 @@ import {
   type AuditEvent,
   type StaffProfile,
 } from "@/features/football-tournaments/data";
+import type { StandingRow } from "@/features/football-tournaments/types";
+import { resolveChampionTeamId } from "@/features/football-tournaments/champion";
+import { calculateStandings } from "@/features/football-tournaments/standings";
 
 type TournamentWorkspacePageProps = {
   params: Promise<{
@@ -310,6 +314,18 @@ function CategoryMatchStatsPanel({
   const stats = buildCategoryMatchStats(matches, teams, rosterEntries);
   const hasEvents = stats.scorers.length > 0 || stats.discipline.length > 0;
 
+  // Sin eventos, las tres columnas eran tres cajas vacías ocupando media pantalla.
+  if (!hasEvents) {
+    return (
+      <AdminPanel className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+        <p className="text-sm text-[var(--color-muted)]">
+          Todavía no hay goles ni tarjetas cargados en esta categoría.
+        </p>
+        <AdminStatusPill tone="muted">Sin eventos</AdminStatusPill>
+      </AdminPanel>
+    );
+  }
+
   return (
     <AdminPanel className="p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -466,6 +482,37 @@ function TournamentTabs({
   );
 }
 
+function findChampionName(
+  tournament: AdminTournament,
+  teams: Pick<AdminTeam, "id" | "name">[],
+  matches: AdminMatch[],
+) {
+  let standings: StandingRow[] = [];
+
+  if (tournament.format === "league") {
+    try {
+      standings = calculateStandings(
+        teams.map((team) => ({ id: team.id, name: team.name, shortName: null })),
+        matches,
+      );
+    } catch {
+      // Si los datos no cierran (un partido apunta a un equipo que ya no está
+      // en la categoría), no mostramos campeón, pero no tiramos la pantalla.
+      return null;
+    }
+  }
+
+  const championId = resolveChampionTeamId({
+    format: tournament.format,
+    matches,
+    standings,
+  });
+
+  if (!championId) return null;
+
+  return teams.find((team) => team.id === championId)?.name ?? null;
+}
+
 async function renderSummaryTab(
   tournament: AdminTournament,
   selectedCategory: AdminTournamentCategory | null,
@@ -528,8 +575,19 @@ async function renderSummaryTab(
               },
             ];
 
+  const championName = findChampionName(tournament, teams, matches);
+
   return (
     <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      {championName ? (
+        <div className="lg:col-span-2">
+          <ChampionBanner
+            teamName={championName}
+            categoryName={selectedCategory?.name}
+          />
+        </div>
+      ) : null}
+
       <AdminPanel className="p-5 sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)] sm:text-sm">
           Estado del torneo
@@ -675,150 +733,83 @@ function TeamsTab({
       </div>
 
       {teams.length > 0 ? (
-        <AdminPanel>
-          <AdminTableHeader className="grid-cols-[1.1fr_0.8fr_0.8fr_1fr]">
-            <span>Equipo</span>
-            <span>Capitán</span>
-            <span>Teléfono</span>
-            <span>Notas privadas</span>
-          </AdminTableHeader>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {teams.map((team) => {
+            const teamRosterEntries = rosterEntries.filter(
+              (entry) => entry.teamId === team.id,
+            );
 
-          <div className="divide-y divide-white/10">
-            {teams.map((team) => {
-              const teamRosterEntries = rosterEntries.filter(
-                (entry) => entry.teamId === team.id,
-              );
-              const updateTeamAction = updateTeam.bind(
-                null,
-                tournament.id,
-                team.id,
-              );
-              const removeTeamAction = removeTeamFromTournament.bind(
-                null,
-                tournament.id,
-                team.id,
-              );
-
-              return (
-                <article
-                  key={team.id}
-                  className="grid gap-4 px-5 py-5 lg:grid-cols-[1.1fr_0.8fr_0.8fr_1fr] lg:items-start"
-                >
-                  <AdminMobileField label="Equipo">
-                    <div className="flex min-w-0 items-center gap-4">
-                      {team.photoUrl ? (
-                        <Image
-                          src={team.photoUrl}
-                          alt=""
-                          width={56}
-                          height={56}
-                          unoptimized
-                          className="size-14 shrink-0 rounded-[0.8rem] object-cover"
-                        />
-                      ) : (
-                        <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-[0.8rem] border border-white/10 bg-white/[0.035] text-lg font-semibold text-white">
-                          {team.name.slice(0, 2).toUpperCase()}
-                        </span>
-                      )}
-                      <div className="min-w-0">
-                        <h3 className="truncate text-lg font-semibold text-white">
-                          {team.name}
-                        </h3>
-                        <p className="mt-1 text-sm text-[var(--color-muted)]">
-                          {team.shortName ?? "Sin nombre corto"}
-                        </p>
-                      </div>
-                    </div>
-                  </AdminMobileField>
-
-                  <AdminMobileField label="Capitán">
-                    <p className="text-sm text-white/76">
-                      {team.captainName ?? "Sin capitán"}
-                    </p>
-                  </AdminMobileField>
-
-                  <AdminMobileField label="Teléfono">
-                    <p className="text-sm text-white/76">
-                      {team.contactPhone ?? "Sin teléfono"}
-                    </p>
-                  </AdminMobileField>
-
-                  <AdminMobileField label="Notas privadas">
-                    <p className="text-sm leading-6 text-white/70">
-                      {team.notes ?? "Sin notas privadas"}
-                    </p>
-                    <div className="mt-3 grid gap-2">
-                      <TeamEditDialog action={updateTeamAction} team={team} />
-                      <TeamRemoveDialog
-                        action={removeTeamAction}
-                        teamName={team.name}
+            return (
+              <TeamCard
+                key={team.id}
+                team={team}
+                playerCount={teamRosterEntries.length}
+                editSlot={
+                  <TeamEditDialog
+                    action={updateTeam.bind(null, tournament.id, team.id)}
+                    team={team}
+                  />
+                }
+                removeSlot={
+                  <TeamRemoveDialog
+                    action={removeTeamFromTournament.bind(
+                      null,
+                      tournament.id,
+                      team.id,
+                    )}
+                    teamName={team.name}
+                    quiet
+                  />
+                }
+                rosterCreateSlot={
+                  <RosterEntryCreateDialog
+                    action={createRosterEntry.bind(
+                      null,
+                      tournament.id,
+                      selectedCategory?.id as string,
+                      team.id,
+                    )}
+                    availablePlayers={availablePlayers}
+                    teamName={team.name}
+                  />
+                }
+                rosterSlot={teamRosterEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center gap-2 rounded-lg border border-white/8 bg-black/10 py-1.5 pl-3 pr-1.5"
+                  >
+                    <span className="w-8 shrink-0 text-sm font-semibold tabular-nums text-white/45">
+                      {entry.shirtNumber !== null
+                        ? `#${entry.shirtNumber}`
+                        : "–"}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
+                      {getRosterDisplayName(entry)}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <RosterEntryEditDialog
+                        action={updateRosterEntry.bind(
+                          null,
+                          tournament.id,
+                          entry.id,
+                        )}
+                        rosterEntry={entry}
+                      />
+                      <RosterEntryRemoveDialog
+                        action={deleteRosterEntry.bind(
+                          null,
+                          tournament.id,
+                          entry.id,
+                        )}
+                        playerName={getRosterDisplayName(entry)}
                       />
                     </div>
-                    <div className="mt-5 rounded-[0.8rem] border border-white/10 bg-white/[0.025] p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-                          Plantel
-                        </p>
-                        <RosterEntryCreateDialog
-                          action={createRosterEntry.bind(
-                            null,
-                            tournament.id,
-                            selectedCategory?.id as string,
-                            team.id,
-                          )}
-                          availablePlayers={availablePlayers}
-                          teamName={team.name}
-                        />
-                      </div>
-
-                      {teamRosterEntries.length > 0 ? (
-                        <div className="mt-3 grid gap-2">
-                          {teamRosterEntries.map((entry) => (
-                            <div
-                              key={entry.id}
-                              className="grid gap-2 rounded-[0.7rem] border border-white/8 bg-black/10 p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
-                            >
-                              <span className="text-sm font-semibold text-white/72">
-                                {entry.shirtNumber !== null
-                                  ? `#${entry.shirtNumber}`
-                                  : "S/N"}
-                              </span>
-                              <span className="min-w-0 truncate text-sm font-semibold text-white">
-                                {getRosterDisplayName(entry)}
-                              </span>
-                              <div className="flex flex-wrap gap-2 sm:justify-end">
-                                <RosterEntryEditDialog
-                                  action={updateRosterEntry.bind(
-                                    null,
-                                    tournament.id,
-                                    entry.id,
-                                  )}
-                                  rosterEntry={entry}
-                                />
-                                <RosterEntryRemoveDialog
-                                  action={deleteRosterEntry.bind(
-                                    null,
-                                    tournament.id,
-                                    entry.id,
-                                  )}
-                                  playerName={getRosterDisplayName(entry)}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mt-3 text-sm text-[var(--color-muted)]">
-                          Sin jugadores cargados.
-                        </p>
-                      )}
-                    </div>
-                  </AdminMobileField>
-                </article>
-              );
-            })}
-          </div>
-        </AdminPanel>
+                  </div>
+                ))}
+              />
+            );
+          })}
+        </div>
       ) : (
         <AdminEmptyState
           eyebrow="Sin equipos"
@@ -857,6 +848,7 @@ function MatchesTab({
   const generateBracketAction = generateBracketFixture.bind(null, tournament.id, selectedCategory?.id as string);
   const generateGroupPlayoffAction = generateGroupPlayoffFixture.bind(null, tournament.id, selectedCategory?.id as string);
   const canGenerateFixture = !fixtureStructure.hasStructure;
+  const championName = findChampionName(tournament, teams, matches);
   const generatorDisabledReason = canGenerateFixture
     ? undefined
     : fixtureStructure.groupCount > 0 && fixtureStructure.matchCount === 0
@@ -875,6 +867,13 @@ function MatchesTab({
           </h2>
         </div>
       </div>
+
+      {championName ? (
+        <ChampionBanner
+          teamName={championName}
+          categoryName={selectedCategory?.name}
+        />
+      ) : null}
 
       {matches.length > 0 ? (
         <>
@@ -954,7 +953,40 @@ function MatchesTab({
   );
 }
 
-function ActivityTab({ events }: { events: AuditEvent[] }) {
+const auditEntityLabels: Record<string, string> = {
+  tournament: "Torneo",
+  team: "Equipo",
+  match: "Partido",
+  viewer_assignment: "Veedor",
+  match_result: "Resultado",
+};
+
+/** El marcador que quedó guardado, para no tener que abrir el partido. */
+function formatAuditScore(metadata: AuditEvent["metadata"]) {
+  const homeScore = metadata?.homeScore;
+  const awayScore = metadata?.awayScore;
+
+  if (typeof homeScore !== "number" || typeof awayScore !== "number") {
+    return null;
+  }
+
+  const homePenalties = metadata?.homePenaltyScore;
+  const awayPenalties = metadata?.awayPenaltyScore;
+  const penalties =
+    typeof homePenalties === "number" && typeof awayPenalties === "number"
+      ? ` (${homePenalties}-${awayPenalties} pen.)`
+      : "";
+
+  return `${homeScore} - ${awayScore}${penalties}`;
+}
+
+function ActivityTab({
+  events,
+  matchNames,
+}: {
+  events: AuditEvent[];
+  matchNames: Map<string, string>;
+}) {
   return (
     <section className="grid gap-5">
       <div>
@@ -980,13 +1012,22 @@ function ActivityTab({ events }: { events: AuditEvent[] }) {
                       {event.summary}
                     </p>
                     <AdminStatusPill tone="muted">
-                      {event.entityType}
+                      {auditEntityLabels[event.entityType] ?? event.entityType}
                     </AdminStatusPill>
+                    {formatAuditScore(event.metadata) ? (
+                      <AdminStatusPill tone="accent">
+                        {formatAuditScore(event.metadata)}
+                      </AdminStatusPill>
+                    ) : null}
                   </div>
+                  {matchNames.get(event.entityId) ? (
+                    <p className="mt-1 truncate text-sm text-white/70">
+                      {matchNames.get(event.entityId)}
+                    </p>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-[var(--color-muted)]">
                     <span>{event.actorEmail}</span>
                     <span>{formatScheduledAt(event.createdAt)}</span>
-                    <span>ID {event.entityId.slice(0, 8)}</span>
                   </div>
                 </div>
               </article>
@@ -1086,8 +1127,24 @@ export default async function AdminTournamentWorkspacePage({
     }
 
     if (activeTab === "actividad") {
-      const events = await getTournamentAuditEvents(tournament.id);
-      return <ActivityTab events={events} />;
+      // Los eventos guardan solo el id de la entidad: resolvemos los partidos
+      // para poder nombrarlos en vez de mostrar un UUID cortado.
+      const [events, auditMatches, auditTeams] = await Promise.all([
+        getTournamentAuditEvents(tournament.id),
+        getAdminMatches(tournament.id),
+        getAdminTeams(tournament.id),
+      ]);
+      const teamNames = new Map(auditTeams.map((team) => [team.id, team.name]));
+      const matchNames = new Map(
+        auditMatches.map((match) => [
+          match.id,
+          `${match.roundLabel} · ${
+            teamNames.get(match.homeTeamId ?? "") ?? "Por definirse"
+          } vs ${teamNames.get(match.awayTeamId ?? "") ?? "Por definirse"}`,
+        ]),
+      );
+
+      return <ActivityTab events={events} matchNames={matchNames} />;
     }
 
     return await renderSummaryTab(tournament, selectedCategory, categories);

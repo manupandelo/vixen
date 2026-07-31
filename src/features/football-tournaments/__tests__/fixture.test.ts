@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildGroupPlayoffFixture, buildLeagueFixture } from "../fixture";
+import {
+  buildBracketFixture,
+  buildGroupPlayoffFixture,
+  buildLeagueFixture,
+} from "../fixture";
 
 const teams = [
   { id: "team-1", name: "Vixen Norte" },
@@ -140,5 +144,50 @@ describe("buildGroupPlayoffFixture", () => {
         daysBetweenPlayoffRounds: 7,
       }),
     ).toThrow("No puede haber más zonas que equipos.");
+  });
+});
+
+describe("buildBracketFixture slots", () => {
+  it("asigna slots alternados home/away a los alimentadores de cada partido", () => {
+    const matches = buildBracketFixture(
+      [
+        { homeTeamId: "a", awayTeamId: "b" },
+        { homeTeamId: "c", awayTeamId: "d" },
+        { homeTeamId: "e", awayTeamId: "f" },
+        { homeTeamId: "g", awayTeamId: "h" },
+      ],
+      "2026-08-01",
+      7,
+    );
+
+    const byNext = new Map<string, string[]>();
+
+    for (const match of matches) {
+      if (!match.nextMatchId) continue;
+      expect(match.nextMatchSlot).not.toBeNull();
+      const slots = byNext.get(match.nextMatchId) ?? [];
+      slots.push(match.nextMatchSlot as string);
+      byNext.set(match.nextMatchId, slots);
+    }
+
+    expect(byNext.size).toBeGreaterThan(0);
+
+    for (const slots of byNext.values()) {
+      expect([...slots].sort()).toEqual(["away", "home"]);
+    }
+  });
+
+  it("deja el slot en null para la final", () => {
+    const matches = buildBracketFixture(
+      [
+        { homeTeamId: "a", awayTeamId: "b" },
+        { homeTeamId: "c", awayTeamId: "d" },
+      ],
+      null,
+      7,
+    );
+    const final = matches.find((match) => match.nextMatchId === null);
+
+    expect(final?.nextMatchSlot).toBeNull();
   });
 });

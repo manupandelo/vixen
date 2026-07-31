@@ -5,6 +5,10 @@ import { X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { PublicFootballMatch } from "@/features/football-tournaments/types";
 
+import { formatPenaltyResult } from "@/features/football-tournaments/penalties";
+
+import { MatchEventSummary } from "./MatchEventSummary";
+
 const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   weekday: "long",
   year: "numeric",
@@ -41,6 +45,8 @@ export function PublicMatchDetailOverlay({
   const isScheduled = match?.status === "scheduled";
   const dateObj = match?.scheduledAt ? new Date(match.scheduledAt) : null;
   
+  const penaltyResult = match ? formatPenaltyResult(match) : null;
+
   const homeInitial = match?.homeTeamShortName || getInitials(match?.homeTeamName || "");
   const awayInitial = match?.awayTeamShortName || getInitials(match?.awayTeamName || "");
 
@@ -100,13 +106,13 @@ export function PublicMatchDetailOverlay({
                             {timeFormatter.format(dateObj)} hs
                           </p>
                         </div>
-                      ) : (
+                      ) : !isCompleted ? (
                         <div className="flex flex-col items-center gap-1 mt-2">
                           <p className="text-[var(--color-accent)] text-sm uppercase tracking-[0.3em] font-black drop-shadow-[0_0_8px_rgba(var(--color-accent-rgb),0.5)]">
                             A Confirmar
                           </p>
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Teams and Score */}
@@ -141,6 +147,12 @@ export function PublicMatchDetailOverlay({
                           </div>
                         )}
 
+                        {penaltyResult ? (
+                          <p className="mt-3 text-sm font-semibold text-[var(--color-accent)]">
+                            {penaltyResult}
+                          </p>
+                        ) : null}
+
                         {/* Status Tags */}
                         {isCompleted && (
                           <div className="mt-6 px-3 py-1 rounded bg-[var(--color-accent)]/20 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-accent)] border border-[var(--color-accent)]/30">
@@ -171,6 +183,12 @@ export function PublicMatchDetailOverlay({
                       </div>
 
                     </div>
+
+                    <MatchEventSummary
+                      events={match.events ?? []}
+                      homeTeamId={match.homeTeamId}
+                      awayTeamId={match.awayTeamId}
+                    />
                   </div>
                 </div>
               </motion.div>

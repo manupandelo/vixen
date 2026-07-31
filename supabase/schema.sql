@@ -211,6 +211,7 @@ create table public.football_matches (
   away_team_id uuid references public.football_teams(id) on delete restrict,
   group_id uuid,
   next_match_id uuid references public.football_matches(id) on delete set null,
+  next_match_slot text,
   home_score integer,
   away_score integer,
   status football_match_status not null default 'scheduled',
@@ -251,6 +252,10 @@ create table public.football_matches (
         and home_score = away_score
       )
     ),
+  constraint football_matches_next_match_slot_check
+    check (next_match_slot is null or next_match_slot in ('home', 'away')),
+  constraint football_matches_next_match_slot_pair_check
+    check ((next_match_id is null) = (next_match_slot is null)),
   constraint football_matches_status_check check (
     (
       status = 'completed'
@@ -265,6 +270,11 @@ create table public.football_matches (
     )
   )
 );
+
+-- Dos partidos no pueden alimentar el mismo lado del partido siguiente.
+create unique index football_matches_next_match_slot_key
+on public.football_matches (next_match_id, next_match_slot)
+where next_match_id is not null;
 
 create table public.football_match_events (
   id uuid primary key default gen_random_uuid(),
@@ -754,6 +764,45 @@ create policy "Admins can manage football match events"
 on public.football_match_events for all
 using (public.is_admin())
 with check (public.is_admin());
+
+create policy "Public can read events from visible tournaments"
+on public.football_match_events for select
+using (
+  exists (
+    select 1
+    from public.football_tournament_categories category
+    join public.football_tournaments tournament
+      on tournament.id = category.tournament_id
+    where category.id = football_match_events.category_id
+      and tournament.id = football_match_events.tournament_id
+      and category.status in ('published', 'active', 'completed')
+      and tournament.status in ('published', 'active', 'completed')
+  )
+);
+
+-- Solo id y nombre para mostrar: football_players tiene DNI, telefono y fecha
+-- de nacimiento en la misma fila, y RLS es por fila, no por columna.
+create or replace view public.football_public_player_names as
+select
+  player.id,
+  coalesce(
+    nullif(btrim(player.public_name), ''),
+    btrim(player.first_name || ' ' || player.last_name)
+  ) as display_name
+from public.football_players player;
+
+grant select on public.football_public_player_names to anon, authenticated;
+
+-- El numero de camiseta vive en la inscripcion, que guarda ademas estado
+-- medico, seguro y notas internas.
+create or replace view public.football_public_roster_numbers as
+select
+  entry.category_id,
+  entry.player_id,
+  entry.shirt_number
+from public.football_roster_entries entry;
+
+grant select on public.football_public_roster_numbers to anon, authenticated;
 
 create policy "Viewers can manage assigned match events"
 on public.football_match_events for all

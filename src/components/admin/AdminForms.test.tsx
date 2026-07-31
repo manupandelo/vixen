@@ -473,7 +473,13 @@ describe("match management forms", () => {
 
     render(
       <AdminToastProvider>
-        <MatchResultForm action={action} homeScore={null} awayScore={null} />
+        <MatchResultForm
+          action={action}
+          homeScore={null}
+          awayScore={null}
+          homeTeamId="team-home"
+          awayTeamId="team-away"
+        />
       </AdminToastProvider>,
     );
 
@@ -494,6 +500,56 @@ describe("match management forms", () => {
     expect(submitted.get("homeScore")).toBe("2");
     expect(submitted.get("awayScore")).toBe("1");
     expect(await screen.findByText("Resultado guardado.")).toBeInTheDocument();
+  });
+
+  it("deshabilita la carga cuando faltan definir los equipos", () => {
+    render(
+      <AdminToastProvider>
+        <MatchResultForm
+          action={async () => ({ ok: true, message: "" })}
+          homeScore={null}
+          awayScore={null}
+          homeTeamId={null}
+          awayTeamId={null}
+          isKnockout
+        />
+      </AdminToastProvider>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Guardar resultado" }),
+    ).toBeDisabled();
+    expect(screen.getByText(/faltan definir los equipos/i)).toBeInTheDocument();
+  });
+
+  it("mantiene el detalle de goles y tarjetas colapsado por defecto", () => {
+    render(
+      <AdminToastProvider>
+        <MatchResultForm
+          action={async () => ({ ok: true, message: "" })}
+          homeScore={0}
+          awayScore={0}
+          homeTeamId="team-home"
+          awayTeamId="team-away"
+          rosterEntries={[
+            {
+              id: "roster-1",
+              teamId: "team-home",
+              playerId: "player-1",
+              shirtNumber: 10,
+              displayName: "Riquelme",
+            },
+          ]}
+        />
+      </AdminToastProvider>,
+    );
+
+    const details = screen
+      .getByText(/detalle de goles y tarjetas/i)
+      .closest("details");
+
+    expect(details).not.toBeNull();
+    expect((details as HTMLDetailsElement).open).toBe(false);
   });
 
   it("prefills player match events and summarizes assigned goals", async () => {

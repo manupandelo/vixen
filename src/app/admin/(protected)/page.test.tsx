@@ -4,6 +4,20 @@ import { describe, expect, it, vi } from "vitest";
 import AdminDashboardPage from "./page";
 
 vi.mock("@/features/football-tournaments/data", () => ({
+  getAdminPendingMatches: vi.fn(async () => [
+    {
+      id: "match-1",
+      tournamentId: "tournament-1",
+      tournamentName: "Torneo Prueba 2",
+      categoryName: "Primera",
+      roundLabel: "Semifinal",
+      homeTeamName: "Roma",
+      awayTeamName: "Boca Juniors",
+      scheduledAt: null,
+      isOverdue: false,
+      href: "/admin/torneos/tournament-1?tab=partidos",
+    },
+  ]),
   getAdminDashboardSummary: vi.fn(async () => ({
     metrics: {
       totalTournaments: 2,
@@ -80,5 +94,16 @@ describe("AdminDashboardPage", () => {
     expect(
       screen.queryByText("Cargar sin saltearse etapas"),
     ).not.toBeInTheDocument();
+  });
+
+  it("lista los partidos que faltan cargar en vez de solo contarlos", async () => {
+    render(await AdminDashboardPage());
+
+    expect(screen.getByText("Roma vs Boca Juniors")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Torneo Prueba 2 · Primera · Semifinal/),
+    ).toBeInTheDocument();
+    // El panel duplicado desaparece: el porcentaje ya vive en las métricas.
+    expect(screen.queryByText("Estado de competencia")).not.toBeInTheDocument();
   });
 });

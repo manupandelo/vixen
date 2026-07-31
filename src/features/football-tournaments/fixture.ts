@@ -1,3 +1,5 @@
+import type { MatchSlot } from "./bracket-progression";
+
 export type FixtureTeam = {
   id: string;
   name: string;
@@ -211,6 +213,7 @@ function buildPlaceholderPlayoff(
       homeTeamId: null,
       awayTeamId: null,
       nextMatchId: null,
+      nextMatchSlot: null,
     };
   });
 
@@ -222,6 +225,8 @@ function buildPlaceholderPlayoff(
     for (let index = 0; index < roundSize; index += 1) {
       matches[roundStart + index].nextMatchId =
         matches[nextRoundStart + Math.floor(index / 2)].id;
+      matches[roundStart + index].nextMatchSlot =
+        index % 2 === 0 ? "home" : "away";
     }
     roundStart = nextRoundStart;
     roundSize /= 2;
@@ -336,6 +341,7 @@ export type GeneratedBracketMatch = {
   homeTeamId: string | null;
   awayTeamId: string | null;
   nextMatchId: string | null;
+  nextMatchSlot: MatchSlot | null;
 };
 
 export function getBracketRoundLabel(matchesInRound: number): string {
@@ -374,6 +380,7 @@ export function buildBracketFixture(
     homeTeamId: m.homeTeamId,
     awayTeamId: m.awayTeamId,
     nextMatchId: null,
+    nextMatchSlot: null,
   }));
 
   allMatches.push(...currentRoundMatches);
@@ -395,6 +402,7 @@ export function buildBracketFixture(
         homeTeamId: null,
         awayTeamId: null,
         nextMatchId: null,
+        nextMatchSlot: null,
       };
 
       const prevHomeMatch = currentRoundMatches[i * 2];
@@ -415,7 +423,9 @@ export function buildBracketFixture(
 
       // Link matches
       prevHomeMatch.nextMatchId = nextMatch.id;
+      prevHomeMatch.nextMatchSlot = "home";
       prevAwayMatch.nextMatchId = nextMatch.id;
+      prevAwayMatch.nextMatchSlot = "away";
 
       nextRoundMatches.push(nextMatch);
     }

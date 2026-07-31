@@ -23,6 +23,12 @@ const storageFromMock = vi.hoisted(() => vi.fn());
 const uploadMock = vi.hoisted(() => vi.fn());
 const getPublicUrlMock = vi.hoisted(() => vi.fn());
 const createSupabaseServerClientMock = vi.hoisted(() => vi.fn());
+const adminUpdateMock = vi.hoisted(() => vi.fn());
+const adminEqMock = vi.hoisted(() => vi.fn());
+const adminMaybeSingleMock = vi.hoisted(() => vi.fn());
+const adminSelectMock = vi.hoisted(() => vi.fn());
+const adminFromMock = vi.hoisted(() => vi.fn());
+const createSupabaseAdminClientMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({
   redirect: redirectMock,
@@ -35,6 +41,10 @@ vi.mock("next/cache", () => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: createSupabaseServerClientMock,
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createSupabaseAdminClient: createSupabaseAdminClientMock,
 }));
 
 vi.mock("@/features/football-tournaments/data", () => ({
@@ -51,6 +61,7 @@ vi.mock("@/features/football-tournaments/data", () => ({
 
 import {
   assignMatchViewer,
+  clearMatchResult,
   createMatch,
   createRosterEntry,
   createTeam,
@@ -131,6 +142,22 @@ function createSupabaseMock() {
   });
 
   createSupabaseServerClientMock.mockResolvedValue(supabase);
+
+  // El avance en la llave corre con service role: la política RLS del veedor
+  // exige status='completed' en la fila que toca, y el partido siguiente
+  // todavía no lo está.
+  adminEqMock.mockReturnValue({ maybeSingle: adminMaybeSingleMock });
+  adminSelectMock.mockReturnValue({ eq: adminEqMock });
+  adminUpdateMock.mockReturnValue({ eq: adminEqMock });
+  adminFromMock.mockReturnValue({
+    select: adminSelectMock,
+    update: adminUpdateMock,
+  });
+  adminEqMock.mockReturnValue({
+    maybeSingle: adminMaybeSingleMock,
+    error: null,
+  });
+  createSupabaseAdminClientMock.mockReturnValue({ from: adminFromMock });
 
   return supabase;
 }
@@ -1396,6 +1423,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: "team-1",
               awayTeamId: "team-2",
               nextMatchId: "match-3",
+              isHomeSlotInNextMatch: true,
             },
             {
               id: "match-2",
@@ -1404,6 +1432,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: "team-3",
               awayTeamId: "team-4",
               nextMatchId: "match-3",
+              isHomeSlotInNextMatch: false,
             },
             {
               id: "match-3",
@@ -1412,6 +1441,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: null,
               awayTeamId: null,
               nextMatchId: null,
+              isHomeSlotInNextMatch: true,
             },
           ],
         }),
@@ -1423,6 +1453,77 @@ describe("football tournament admin actions", () => {
       message:
         "Falta aplicar la migración de llaves de copa en Supabase. Ejecutá la migración 20260701020000_update_football_matches_for_brackets.sql y recargá el schema cache.",
     });
+  });
+
+  it("persiste el slot destino de cada cruce al generar la llave", async () => {
+    vi.mocked(getAdminFixtureStructureState).mockResolvedValue({
+      matchCount: 0,
+      groupCount: 0,
+      hasStructure: false,
+    });
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    insertMock.mockResolvedValue({ data: null, error: null });
+
+    const state = await generateBracketFixture(
+      "tournament-1",
+      "category-1",
+      { ok: false, message: "" },
+      formData({
+        bracketData: JSON.stringify({
+          startsAt: "2026-08-01",
+          daysBetweenRounds: 7,
+          initialMatches: [
+            {
+              id: "semi-a",
+              depth: 1,
+              roundLabel: "Semifinal",
+              homeTeamId: "team-a",
+              awayTeamId: "team-b",
+              nextMatchId: "final",
+              isHomeSlotInNextMatch: true,
+            },
+            {
+              id: "semi-b",
+              depth: 1,
+              roundLabel: "Semifinal",
+              homeTeamId: "team-c",
+              awayTeamId: "team-d",
+              nextMatchId: "final",
+              isHomeSlotInNextMatch: false,
+            },
+            {
+              id: "final",
+              depth: 0,
+              roundLabel: "Final",
+              homeTeamId: null,
+              awayTeamId: null,
+              nextMatchId: null,
+              isHomeSlotInNextMatch: true,
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(state.ok).toBe(true);
+
+    const inserted = insertMock.mock.calls[0][0] as Array<{
+      round_label: string;
+      next_match_slot: string | null;
+    }>;
+    const slots = inserted
+      .filter((row) => row.round_label === "Semifinal")
+      .map((row) => row.next_match_slot)
+      .sort();
+
+    expect(slots).toEqual(["away", "home"]);
+    expect(
+      inserted.find((row) => row.round_label === "Final")?.next_match_slot,
+    ).toBeNull();
   });
 
   it("maps temporary bracket node ids to database UUIDs before inserting", async () => {
@@ -1453,6 +1554,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: "team-1",
               awayTeamId: "team-2",
               nextMatchId: "finaltemp",
+              isHomeSlotInNextMatch: true,
             },
             {
               id: "abc1234",
@@ -1461,6 +1563,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: "team-3",
               awayTeamId: "team-4",
               nextMatchId: "finaltemp",
+              isHomeSlotInNextMatch: false,
             },
             {
               id: "finaltemp",
@@ -1469,6 +1572,7 @@ describe("football tournament admin actions", () => {
               homeTeamId: null,
               awayTeamId: null,
               nextMatchId: null,
+              isHomeSlotInNextMatch: true,
             },
           ],
         }),
@@ -1939,6 +2043,285 @@ describe("football tournament admin actions", () => {
     expect(eqMock).toHaveBeenCalledWith("tournament_id", "tournament-1");
   });
 
+  it("siembra al ganador en el slot del partido siguiente", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    // 1. el partido que se está cargando
+    maybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-1",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: null,
+        next_match_id: "match-final",
+        next_match_slot: "away",
+        result_locked_at: null,
+        football_tournaments: { format: "cup" },
+      },
+      error: null,
+    });
+    // 2. el partido siguiente lo lee el cliente con service role
+    adminMaybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-final",
+        round_label: "Final",
+        home_team_id: null,
+        away_team_id: null,
+        home_score: null,
+        away_score: null,
+        status: "scheduled",
+      },
+      error: null,
+    });
+    adminEqMock.mockReturnValueOnce({ maybeSingle: adminMaybeSingleMock });
+    // 3. el update del resultado
+    maybeSingleMock.mockResolvedValueOnce({
+      data: { id: "match-1" },
+      error: null,
+    });
+
+    const state = await updateMatchResult(
+      "tournament-1",
+      "match-1",
+      { ok: false, message: "" },
+      formData({ homeScore: "1", awayScore: "3" }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Resultado guardado. El ganador pasa a Final.",
+    });
+    // La siembra va por service role, no por el cliente del usuario:
+    // la policy RLS del veedor rechaza tocar un partido sin resultado.
+    expect(adminUpdateMock).toHaveBeenCalledWith({ away_team_id: "team-away" });
+    expect(adminEqMock).toHaveBeenCalledWith("id", "match-final");
+  });
+
+  it("bloquea la correccion si la ronda siguiente ya tiene resultado", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-1",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: null,
+        next_match_id: "match-final",
+        next_match_slot: "home",
+        result_locked_at: null,
+        football_tournaments: { format: "cup" },
+      },
+      error: null,
+    });
+    adminMaybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-final",
+        round_label: "Final",
+        home_team_id: "team-away",
+        away_team_id: "team-otro",
+        home_score: 2,
+        away_score: 1,
+        status: "completed",
+      },
+      error: null,
+    });
+
+    const state = await updateMatchResult(
+      "tournament-1",
+      "match-1",
+      { ok: false, message: "" },
+      formData({ homeScore: "3", awayScore: "0" }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message:
+        "No se puede cambiar el ganador: Final ya tiene resultado cargado. Borrá ese resultado primero.",
+    });
+    // no debe haber tocado la base
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("rechaza cargar un resultado si faltan definir los equipos", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-final",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: null,
+        away_team_id: null,
+        group_id: null,
+        next_match_id: null,
+        next_match_slot: null,
+        result_locked_at: null,
+        football_tournaments: { format: "cup" },
+      },
+      error: null,
+    });
+
+    const state = await updateMatchResult(
+      "tournament-1",
+      "match-final",
+      { ok: false, message: "" },
+      formData({ homeScore: "1", awayScore: "0" }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message: "Faltan definir los equipos de este partido.",
+    });
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("no deja al veedor pisar un resultado que ya cargo un admin", async () => {
+    requireViewerMock.mockResolvedValue({
+      id: "viewer-1",
+      email: "veedor@vixen.test",
+      role: "viewer",
+    });
+    maybeSingleMock.mockResolvedValue({
+      data: {
+        id: "match-1",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: null,
+        next_match_id: null,
+        next_match_slot: null,
+        // el admin lo dejo completo pero sin bloquear
+        status: "completed",
+        home_score: 2,
+        away_score: 1,
+        result_locked_at: null,
+        football_tournaments: { format: "cup" },
+      },
+      error: null,
+    });
+
+    const state = await submitViewerMatchResult(
+      "match-1",
+      { ok: false, message: "" },
+      formData({ homeScore: "0", awayScore: "3" }),
+    );
+
+    expect(state).toEqual<ActionState>({
+      ok: false,
+      message:
+        "Este partido ya tiene resultado cargado. Pedile a un administrador que lo corrija.",
+    });
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("borra el resultado y desiembra al ganador del partido siguiente", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-1",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: null,
+        next_match_id: "match-final",
+        next_match_slot: "home",
+        result_locked_at: null,
+        football_tournaments: { format: "cup" },
+      },
+      error: null,
+    });
+    // el partido siguiente, sin resultado: se le puede sacar el equipo
+    adminMaybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-final",
+        round_label: "Final",
+        home_team_id: "team-home",
+        away_team_id: null,
+        home_score: null,
+        away_score: null,
+        status: "scheduled",
+      },
+      error: null,
+    });
+
+    const state = await clearMatchResult("tournament-1", "match-1");
+
+    expect(state).toEqual<ActionState>({
+      ok: true,
+      message: "Resultado borrado.",
+    });
+    expect(adminUpdateMock).toHaveBeenCalledWith({ home_team_id: null });
+    expect(updateMock).toHaveBeenCalledWith({
+      home_score: null,
+      away_score: null,
+      home_penalty_score: null,
+      away_penalty_score: null,
+      status: "scheduled",
+      result_locked_at: null,
+      result_submitted_by: null,
+    });
+  });
+
+  it("no borra el resultado si la ronda siguiente ya tiene resultado", async () => {
+    requireAdminMock.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@vixen.test",
+      role: "admin",
+    });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-1",
+        tournament_id: "tournament-1",
+        category_id: "category-1",
+        home_team_id: "team-home",
+        away_team_id: "team-away",
+        group_id: null,
+        next_match_id: "match-final",
+        next_match_slot: "home",
+        result_locked_at: null,
+        football_tournaments: { format: "cup" },
+      },
+      error: null,
+    });
+    adminMaybeSingleMock.mockResolvedValueOnce({
+      data: {
+        id: "match-final",
+        round_label: "Final",
+        home_team_id: "team-home",
+        away_team_id: "team-otro",
+        home_score: 2,
+        away_score: 0,
+        status: "completed",
+      },
+      error: null,
+    });
+
+    const state = await clearMatchResult("tournament-1", "match-1");
+
+    expect(state.ok).toBe(false);
+    expect(state.message).toContain("Final ya tiene resultado cargado");
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
   it("reports when updating a match result did not touch any match", async () => {
     requireAdminMock.mockResolvedValue({
       id: "admin-1",
@@ -2008,7 +2391,7 @@ describe("football tournament admin actions", () => {
     });
     expect(requireViewerMock).toHaveBeenCalledTimes(1);
     expect(selectMock).toHaveBeenCalledWith(
-      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, result_locked_at, football_tournaments(format)",
+      "id, tournament_id, category_id, home_team_id, away_team_id, group_id, next_match_id, next_match_slot, status, home_score, away_score, result_locked_at, football_tournaments(format)",
     );
     expect(eqMock).toHaveBeenCalledWith("id", "match-1");
     expect(eqMock).toHaveBeenCalledWith("assigned_viewer_id", "viewer-1");
@@ -2051,7 +2434,7 @@ describe("football tournament admin actions", () => {
 
     expect(state).toEqual<ActionState>({
       ok: false,
-      message: "Este resultado ya fue cargado. Pedile a un administrador que lo corrija.",
+      message: "Este partido ya tiene resultado cargado. Pedile a un administrador que lo corrija.",
     });
     expect(updateMock).not.toHaveBeenCalled();
   });

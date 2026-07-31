@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import AdminTournamentWorkspacePage from "./page";
@@ -175,7 +176,16 @@ describe("AdminTournamentWorkspacePage", () => {
       "/admin/torneos/tournament-1?tab=actividad&category=primera",
     );
     expect(screen.getByText("Vixen Norte")).toBeInTheDocument();
-    expect(screen.getByText("Plantel")).toBeInTheDocument();
+    // El plantel salió de la card: ahora se abre en un drawer aparte.
+    const rosterButton = screen.getByRole("button", { name: /ver plantel/i });
+    expect(rosterButton).toBeInTheDocument();
+    expect(screen.getByText("1 jugador")).toBeInTheDocument();
+
+    await userEvent.click(rosterButton);
+
+    expect(
+      await screen.findByRole("dialog", { name: /plantel de vixen norte/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Juan Perez")).toBeInTheDocument();
     expect(screen.getByText("#10")).toBeInTheDocument();
     expect(

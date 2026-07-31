@@ -23,8 +23,10 @@ import {
   AdminTableHeader,
   AdminMobileField,
 } from "@/components/admin/AdminUI";
+import { PendingMatchesPanel } from "@/components/admin/PendingMatchesPanel";
 import {
   getAdminDashboardSummary,
+  getAdminPendingMatches,
   type AdminDashboardSummary,
 } from "@/features/football-tournaments/data";
 import type { FootballTournamentStatus } from "@/features/football-tournaments/types";
@@ -62,14 +64,18 @@ function DashboardMetric({
   value,
   helper,
   icon,
+  href,
 }: {
   label: string;
   value: string | number;
   helper: string;
   icon: ReactNode;
+  href?: string;
 }) {
-  return (
-    <div className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] p-5 transition-colors duration-300 hover:bg-white/[0.04]">
+  const className =
+    "group relative block overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] p-5 transition-colors duration-300 hover:bg-white/[0.04]";
+  const body = (
+    <>
       <div className="relative z-10 flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/50">
@@ -84,8 +90,18 @@ function DashboardMetric({
       <p className="relative z-10 mt-5 text-xs leading-5 text-white/50">
         {helper}
       </p>
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {body}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{body}</div>;
 }
 
 function DailyStatusPanel({ summary }: { summary: AdminDashboardSummary }) {
@@ -130,30 +146,22 @@ function DailyStatusPanel({ summary }: { summary: AdminDashboardSummary }) {
               action: "Ver torneos",
               tone: "good" as const,
             };
-  const loadedLabel =
-    metrics.totalMatches > 0
-      ? `${metrics.completedMatches}/${metrics.totalMatches} resultados`
-      : "Sin partidos";
-  const progressLabel =
-    metrics.totalMatches > 0
-      ? `${metrics.resultProgress}% cargado`
-      : "Fixture pendiente";
   const toneClass =
-    status.tone === "warning"
-      ? "border-[var(--color-warm)]/35 bg-[var(--color-warm)]/10 text-[var(--color-warm)]"
-      : "border-[var(--color-accent)]/28 bg-[var(--color-accent)]/10 text-[var(--color-accent)]";
+    status.tone === "good"
+      ? "border-[var(--color-accent)]/28 bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
+      : "border-[var(--color-warm)]/35 bg-[var(--color-warm)]/10 text-[var(--color-warm)]";
 
   return (
     <AdminPanel className="relative overflow-hidden p-6 sm:p-8">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center relative z-10">
+      <div className="relative z-10">
         <div className="flex gap-5">
           <span
             className={`mt-1 grid size-11 shrink-0 place-items-center rounded-xl border ${toneClass}`}
           >
-            {status.tone === "warning" ? (
-              <AlertTriangle size={20} aria-hidden="true" />
-            ) : (
+            {status.tone === "good" ? (
               <CheckCircle2 size={20} aria-hidden="true" />
+            ) : (
+              <AlertTriangle size={20} aria-hidden="true" />
             )}
           </span>
           <div className="min-w-0">
@@ -176,24 +184,6 @@ function DailyStatusPanel({ summary }: { summary: AdminDashboardSummary }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
-          <div className="rounded-[0.95rem] border border-white/10 bg-black/16 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">
-              Progreso
-            </p>
-            <p className="mt-2 text-xl font-semibold text-white">
-              {progressLabel}
-            </p>
-          </div>
-          <div className="rounded-[0.95rem] border border-white/10 bg-black/16 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">
-              Carga
-            </p>
-            <p className="mt-2 text-xl font-semibold text-white">
-              {loadedLabel}
-            </p>
-          </div>
-        </div>
       </div>
     </AdminPanel>
   );
@@ -222,7 +212,10 @@ function AttentionList({
 }
 
 export default async function AdminDashboardPage() {
-  const summary = await getAdminDashboardSummary();
+  const [summary, pendingMatches] = await Promise.all([
+    getAdminDashboardSummary(),
+    getAdminPendingMatches(),
+  ]);
   const { metrics } = summary;
   const nextMatchDate = formatCompactDate(summary.nextMatch?.scheduledAt ?? null);
   const resultLabel =
@@ -269,12 +262,14 @@ export default async function AdminDashboardPage() {
           icon={<CheckCircle2 size={18} aria-hidden="true" />}
         />
         <DashboardMetric
+          href="#partidos-pendientes"
           label="Pendientes"
           value={metrics.pendingResults}
           helper={pendingHelper}
           icon={<ListChecks size={18} aria-hidden="true" />}
         />
         <DashboardMetric
+          href="#partidos-pendientes"
           label="Próxima fecha"
           value={nextMatchDate}
           helper={summary.nextMatch?.roundLabel ?? "No hay partidos futuros"}
@@ -288,64 +283,11 @@ export default async function AdminDashboardPage() {
         />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <AdminPanel className="p-5 sm:p-6">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-end">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)] sm:text-sm">
-                Estado de competencia
-              </p>
-              <h2 className="mt-3 text-2xl font-semibold text-white">
-                {metrics.resultProgress}% de resultados cargados
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-                Se calcula sobre partidos creados y resultados finales
-                confirmados. Si falta fixture, aparece como pendiente de carga.
-              </p>
-            </div>
-            <div className="rounded-[1rem] border border-white/10 bg-black/16 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/45">
-                Operación
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-white">
-                {metrics.activeViewers} veedores
-              </p>
-              <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-                {metrics.admins} administradores activos en el panel.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-7">
-            <div className="h-3 overflow-hidden rounded-full bg-white/[0.055]">
-              <div
-                className="h-full rounded-full bg-[var(--color-accent)] transition-[width] duration-500"
-                style={{ width: `${metrics.resultProgress}%` }}
-              />
-            </div>
-            <div className="mt-3 flex flex-wrap justify-between gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
-              <span>{metrics.completedMatches} cargados</span>
-              <span>{metrics.totalMatches} partidos</span>
-            </div>
-          </div>
-
-          {summary.nextMatch ? (
-            <Link
-              href={`/admin/torneos/${summary.nextMatch.tournamentId}?tab=partidos`}
-              className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[0.95rem] border border-white/10 bg-white/[0.025] p-4 transition hover:border-[var(--color-accent)]/35 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]"
-            >
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  {summary.nextMatch.tournamentName}
-                </p>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">
-                  {summary.nextMatch.roundLabel}
-                </p>
-              </div>
-              <AdminStatusPill>{nextMatchDate}</AdminStatusPill>
-            </Link>
-          ) : null}
-        </AdminPanel>
+      <section
+        id="partidos-pendientes"
+        className="grid gap-5 scroll-mt-24 xl:grid-cols-[minmax(0,1fr)_24rem]"
+      >
+        <PendingMatchesPanel matches={pendingMatches} />
 
         <AdminPanel className="p-5 sm:p-6">
           <div className="mb-5">
