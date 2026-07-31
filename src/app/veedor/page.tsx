@@ -1,44 +1,14 @@
 import type { Metadata } from "next";
 import { LogOut } from "lucide-react";
 
-import { ViewerMatchCard } from "@/components/veedor/ViewerMatchCard";
-import {
-  logoutAdmin,
-  submitViewerMatchResult,
-} from "@/features/football-tournaments/actions";
-import {
-  getViewerAssignedMatches,
-  type ViewerAssignedMatch,
-} from "@/features/football-tournaments/data";
+import { ViewerMatchList } from "@/components/veedor/ViewerMatchList";
+import { logoutAdmin } from "@/features/football-tournaments/actions";
+import { getViewerAssignedMatches } from "@/features/football-tournaments/data";
 
 export const metadata: Metadata = {
   title: "Veedor — Vixen Club",
   description: "Carga privada de resultados asignados.",
 };
-
-const dayFormatter = new Intl.DateTimeFormat("es-AR", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  timeZone: "America/Argentina/Buenos_Aires",
-});
-
-function getDayLabel(value: string | null) {
-  if (!value) return "Sin fecha asignada";
-
-  return dayFormatter.format(new Date(value));
-}
-
-function groupByDay(matches: ViewerAssignedMatch[]) {
-  const groups = new Map<string, ViewerAssignedMatch[]>();
-
-  for (const match of matches) {
-    const label = getDayLabel(match.scheduledAt);
-    groups.set(label, [...(groups.get(label) ?? []), match]);
-  }
-
-  return groups;
-}
 
 export default async function ViewerDashboardPage() {
   const matches = await getViewerAssignedMatches();
@@ -72,24 +42,7 @@ export default async function ViewerDashboardPage() {
         </section>
 
         {matches.length > 0 ? (
-          <div className="grid gap-8">
-            {[...groupByDay(matches).entries()].map(([dayLabel, dayMatches]) => (
-              <section key={dayLabel} className="grid gap-3">
-                <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-white/44">
-                  {dayLabel}
-                </h2>
-                <div className="grid items-start gap-3 lg:grid-cols-2">
-                  {dayMatches.map((match) => (
-                    <ViewerMatchCard
-                      key={match.id}
-                      match={match}
-                      submitAction={submitViewerMatchResult.bind(null, match.id)}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
+          <ViewerMatchList matches={matches} />
         ) : (
           <section className="rounded-[0.95rem] border border-white/10 bg-white/[0.025] p-6 sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">

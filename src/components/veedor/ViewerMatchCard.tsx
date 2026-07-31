@@ -114,9 +114,20 @@ export function ViewerMatchCard({ match, submitAction }: ViewerMatchCardProps) {
   return (
     <article className="grid gap-3 self-start rounded-xl border border-white/10 bg-[#121212] p-4">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-          {match.tournamentName} · {match.roundLabel}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="min-w-0 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
+            {match.tournamentName} · {match.roundLabel}
+          </p>
+          <span
+            className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.1em] ${
+              isLocked
+                ? "border-[var(--color-accent)]/35 bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
+                : "border-[var(--color-warm)]/35 bg-[var(--color-warm)]/10 text-[var(--color-warm)]"
+            }`}
+          >
+            {isLocked ? "Cargado" : "Pendiente"}
+          </span>
+        </div>
         <p className="mt-1 text-xs text-[var(--color-muted)]">
           {match.resultLockedAt
             ? formatLoadedAt(match.resultLockedAt)

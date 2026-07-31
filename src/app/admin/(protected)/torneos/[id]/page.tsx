@@ -776,19 +776,17 @@ function TeamsTab({
                 rosterSlot={teamRosterEntries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="grid gap-3 rounded-[0.7rem] border border-white/8 bg-black/10 p-3"
+                    className="flex items-center gap-2 rounded-lg border border-white/8 bg-black/10 py-1.5 pl-3 pr-1.5"
                   >
-                    <div className="flex min-w-0 items-baseline gap-2">
-                      <span className="shrink-0 text-sm font-semibold tabular-nums text-white/50">
-                        {entry.shirtNumber !== null
-                          ? `#${entry.shirtNumber}`
-                          : "S/N"}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
-                        {getRosterDisplayName(entry)}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <span className="w-7 shrink-0 text-sm font-semibold tabular-nums text-white/45">
+                      {entry.shirtNumber !== null
+                        ? entry.shirtNumber
+                        : "–"}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
+                      {getRosterDisplayName(entry)}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1">
                       <RosterEntryEditDialog
                         action={updateRosterEntry.bind(
                           null,

@@ -14,6 +14,7 @@ import {
   Plus,
   Minus,
   Trash2,
+  ChevronDown,
   Trophy,
   Settings,
 } from "lucide-react";
@@ -375,6 +376,18 @@ const compactButtonClass =
 
 const dangerCompactButtonClass =
   "inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-warm)]/40 bg-[var(--color-warm)]/15 px-4 py-2 text-sm font-bold text-white transition-all duration-200 hover:bg-[var(--color-warm)]/25 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
+
+const iconButtonClass =
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-white/[0.03] text-white/70 transition hover:border-white/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]";
+
+const dangerIconButtonClass =
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-transparent text-white/40 transition hover:border-[var(--color-warm)]/40 hover:text-[var(--color-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-warm)]";
+
+const disclosureSummaryClass =
+  "flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-xl px-4 text-sm font-semibold text-white transition marker:content-none hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]";
+
+const compactEventInputClass =
+  "w-11 shrink-0 rounded-md border border-white/12 bg-black/25 px-1 py-1.5 text-center text-sm font-semibold tabular-nums text-white placeholder:text-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]";
 
 const primaryButtonClass =
   "inline-flex min-h-[44px] w-full sm:w-fit items-center justify-center gap-2 rounded-lg border border-[var(--color-accent-strong)] bg-[var(--color-accent)] px-5 py-2.5 text-sm font-bold text-[#07110a] transition-all duration-200 hover:bg-[var(--color-accent-strong)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-base)]";
@@ -1721,10 +1734,15 @@ function RosterEntryForm({
                 </label>
               </div>
 
-              <details className="rounded-xl border border-white/10 bg-white/[0.02]">
-                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold text-white marker:content-none">
-                  <span>Datos adicionales</span>
-                  <span className="text-xs font-semibold text-[var(--color-muted)]">
+              <details className="group rounded-xl border border-white/10 bg-white/[0.02]">
+                <summary className={disclosureSummaryClass}>
+                  <ChevronDown
+                    size={16}
+                    aria-hidden="true"
+                    className="shrink-0 text-[var(--color-accent)] transition-transform group-open:rotate-180"
+                  />
+                  <span className="min-w-0 flex-1">Datos adicionales</span>
+                  <span className="shrink-0 text-xs font-semibold text-[var(--color-muted)]">
                     Opcional
                   </span>
                 </summary>
@@ -1833,10 +1851,15 @@ function RosterEntryForm({
           </label>
         </div>
 
-        <details className="rounded-xl border border-white/10 bg-white/[0.02]">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold text-white marker:content-none">
-            <span>Inscripción</span>
-            <span className="text-xs font-semibold text-[var(--color-muted)]">
+        <details className="group rounded-xl border border-white/10 bg-white/[0.02]">
+          <summary className={disclosureSummaryClass}>
+            <ChevronDown
+              size={16}
+              aria-hidden="true"
+              className="shrink-0 text-[var(--color-accent)] transition-transform group-open:rotate-180"
+            />
+            <span className="min-w-0 flex-1">Inscripción</span>
+            <span className="shrink-0 text-xs font-semibold text-[var(--color-muted)]">
               Estado y documentación
             </span>
           </summary>
@@ -1938,7 +1961,7 @@ export function RosterEntryCreateDialog({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button type="button" className={`${secondaryButtonClass} gap-2`}>
+        <button type="button" className={`${primaryButtonClass} w-full gap-2`}>
           <Plus size={15} aria-hidden="true" />
           Agregar jugador
         </button>
@@ -1974,9 +1997,13 @@ export function RosterEntryEditDialog({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button type="button" className={compactButtonClass}>
-          <Pencil size={14} aria-hidden="true" />
-          Editar jugador
+        <button
+          type="button"
+          aria-label="Editar jugador"
+          title="Editar jugador"
+          className={iconButtonClass}
+        >
+          <Pencil size={15} aria-hidden="true" />
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -2017,9 +2044,13 @@ export function RosterEntryRemoveDialog({
   return (
     <AlertDialog.Root open={open} onOpenChange={setOpen}>
       <AlertDialog.Trigger asChild>
-        <button type="button" className={dangerCompactButtonClass}>
-          <Trash2 size={14} aria-hidden="true" />
-          Quitar jugador
+        <button
+          type="button"
+          aria-label="Quitar jugador"
+          title="Quitar jugador"
+          className={dangerIconButtonClass}
+        >
+          <Trash2 size={15} aria-hidden="true" />
         </button>
       </AlertDialog.Trigger>
       <AlertDialog.Portal>
@@ -3166,10 +3197,15 @@ export function MatchResultForm({
       ) : null}
 
       {hasRosterEntries ? (
-        <details className="rounded-2xl border border-white/10 bg-white/[0.025]">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-semibold text-white marker:content-none">
-            <span>Detalle de goles y tarjetas</span>
-            <span className="text-xs font-semibold text-[var(--color-muted)]">
+        <details className="group rounded-2xl border border-white/10 bg-white/[0.025]">
+          <summary className={disclosureSummaryClass}>
+            <ChevronDown
+              size={16}
+              aria-hidden="true"
+              className="shrink-0 text-[var(--color-accent)] transition-transform group-open:rotate-180"
+            />
+            <span className="min-w-0 flex-1">Detalle de goles y tarjetas</span>
+            <span className="shrink-0 text-xs font-semibold text-[var(--color-muted)]">
               {loadedEventCount > 0
                 ? `${loadedEventCount} cargados`
                 : "Opcional"}
@@ -3208,28 +3244,46 @@ export function MatchResultForm({
             ["Visitante", awayRosterEntries],
           ] as const).map(([title, entries]) =>
             entries.length > 0 ? (
-              <div key={title} className="grid gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/50">
-                  {title}
-                </p>
-                <div className="grid gap-2">
-                  {entries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="grid gap-2 rounded-xl border border-white/8 bg-black/10 p-3 sm:grid-cols-[minmax(0,1fr)_4rem_4rem_4rem] sm:items-center"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white">
-                          {entry.shirtNumber !== null
-                            ? `#${entry.shirtNumber} `
-                            : ""}
+              <div key={title} className="grid gap-1">
+                {/* Las etiquetas van una vez por equipo, no repetidas por jugador. */}
+                <div className="flex items-center gap-2 pb-1">
+                  <p className="min-w-0 flex-1 text-xs font-semibold uppercase tracking-[0.14em] text-white/50">
+                    {title}
+                  </p>
+                  <span className="w-11 text-center text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-white/40">
+                    Gol
+                  </span>
+                  <span className="w-11 text-center text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-[#e3c34a]/70">
+                    Ama
+                  </span>
+                  <span className="w-11 text-center text-[0.6rem] font-semibold uppercase tracking-[0.1em] text-[var(--color-warm)]/70">
+                    Roj
+                  </span>
+                </div>
+                <div className="grid gap-1">
+                  {entries.map((entry) => {
+                    const rowGoals = getEventCount(entry.id, "goals");
+                    const rowYellow = getEventCount(entry.id, "yellowCards");
+                    const rowRed = getEventCount(entry.id, "redCards");
+                    const hasAny = rowGoals + rowYellow + rowRed > 0;
+
+                    return (
+                      <div
+                        key={entry.id}
+                        className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
+                          hasAny
+                            ? "border-[var(--color-accent)]/25 bg-[var(--color-accent)]/5"
+                            : "border-white/8 bg-black/10"
+                        }`}
+                      >
+                        <p className="min-w-0 flex-1 truncate text-sm text-white/85">
+                          {entry.shirtNumber !== null ? (
+                            <span className="mr-1.5 text-white/45 tabular-nums">
+                              {entry.shirtNumber}
+                            </span>
+                          ) : null}
                           {entry.displayName}
                         </p>
-                      </div>
-                      <label className="grid gap-1">
-                        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white/42">
-                          Goles
-                        </span>
                         <input
                           type="number"
                           name={`goals:${entry.id}`}
@@ -3237,9 +3291,7 @@ export function MatchResultForm({
                           min={0}
                           max={50}
                           placeholder="0"
-                          value={getMatchEventInputValue(
-                            getEventCount(entry.id, "goals"),
-                          )}
+                          value={getMatchEventInputValue(rowGoals)}
                           onChange={(event) =>
                             updateEventCount(
                               entry.id,
@@ -3248,13 +3300,8 @@ export function MatchResultForm({
                               50,
                             )
                           }
-                          className={inputClass}
+                          className={compactEventInputClass}
                         />
-                      </label>
-                      <label className="grid gap-1">
-                        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white/42">
-                          Amar.
-                        </span>
                         <input
                           type="number"
                           name={`yellowCards:${entry.id}`}
@@ -3262,9 +3309,7 @@ export function MatchResultForm({
                           min={0}
                           max={2}
                           placeholder="0"
-                          value={getMatchEventInputValue(
-                            getEventCount(entry.id, "yellowCards"),
-                          )}
+                          value={getMatchEventInputValue(rowYellow)}
                           onChange={(event) =>
                             updateEventCount(
                               entry.id,
@@ -3273,13 +3318,8 @@ export function MatchResultForm({
                               2,
                             )
                           }
-                          className={inputClass}
+                          className={compactEventInputClass}
                         />
-                      </label>
-                      <label className="grid gap-1">
-                        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white/42">
-                          Roja
-                        </span>
                         <input
                           type="number"
                           name={`redCards:${entry.id}`}
@@ -3287,9 +3327,7 @@ export function MatchResultForm({
                           min={0}
                           max={1}
                           placeholder="0"
-                          value={getMatchEventInputValue(
-                            getEventCount(entry.id, "redCards"),
-                          )}
+                          value={getMatchEventInputValue(rowRed)}
                           onChange={(event) =>
                             updateEventCount(
                               entry.id,
@@ -3298,11 +3336,11 @@ export function MatchResultForm({
                               1,
                             )
                           }
-                          className={inputClass}
+                          className={compactEventInputClass}
                         />
-                      </label>
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : null,
@@ -3360,13 +3398,15 @@ export function MatchResultForm({
           </AlertDialog.Portal>
         </AlertDialog.Root>
       ) : (
-        <button
-          type="submit"
-          disabled={isPending || hasEventOverflow || !hasBothTeams}
-          className={`${primaryButtonClass} w-full sm:w-full`}
-        >
-          {isPending ? "Guardando..." : submitLabel}
-        </button>
+        <div className="sticky bottom-0 -mx-1 bg-[#0F1411]/95 px-1 pb-1 pt-3 backdrop-blur">
+          <button
+            type="submit"
+            disabled={isPending || hasEventOverflow || !hasBothTeams}
+            className={`${primaryButtonClass} w-full sm:w-full`}
+          >
+            {isPending ? "Guardando..." : submitLabel}
+          </button>
+        </div>
       )}
     </form>
   );

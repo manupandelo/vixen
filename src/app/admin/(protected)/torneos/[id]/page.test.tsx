@@ -187,7 +187,7 @@ describe("AdminTournamentWorkspacePage", () => {
       await screen.findByRole("dialog", { name: /plantel de vixen norte/i }),
     ).toBeInTheDocument();
     expect(screen.getByText("Juan Perez")).toBeInTheDocument();
-    expect(screen.getByText("#10")).toBeInTheDocument();
+    expect(screen.getByText("10")).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Ver partidos" }),
     ).not.toBeInTheDocument();
